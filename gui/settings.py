@@ -11,32 +11,37 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 from pathlib import Path
-import os, datetime
+import os, datetime, dj_database_url, environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# read env file
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
+# reading .env file
+environ.Env.read_env(".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'al_va*%$9f%@19&**+gfhm^ltd=ze2^xsv_&&*r%3l&g0cs$42'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
+DEBUG = env('DEBUG')
 
-# ALLOWED_HOSTS = []
-
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+ALLOWED_HOSTS = [
+    '*'
+]
 
 
 # Application definition
 
-INSTALLED_APPS = [    
+INSTALLED_APPS = [
+    'environ',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -86,14 +91,12 @@ ASGI_APPLICATION = 'gui.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+DATABASES = {
+    'default': env.db()
+}
 
-# specify user model
+
+# Specify User Model
 AUTH_USER_MODEL = 'accounts.Member'
 
 # Password validation
@@ -129,11 +132,25 @@ USE_L10N = True
 USE_TZ = True
 
 
+# Heroku: Update database configuration from $DATABASE_URL.
+DB_FROM_ENV = dj_database_url.config(conn_max_age=500)
+DATABASES['default'].update(DB_FROM_ENV)
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
 
+# Static files
+if DEBUG:
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, "static"),
+    ]
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR, "static")
+
+# Rest framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -145,21 +162,22 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Cors Policy Setting
 CORS_ORIGIN_ALLOW_ALL = True
 
-# jwt_auth
+# Jwt Authentication
 JWT_AUTH = {
     'JWT_SECRET_KEY': SECRET_KEY,
     'JWT_VERIFY': True,
     'JWT_VERIFY_EXPIRATION': True,
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(days = 1),
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=1),
     'JWT_ALLOW_REFRESH': True,
-    'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(days = 7),
+    'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(days=7),
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
     'JWT_RESPONSE_PAYLOAD_HANDLER': 'accounts.payload.jwt_response_payload_handler',
 }
 
-# django websocket redis channel
+# Django websocket redis channel
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -169,7 +187,7 @@ CHANNEL_LAYERS = {
     },
 }
 
-# django resized
+# Django resized
 DJANGORESIZED_DEFAULT_QUALITY = 75
 DJANGORESIZED_DEFAULT_KEEP_META = True
 DJANGORESIZED_DEFAULT_FORCE_FORMAT = 'JPEG'

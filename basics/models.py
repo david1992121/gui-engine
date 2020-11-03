@@ -28,14 +28,14 @@ class GuestLevel(models.Model):
     def __str__(self):
         return self.name
 
-    name = models.CharField('名前', unique=True, max_length=192)
-    en_name = models.CharField('名前', unique=True, max_length=192)
+    name = models.CharField('名前', unique=True, max_length=190)
+    en_name = models.CharField('名前', unique=True, max_length=190)
     point = models.IntegerField('しきい値', default=0)
 
 class CastClass(models.Model):
     def __str__(self):
         return self.name
 
-    name = models.CharField('名前', unique=True, max_length=192)
-    en_name = models.CharField('名前', unique=True, max_length=192)
+    name = models.CharField('名前', unique=True, max_length=190)
+    en_name = models.CharField('名前', unique=True, max_length=190)
     point = models.IntegerField('しきい値', default=0)

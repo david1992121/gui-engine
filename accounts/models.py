@@ -35,14 +35,15 @@ class Member(AbstractUser, SoftDeletionModel):
     social_type = models.IntegerField('ソーシャルタイプ', choices = SOCIAL_CHOICES, default = 0)
     social_id = models.CharField('ソーシャルID', null=True, blank=True, max_length=100)
     phone_number = models.CharField('電話番号', unique=True, null=True, blank=True, max_length=20)
-    nickname = models.CharField('ニックネーム', unique = True, null = True, blank = True, max_length=192)
+    nickname = models.CharField('ニックネーム', unique = True, null = True, blank = True, max_length=190)
     avatars = models.ManyToManyField(Media, related_name="avatar", verbose_name='アバタ')
     is_registered = models.BooleanField('初期登録', default = False)
+    is_verified = models.BooleanField('メール確認', default = False)
 
     ##### private info #####
     verify_code = models.CharField('認証コード', null=True, blank=True, max_length=100)
     birthday = models.DateTimeField('誕生日', null=True, blank=True)
-    word = models.CharField('今日のひとこと', null=True, blank=True, max_length=192)
+    word = models.CharField('今日のひとこと', null=True, blank=True, max_length=190)
     about = models.TextField('自己紹介', null=True, blank=True)
     point = models.IntegerField('ポイント', default = 0)
     role = models.IntegerField('ユーザーロール', choices = SOCIAL_CHOICES, default = 1)
