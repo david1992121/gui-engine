@@ -1,5 +1,5 @@
 {% autoescape off %}
 Guiの会員登録ありがとうございます。
 下記のリンクをクリックしてメールを確認できます。
-http://{{ domain }}{% url 'activate' uidb64=uid token=token %}
+{{ site_url }}/api/accounts/{% url 'activate' uidb64=uid token=token %}
 {% endautoescape %}

@@ -19,6 +19,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from .models import Member
+from .tokens import account_activation_token
 from .serializers import *
 
 # Create your views here.
@@ -39,15 +40,14 @@ class EmailView(APIView):
             else:
                 # create user
                 user = Member.objects.create(email = email)
-                user.set_password(password = password)
+                user.set_password(password)
                 user.save()
                 
                 # now send email
                 current_site = get_current_site(request)
                 mail_subject = 'メールを確認してください',
-                message = render_to_string('email_templates/email_verification.html', {
-                    'user': user,
-                    'domain': current_site.domain,
+                message = render_to_string('email_templates\\email_verification.html', {
+                    'site_url': settings.SITE_URL,
                     'uid': urlsafe_base64_encode(force_bytes(user.pk)),
                     'token': account_activation_token.make_token(user),
                 })
