@@ -13,7 +13,11 @@ class EmailRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(min_length = 6, max_length = 30)
 
-class CustomJWTSerializer(JSONWebTokenSerializer):
+class SNSAuthorizeSerializer(serializers.Serializer):
+    line_code = serializers.CharField()
+
+
+class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
 
     def get_token(self, object):
@@ -73,5 +77,5 @@ class MediaImageSerializer(serializers.ModelSerializer):
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     class Meta:
-        fields = ('id', 'email', 'nickname', 'birthday', 'avatars')
+        fields = ('id', 'email', 'nickname', 'birthday', 'avatars', 'is_registered')
         model = Member

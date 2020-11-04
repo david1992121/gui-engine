@@ -23,14 +23,38 @@ from .models import Member
 from .serializers import *
 from threading import Thread
 
-
 class EmailLoginView(JSONWebTokenAPIView):
-    """
-    API View that receives a POST with a user's email and password.
-    Returns a JSON Web Token that can be used for authenticated requests.
-    """
-    serializer_class = CustomJWTSerializer
+    serializer_class = EmailJWTSerializer
 
+class LineLoginView(APIView):    
+    
+    def get_token(self, object):
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+        payload = jwt_payload_handler(object)
+        token = jwt_encode_handler(payload) 
+        return token
+
+    def post(self, request):
+        serializer = SNSAuthorizeSerializer(data = request.data)
+        if serializer.is_valid():
+            input_data = serializer.data
+            line_id = input_data.get('line_id')
+
+            # line verification with line_id
+            is_line_ok = True
+
+            if is_line_ok:
+                if Member.objects.filter(line_id = line_id).count() == 0:
+                    Member.objects.create(line_id = line_id)
+
+                user_obj = Member.objects.filter(line_id = line_id).first()
+                return {
+                    'token': self.get_token(user_obj),
+                    'user': MemberSerializer(user_obj).data
+                }
+            
+        return Response(status.HTTP_400_BAD_REQUEST)        
 
 class EmailRegisterView(APIView):
     permission_classes = [AllowAny]
