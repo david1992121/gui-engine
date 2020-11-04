@@ -103,7 +103,7 @@ class EmailRegisterView(APIView):
                     'token': f'{email.decode("utf-8")}/{cur_token}',
                 })
 
-                t = Thread(target=sendmail_thread, args=(
+                t = Thread(target=send_mail, args=(
                     mail_subject, message, settings.EMAIL_FROM_USER, to_email))
                 t.start()
 
@@ -115,8 +115,8 @@ class EmailRegisterView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 # send email function
-def sendmail_thread(mail_subject, message, from_email, to_email):
-    send_mail(mail_subject, message, from_email, to_email)
+def sendmail_thread(mail_subject, message, from_email, to_email, template):
+    send_mail(mail_subject, message, from_email, to_email, html_message=template)
 
 # verify token
 def verify_token(email, email_token):
@@ -184,18 +184,13 @@ def resend_email(request, id = None):
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
     target_link = "{}/account/result?type=reset_password&token={}".format(settings.CLIENT_URL, reset_password_token.key)
-
-    language_code = settings.LANGUAGE_CODE[0:2]
     html_template = render_to_string("emails\\password_forgotten.html", { 'link': target_link })
+    print(reset_password_token.user.email)
 
-    send_mail(
-        # title:
-        "パスワードリセット"
-        # message:
-        "パスワードトークンを確認してください",
-        # from:
-        settings.EMAIL_FROM_ADDRESS,
-        # to:
-        [reset_password_token.user.email],
-        html_message=html_template
-    )
+    mail_subject = "パスワードリセット"
+    message = "パスワードトークンを確認してください"
+    from_user = settings.EMAIL_FROM_USER
+    receipient = [reset_password_token.user.email]
+    
+    t = Thread(target=sendmail_thread, args=(mail_subject, message, from_user, receipient, html_template))
+    t.start()
