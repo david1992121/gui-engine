@@ -98,9 +98,10 @@ class EmailRegisterView(APIView):
                 t = Thread(target = sendmail_thread, args = (mail_subject, message, "noreply@gmail.com", to_email))
                 t.start()
             
-            return Response({
-                "success": True
-            }, status.HTTP_200_OK)
+                return Response({
+                    "success": True,
+                    "user": MemberSerializer(user).data
+                }, status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
