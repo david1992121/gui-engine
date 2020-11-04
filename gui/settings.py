@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_rest_passwordreset',
     'corsheaders',
     'channels',
     'chat',
@@ -213,3 +214,6 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_FROM_USER = env('EMAIL_FROM_USER')
 EMAIL_BACKEND = env('EMAIL_BACKEND')
 EMAIL_USE_TLS = env('EMAIL_USE_TLS')
+
+# Django reset password
+DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = 24

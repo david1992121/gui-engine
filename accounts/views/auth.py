@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import redirect
+from django.dispatch import receiver
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
 from base64 import urlsafe_b64decode, urlsafe_b64encode
@@ -19,8 +20,11 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_jwt.views import JSONWebTokenAPIView
 
-from .models import Member
-from .serializers import *
+from django_rest_passwordreset.signals import reset_password_token_created
+
+
+from accounts.models import Member
+from accounts.serializers import *
 from threading import Thread
 
 
@@ -175,3 +179,23 @@ def resend_email(request, id = None):
         return Response(status.HTTP_200_OK)
     else:
         return Response(status.HTTP_400_BAD_REQUEST)
+
+@receiver(reset_password_token_created)
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+
+    target_link = "{}/account/result?type=reset_password&token={}".format(settings.CLIENT_URL, reset_password_token.key)
+
+    language_code = settings.LANGUAGE_CODE[0:2]
+    html_template = render_to_string("emails\\password_forgotten.html", { 'link': target_link })
+
+    send_mail(
+        # title:
+        "パスワードリセット"
+        # message:
+        "パスワードトークンを確認してください",
+        # from:
+        settings.EMAIL_FROM_ADDRESS,
+        # to:
+        [reset_password_token.user.email],
+        html_message=html_template
+    )

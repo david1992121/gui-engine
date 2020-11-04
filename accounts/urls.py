@@ -1,6 +1,7 @@
 from django.urls import path, include
-from .views import *
 from django.conf.urls import url
+
+from .views.auth import *
 
 urlpatterns = [
     # authorization
@@ -9,6 +10,7 @@ urlpatterns = [
     path('line/login', LineLoginView.as_view(), name = "line_login"),
     path('<str:email>/<str:email_token>', verify_email, name="verify_token"),
     path('resend/<int:id>', resend_email, name="resend_email"),
+    path('password/', include('django_rest_passwordreset.urls', namespace='password_reset')),
 
     # after authorization
     path('info', get_user_profile, name = "user_info"),
