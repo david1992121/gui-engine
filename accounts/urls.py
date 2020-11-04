@@ -4,12 +4,8 @@ API URLs for Accounts
 
 from django.urls import path, include
 
-from .views.auth import EmailRegisterView
-from .views.auth import EmailLoginView
-from .views.auth import LineLoginView
-from .views.auth import verify_email
-from .views.auth import resend_email
-from .views.auth import get_user_profile
+from .views.auth import *
+from .views.member import *
 
 urlpatterns = [
     # authorization
@@ -21,6 +17,9 @@ urlpatterns = [
     path('password/', include('django_rest_passwordreset.urls',
                               namespace='password_reset')),
 
-    # after authorization
-    path('info', get_user_profile, name="user_info"),
+    # get info
+    path('info', get_user_profile, name="user_info"),   
+
+    # upload info
+    path('info/initialize', InitialRegister.as_view(), name="info_register")
 ]

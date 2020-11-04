@@ -1,5 +1,5 @@
 """
-Serializers for Accounts
+Serializers for Auth
 """
 
 from django.utils import timezone
@@ -9,9 +9,15 @@ from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
-from .models import Member, Media
+from accounts.models import Member, Media
 
 
+def file_validator(file):
+    max_file_size = 1024 * 1024 * 1  # 1MB
+
+    if file.size > max_file_size:
+        raise serializers.ValidationError(_('Max file size is {} and your file size is {}'.
+            format(max_file_size, file.size)))
 class EmailRegisterSerializer(serializers.Serializer):
     """Serializer for Email Register"""
     email = serializers.EmailField()
@@ -20,7 +26,6 @@ class EmailRegisterSerializer(serializers.Serializer):
 
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
-
 
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'

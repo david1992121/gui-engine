@@ -28,11 +28,7 @@ from rest_framework_jwt.views import JSONWebTokenAPIView
 from django_rest_passwordreset.signals import reset_password_token_created
 
 from accounts.models import Member
-from accounts.serializers import EmailJWTSerializer
-from accounts.serializers import EmailRegisterSerializer
-from accounts.serializers import SNSAuthorizeSerializer
-from accounts.serializers import MemberSerializer
-
+from accounts.serializers.auth import *
 
 class EmailLoginView(JSONWebTokenAPIView):
     serializer_class = EmailJWTSerializer
@@ -56,6 +52,7 @@ class LineLoginView(APIView):
 
         if serializer.is_valid():
             line_code = serializer.data.get('code')
+            role = serializer.data.get('role')
 
             url = "https://api.line.me/oauth2/v2.1/token"
 
@@ -79,39 +76,40 @@ class LineLoginView(APIView):
                 decoded_payload = jwt.decode(id_token, None, None)
                 line_id = decoded_payload['sub']
                 line_email = decoded_payload['email']
-                role = int(decoded_payload['nonce'])
 
-                user_obj, _ = Member.objects.get_or_create(
-                    email=line_email
-                )
+                user_obj, is_created = Member.objects.get_or_create(email=line_email)
 
-                if user_obj.username == '':
-                    user_obj.username = 'user_{}'.format(user_obj.id)
-
-                if role == 0 and user_obj.role == 1:
-                    user_obj.role = 10
+                # if user is new
+                if is_created:
+                    # if user applys for cast
+                    if role == 0:
+                        user_obj.role = 10
+                    else:
+                        user_obj.role = 1
+                
+                    user_obj.username = "user_{}".format(user_obj.id)
+                    
+                # if user logins
+                else:
+                    user_obj.last_login = timezone.now()
 
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
                 user_obj.is_verified = True
-                user_obj.last_login = timezone.now()
                 user_obj.save()
 
                 return Response({
                     'token': self.get_token(user_obj),
-                    'user': MemberSerializer(user_obj).data,
+                    'user': MemberSerializer(user_obj).data,                    
                 }, status.HTTP_200_OK)
 
             except jwt.exceptions.InvalidSignatureError:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            except jwt.exceptions.DecodeError:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(status.HTTP_400_BAD_REQUEST)
 
 
 class EmailRegisterView(APIView):
-    """Signup with Email"""
     permission_classes = [AllowAny]
 
     def post(self, request):
