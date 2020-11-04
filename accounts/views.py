@@ -47,9 +47,10 @@ class LineLoginView(APIView):
 
             if is_line_ok:
                 if Member.objects.filter(line_id = line_id).count() == 0:
-                    Member.objects.create(line_id = line_id, is_verified = True)
-
-                user_obj = Member.objects.filter(line_id = line_id).first()
+                    user_obj = Member.objects.create(line_id = line_id, is_verified = True)
+                    user_obj.username = "user_{}".format(user_obj.id)
+                else:
+                    user_obj = Member.objects.filter(line_id = line_id).first()
 
                 # verify
                 if not user_obj.is_active:
@@ -79,6 +80,7 @@ class EmailRegisterView(APIView):
             else:
                 # create user
                 user = Member.objects.create(email = email)
+                user.username = "user_{}".format(user.id)
                 user.set_password(password)
                 user.save()
                 
