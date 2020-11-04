@@ -1,3 +1,8 @@
+from threading import Thread
+import json
+from base64 import urlsafe_b64decode, urlsafe_b64encode
+import jwt
+import requests
 from django.shortcuts import render
 from django.conf import settings
 from django.db.models import Q
@@ -8,7 +13,6 @@ from django.core.mail import send_mail
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
-from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 from rest_framework import status, generics
 from rest_framework.generics import CreateAPIView, GenericAPIView
@@ -21,7 +25,6 @@ from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from .models import Member
 from .serializers import *
-from threading import Thread
 
 
 class EmailLoginView(JSONWebTokenAPIView):
@@ -40,29 +43,46 @@ class LineLoginView(APIView):
 
     def post(self, request):
         serializer = SNSAuthorizeSerializer(data=request.data)
+
         if serializer.is_valid():
-            input_data = serializer.data
-            line_id = input_data.get('line_id')
+            line_code = serializer.data.get('code')
 
-            # line verification with line_id
-            is_line_ok = True
+            url = "https://api.line.me/oauth2/v2.1/token"
 
-            if is_line_ok:
-                if Member.objects.filter(line_id=line_id).count() == 0:
-                    user_obj = Member.objects.create(
-                        line_id=line_id, is_verified=True)
-                    user_obj.username = "user_{}".format(user_obj.id)
-                else:
-                    user_obj = Member.objects.filter(line_id=line_id).first()
+            payload = 'grant_type=authorization_code' + \
+                '&code=' + line_code + \
+                '&redirect_uri=' + settings.CLIENT_URL + '/account/result' + \
+                '&client_id=' + settings.LINE_CLIENT_ID + \
+                '&client_secret=' + settings.LINE_CLIENT_SECRET
 
-                # verify
-                if not user_obj.is_active:
-                    return {"Your account is blocked", status.HTTP_400_BAD_REQUEST}
+            headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
 
-                return {
+            response = requests.request(
+                "POST", url, headers=headers, data=payload)
+
+            id_token = json.loads(
+                response.text.encode('utf8')).get('id_token', '')
+
+            try:
+                decoded_payload = jwt.decode(id_token, None, None)
+                line_id = decoded_payload['sub']
+                line_email = decoded_payload['email']
+
+                user_obj, _ = Member.objects.get_or_create(email=line_email)
+                user_obj.social_type = 1
+                user_obj.social_id = line_id
+                user_obj.is_verified = True
+                user_obj.save()
+
+                return Response({
                     'token': self.get_token(user_obj),
                     'user': MemberSerializer(user_obj).data
-                }
+                }, status.HTTP_200_OK)
+
+            except jwt.exceptions.InvalidSignatureError:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(status.HTTP_400_BAD_REQUEST)
 
@@ -111,10 +131,14 @@ class EmailRegisterView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 # send email function
+
+
 def sendmail_thread(mail_subject, message, from_email, to_email):
     send_mail(mail_subject, message, from_email, to_email)
 
 # verify token
+
+
 def verify_token(email, email_token):
     try:
         users = get_user_model().objects.filter(
@@ -154,9 +178,9 @@ def get_user_profile(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def resend_email(request, id = None):
+def resend_email(request, id=None):
     user_id = id
-    user = Member.objects.get(pk = user_id)
+    user = Member.objects.get(pk=user_id)
 
     if user and not user.is_verified:
         # now send email
