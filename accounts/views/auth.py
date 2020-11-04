@@ -76,22 +76,17 @@ class LineLoginView(APIView):
                 decoded_payload = jwt.decode(id_token, None, None)
                 line_id = decoded_payload['sub']
                 line_email = decoded_payload['email']
+                role = int(decoded_payload['nonce'])
 
-                user_obj, is_created = Member.objects.get_or_create(email=line_email)
+                user_obj, is_created = Member.objects.get_or_create(
+                    email=line_email
+                )
 
-                # if user is new
                 if is_created:
-                    # if user applys for cast
-                    if role == 0:
-                        user_obj.role = 10
-                    else:
-                        user_obj.role = 1
-                
-                    user_obj.username = "user_{}".format(user_obj.id)
-                    
-                # if user logins
-                else:
-                    user_obj.last_login = timezone.now()
+                    user_obj.username = 'user_{}'.format(user_obj.id)
+
+                if role == 0 and user_obj.role == 1:
+                    user_obj.role = 10
 
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
