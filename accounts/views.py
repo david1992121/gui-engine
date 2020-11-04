@@ -26,7 +26,8 @@ from threading import Thread
 class EmailLoginView(JSONWebTokenAPIView):
     serializer_class = EmailJWTSerializer
 
-class LineLoginView(APIView):    
+class LineLoginView(APIView):
+    permission_classes = [AllowAny]
     
     def get_token(self, object):
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
@@ -132,3 +133,11 @@ def verify_email(request, email, email_token):
             return render(request, "emails\\email_error", {'success': false, 'link': target_link})
     except AttributeError:
         raise NotAllFieldCompiled('EMAIL_PAGE_TEMPLATE field not found')
+
+# get user info
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    cur_user = request.user
+    serializer = MemberSerializer(cur_user)
+    return Response(serializer.data, status = status.HTTP_200_OK)
