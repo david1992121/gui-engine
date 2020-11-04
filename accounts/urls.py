@@ -8,6 +8,7 @@ urlpatterns = [
     path('email/login', EmailLoginView.as_view(), name = "email_login"),
     path('line/login', LineLoginView.as_view(), name = "line_login"),
     path('<str:email>/<str:email_token>', verify_email, name="verify_token"),
+    path('resend/<int:id>', resend_email, name="resend_email"),
 
     # after authorization
     path('info', get_user_profile, name = "user_info"),

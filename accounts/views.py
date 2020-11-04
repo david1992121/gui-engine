@@ -88,7 +88,7 @@ class EmailRegisterView(APIView):
                 user.set_password(password)
                 user.save()
 
-                to_email = user.email
+                to_email = [user.email]
                 cur_token = default_token_generator.make_token(user)
                 email = urlsafe_b64encode(str(user.email).encode('utf-8'))
 
@@ -111,14 +111,10 @@ class EmailRegisterView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 # send email function
-
-
 def sendmail_thread(mail_subject, message, from_email, to_email):
-    send_mail(mail_subject, message, from_email, [to_email])
+    send_mail(mail_subject, message, from_email, to_email)
 
 # verify token
-
-
 def verify_token(email, email_token):
     try:
         users = get_user_model().objects.filter(
@@ -130,7 +126,7 @@ def verify_token(email, email_token):
                 user.is_verified = True
                 user.save()
                 return valid
-    except b64Error:
+    except:
         pass
     return False
 
@@ -144,8 +140,8 @@ def verify_email(request, email, email_token):
             return redirect(target_link)
         else:
             return render(request, "emails\\email_error.html", {'success': False, 'link': target_link})
-    except AttributeError:
-        raise NotAllFieldCompiled('EMAIL_PAGE_TEMPLATE field not found')
+    except:
+        pass
 
 # get user info
 @api_view(['GET'])
@@ -154,3 +150,28 @@ def get_user_profile(request):
     cur_user = request.user
     serializer = MemberSerializer(cur_user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def resend_email(request, id = None):
+    user_id = id
+    user = Member.objects.get(pk = user_id)
+
+    if user and not user.is_verified:
+        # now send email
+        to_email = [user.email]
+        cur_token = default_token_generator.make_token(user)
+        mail_subject = 'メールを確認してください'
+        message = render_to_string('emails\\email_verification.html', {
+            'site_url': settings.SITE_URL,
+            'token': f'{user.email.decode("utf-8")}/{cur_token}',
+        })
+
+        t = Thread(target=sendmail_thread, args=(
+            mail_subject, message, settings.EMAIL_FROM_USER, to_email))
+        t.start()
+
+        return Response(status.HTTP_200_OK)
+    else:
+        return Response(status.HTTP_400_BAD_REQUEST)
