@@ -22,8 +22,11 @@ class SoftDeletionManager(BaseUserManager):
         super(SoftDeletionManager, self).__init__(*args, **kwargs)
 
     def _create_user(self, username, email, password, **extra_fields):
-        user = self.model(username=self.model.normalize_username(username), email=self.normalize_email(email),
-            **extra_fields)
+        if email:
+            user = self.model(email=self.normalize_email(email), **extra_fields)
+        else:
+            user = self.model(**extra_fields)
+            
         if password:
             user.set_password(password)
         user.save(using=self._db)
