@@ -23,10 +23,10 @@ django-cors-headers==3.5.0
 django-environ==0.4.5
 django-extra-fields==3.0.2
 django-resized==0.3.11
+django-rest-passwordreset==1.1.0
 djangorestframework==3.12.1
 djangorestframework-jwt==1.11.0
 drf-yasg==1.20.0
-gunicorn==20.0.4
 hiredis==1.1.0
 hyperlink==20.0.1
 idna==2.10
@@ -59,13 +59,11 @@ ruamel.yaml.clib==0.2.2
 service-identity==18.1.0
 six==1.15.0
 sqlparse==0.4.1
-toml==0.10.2
 Twisted==20.3.0
 txaio==20.4.1
 typed-ast==1.4.0
 uritemplate==3.0.1
 urllib3==1.25.11
-whitenoise==5.2.0
 wincertstore==0.2
 wrapt==1.11.2
 zope.interface==5.1.2
