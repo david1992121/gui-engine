@@ -1,6 +1,6 @@
-from django.contrib.auth import authenticate
-from django.conf import settings
-from django.utils import timezone
+"""
+Serializers for Accounts
+"""
 
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
@@ -11,6 +11,7 @@ from .models import Member, Media
 
 
 class EmailRegisterSerializer(serializers.Serializer):
+    """Serializer for Email Register"""
     email = serializers.EmailField()
     password = serializers.CharField(min_length=6, max_length=30)
 
