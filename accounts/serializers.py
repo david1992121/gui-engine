@@ -17,7 +17,7 @@ class EmailRegisterSerializer(serializers.Serializer):
 
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
-
+    role = serializers.IntegerField()
 
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
@@ -48,6 +48,8 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
                         msg = "Your account is blocked"
                         raise serializers.ValidationError(msg)
                     else:
+                        user_obj.last_login = timezone.now()
+                        user_obj.save()
                         return {
                             'token': self.get_token(user_obj),
                             'user': MemberSerializer(user_obj).data
