@@ -103,9 +103,10 @@ class EmailRegisterView(APIView):
                     mail_subject, message, settings.EMAIL_FROM_USER, to_email))
                 t.start()
 
-            return Response({
-                "success": True
-            }, status.HTTP_200_OK)
+                return Response({
+                    "success": True,
+                    "user": MemberSerializer(user).data
+                }, status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
