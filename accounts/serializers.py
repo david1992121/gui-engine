@@ -88,6 +88,13 @@ class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
 
     class Meta:
-        fields = ('id', 'email', 'nickname', 'birthday',
-                  'avatars', 'is_registered')
+        fields = (
+            'id',
+            'email',
+            'nickname',
+            'birthday',
+            'avatars',
+            'role',
+            'is_registered'
+        )
         model = Member
