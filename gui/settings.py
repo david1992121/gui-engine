@@ -19,7 +19,7 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Read env file
-ENV = environ.Env(
+env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
 )
@@ -31,10 +31,10 @@ environ.Env.read_env(".env")
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ENV('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ENV('DEBUG')
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = [
     '*'
@@ -98,7 +98,7 @@ ASGI_APPLICATION = 'gui.asgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': ENV.db()
+    'default': env.db()
 }
 
 
