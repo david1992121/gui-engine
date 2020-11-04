@@ -2,6 +2,8 @@
 Serializers for Accounts
 """
 
+from django.utils import timezone
+
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
@@ -18,7 +20,7 @@ class EmailRegisterSerializer(serializers.Serializer):
 
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
-    role = serializers.IntegerField()
+
 
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
