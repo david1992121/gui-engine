@@ -13,7 +13,7 @@ class Media(models.Model):
     uri = ResizedImageField('URI',  size = [400, 400], crop=['middle', 'center'], null=True, blank=True, upload_to = "static/images", quality = 75)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)    
-class Member(AbstractUser, SoftDeletionModel):
+class Member(SoftDeletionModel):
     def __str__(self):
         return self.username if self.username else "Undefined"
 
