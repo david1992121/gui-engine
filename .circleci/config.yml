@@ -1,0 +1,41 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.2.1
+  heroku: circleci/heroku@1.2.2
+
+workflows:
+  build & deploy:
+    jobs:
+      - build
+      - heroku/deploy-via-git:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+          post-steps:
+            - run:
+                command: |
+                  heroku run python manage.py migrate --app $HEROKU_APP_NAME
+
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.7.5
+        environment:
+          DATABASE_NAME: gui_development
+          DATABASE_USER: circleci
+          DATABASE_HOST: localhost
+      - image: circleci/postgres:10-alpine
+        environment:
+          POSTGRES_DB: gui_development
+          POSTGRES_USER: circleci
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pipenv
+      - run:
+          command: |
+            pipenv run python manage.py migrate
+            pipenv run python manage.py test
