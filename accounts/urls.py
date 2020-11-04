@@ -1,7 +1,15 @@
-from django.urls import path, include
-from django.conf.urls import url
+"""
+API URLs for Accounts
+"""
 
-from .views.auth import *
+from django.urls import path, include
+
+from .views.auth import EmailRegisterView
+from .views.auth import EmailLoginView
+from .views.auth import LineLoginView
+from .views.auth import verify_email
+from .views.auth import resend_email
+from .views.auth import get_user_profile
 
 urlpatterns = [
     # authorization
