@@ -19,7 +19,7 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Read env file
-env = environ.Env(
+ENV = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
 )
@@ -31,10 +31,10 @@ environ.Env.read_env(".env")
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = ENV('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = ENV('DEBUG')
 
 ALLOWED_HOSTS = [
     '*'
@@ -99,7 +99,7 @@ ASGI_APPLICATION = 'gui.asgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db()
+    'default': ENV.db()
 }
 
 
@@ -203,17 +203,17 @@ DJANGORESIZED_DEFAULT_FORMAT_EXTENSIONS = {'JPEG': ".jpg"}
 DJANGORESIZED_DEFAULT_NORMALIZE_ROTATION = True
 
 # Site Url
-SITE_URL = env('SITE_URL')
-CLIENT_URL = env('CLIENT_URL')
+SITE_URL = ENV('SITE_URL')
+CLIENT_URL = ENV('CLIENT_URL')
 
 # Email Settings
-EMAIL_HOST = env('EMAIL_HOST')
-EMAIL_PORT = env('EMAIL_PORT')
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-EMAIL_FROM_USER = env('EMAIL_FROM_USER')
-EMAIL_BACKEND = env('EMAIL_BACKEND')
-EMAIL_USE_TLS = env('EMAIL_USE_TLS')
+EMAIL_HOST = ENV('EMAIL_HOST')
+EMAIL_PORT = ENV('EMAIL_PORT')
+EMAIL_HOST_USER = ENV('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = ENV('EMAIL_HOST_PASSWORD')
+EMAIL_FROM_USER = ENV('EMAIL_FROM_USER')
+EMAIL_BACKEND = ENV('EMAIL_BACKEND')
+EMAIL_USE_TLS = ENV('EMAIL_USE_TLS')
 
 # Django reset password
 DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = 24

@@ -20,7 +20,6 @@ class Member(SoftDeletionModel):
     SOCIAL_CHOICES = (
         (0, 'email'),
         (1, 'line'),
-        (2, 'phone')
     )
 
     ROLE_CHOICES = (

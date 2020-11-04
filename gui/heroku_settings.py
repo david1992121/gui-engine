@@ -69,7 +69,9 @@ ROOT_URLCONF = 'gui.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -219,3 +221,9 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 EMAIL_FROM_USER = os.environ.get('EMAIL_FROM_USER')
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+
+# LINE Settings
+LINE_CLIENT_ID = os.environ.get('LINE_CLIENT_ID')
+LINE_CLIENT_SECRET = os.environ.get('LINE_CLIENT_SECRET')
+LINE_CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET')
+LINE_CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
