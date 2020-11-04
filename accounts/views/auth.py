@@ -81,11 +81,11 @@ class LineLoginView(APIView):
                 line_email = decoded_payload['email']
                 role = int(decoded_payload['nonce'])
 
-                user_obj, _ = Member.objects.get_or_create(
+                user_obj, is_created = Member.objects.get_or_create(
                     email=line_email
                 )
 
-                if user_obj.username == '':
+                if is_created:
                     user_obj.username = 'user_{}'.format(user_obj.id)
 
                 if role == 0 and user_obj.role == 1:
