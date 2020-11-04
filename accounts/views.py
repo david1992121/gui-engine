@@ -2,12 +2,13 @@ from django.shortcuts import render
 from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.contrib.sites.shortcuts import get_current_site
+from django.shortcuts import redirect
 from django.template.loader import render_to_string
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_text
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 
 from rest_framework import status, generics
 from rest_framework.generics import CreateAPIView, GenericAPIView
@@ -19,11 +20,19 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from .models import Member
-from .tokens import account_activation_token
 from .serializers import *
+from threading import Thread
 
-# Create your views here.
-class EmailView(APIView):
+
+class EmailLoginView(JSONWebTokenAPIView):
+    """
+    API View that receives a POST with a user's email and password.
+    Returns a JSON Web Token that can be used for authenticated requests.
+    """
+    serializer_class = CustomJWTSerializer
+
+
+class EmailRegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -43,15 +52,54 @@ class EmailView(APIView):
                 user.set_password(password)
                 user.save()
                 
+                to_email = user.email
+                cur_token = default_token_generator.make_token(user)
+                email = urlsafe_b64encode(str(user.email).encode('utf-8'))
+
                 # now send email
-                current_site = get_current_site(request)
-                mail_subject = 'メールを確認してください',
-                message = render_to_string('email_templates\\email_verification.html', {
-                    'site_url': settings.SITE_URL,
-                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                    'token': account_activation_token.make_token(user),
+                mail_subject = 'メールを確認してください'
+                message = render_to_string('emails\\email_verification.html', {
+                    'site_url': settings.SITE_URL,                    
+                    'token': f'{email.decode("utf-8")}/{cur_token}',
                 })
-                to_email = email
-                send_mail(mail_subject, message, 'noreply@email.com', [to_email])
+
+                t = Thread(target = sendmail_thread, args = (mail_subject, message, "noreply@gmail.com", to_email))
+                t.start()
+            
+            return Response({
+                "success": True
+            }, status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+# send email function 
+def sendmail_thread(mail_subject, message, from_email, to_email):
+    send_mail(mail_subject, message, settings.EMAIL_HOST_USER, [to_email])
+
+# verify token
+def verify_token(email, email_token):
+    try:
+        users = get_user_model().objects.filter(email=urlsafe_b64decode(email).decode("utf-8"))
+        for user in users:
+            print("user found")
+            valid = default_token_generator.check_token(user, email_token)
+            if valid:
+                user.is_verified = True
+                user.save()
+                return valid
+    except b64Error:
+        pass
+    return False
+
+# verify
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def verify_email(request, email, email_token):
+    try:        
+        target_link = settings.LOGIN_URL
+        if verify_token(email, email_token):
+            return redirect(target_link)
+        else:
+            return render(request, "emails\\email_error", {'success': false, 'link': target_link})
+    except AttributeError:
+        raise NotAllFieldCompiled('EMAIL_PAGE_TEMPLATE field not found')

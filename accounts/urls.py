@@ -3,5 +3,7 @@ from .views import *
 from django.conf.urls import url
 
 urlpatterns = [
-    path('email', EmailView.as_view(), name = "email_view"),
+    path('email/register', EmailRegisterView.as_view(), name = "email_view"),
+    path('email/login', EmailLoginView.as_view(), name = "email_login"),
+    path('<str:email>/<str:email_token>', verify_email, name="verify_token"),
 ]
