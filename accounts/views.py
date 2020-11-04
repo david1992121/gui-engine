@@ -130,7 +130,7 @@ def verify_email(request, email, email_token):
         if verify_token(email, email_token):
             return redirect(target_link)
         else:
-            return render(request, "emails\\email_error", {'success': false, 'link': target_link})
+            return render(request, "emails\\email_error.html", {'success': False, 'link': target_link})
     except AttributeError:
         raise NotAllFieldCompiled('EMAIL_PAGE_TEMPLATE field not found')
 
