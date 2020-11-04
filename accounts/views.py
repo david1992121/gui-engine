@@ -46,9 +46,14 @@ class LineLoginView(APIView):
 
             if is_line_ok:
                 if Member.objects.filter(line_id = line_id).count() == 0:
-                    Member.objects.create(line_id = line_id)
+                    Member.objects.create(line_id = line_id, is_verified = True)
 
                 user_obj = Member.objects.filter(line_id = line_id).first()
+
+                # verify
+                if not user_obj.is_active:
+                    return { "Your account is blocked", status.HTTP_400_BAD_REQUEST }
+
                 return {
                     'token': self.get_token(user_obj),
                     'user': MemberSerializer(user_obj).data
