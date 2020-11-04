@@ -22,10 +22,10 @@ class SNSAuthorizeSerializer(serializers.Serializer):
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
 
-    def get_token(self, object):
+    def get_token(self, obj):
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
         jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-        payload = jwt_payload_handler(object)
+        payload = jwt_payload_handler(obj)
         token = jwt_encode_handler(payload)
         return token
 
@@ -73,9 +73,9 @@ class MediaImageSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image = validated_data.pop('uri')
-        curMediaImage = Media.objects.create(**validated_data)
-        curMediaImage.image = image
-        curMediaImage.save()
+        current_media_image = Media.objects.create(**validated_data)
+        current_media_image.image = image
+        current_media_image.save()
         return True
 
 

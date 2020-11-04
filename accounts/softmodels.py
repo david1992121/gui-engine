@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
+
 class SoftDeletionQuerySet(QuerySet):
     def delete(self):
         return super(SoftDeletionQuerySet, self).update(deleted_at=timezone.now())
@@ -16,6 +17,7 @@ class SoftDeletionQuerySet(QuerySet):
     def dead(self):
         return self.exclude(deleted_at=None)
 
+
 class SoftDeletionManager(BaseUserManager):
     def __init__(self, *args, **kwargs):
         self.alive_only = kwargs.pop('alive_only', True)
@@ -23,10 +25,11 @@ class SoftDeletionManager(BaseUserManager):
 
     def _create_user(self, username, email, password, **extra_fields):
         if email:
-            user = self.model(email=self.normalize_email(email), **extra_fields)            
+            user = self.model(
+                email=self.normalize_email(email), **extra_fields)
         else:
             user = self.model(**extra_fields)
-        
+
         if password:
             user.set_password(password)
         user.save(using=self._db)

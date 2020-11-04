@@ -1,31 +1,36 @@
+"""
+APIs for Accounts
+"""
+
+import json
+from threading import Thread
+from base64 import urlsafe_b64decode, urlsafe_b64encode
+import jwt
+import requests
+
 from django.shortcuts import render
 from django.conf import settings
-from django.db.models import Q
-from django.utils import timezone
-from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import redirect
 from django.dispatch import receiver
 from django.template.loader import render_to_string
-from django.utils.encoding import force_bytes, force_text
-from base64 import urlsafe_b64decode, urlsafe_b64encode
 
-from rest_framework import status, generics
-from rest_framework.generics import CreateAPIView, GenericAPIView
-from rest_framework_jwt.settings import api_settings
+from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission, SAFE_METHODS
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.views import JSONWebTokenAPIView
 
 from django_rest_passwordreset.signals import reset_password_token_created
 
-
 from accounts.models import Member
-from accounts.serializers import *
-from threading import Thread
+from accounts.serializers import EmailJWTSerializer
+from accounts.serializers import EmailRegisterSerializer
+from accounts.serializers import SNSAuthorizeSerializer
+from accounts.serializers import MemberSerializer
 
 
 class EmailLoginView(JSONWebTokenAPIView):
@@ -33,40 +38,61 @@ class EmailLoginView(JSONWebTokenAPIView):
 
 
 class LineLoginView(APIView):
+    """APIs for LINE Authorization"""
     permission_classes = [AllowAny]
 
-    def get_token(self, object):
+    def get_token(self, obj):
+        """Generate JWT Token"""
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
         jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-        payload = jwt_payload_handler(object)
+        payload = jwt_payload_handler(obj)
         token = jwt_encode_handler(payload)
         return token
 
     def post(self, request):
+        """Authorize with LINE"""
         serializer = SNSAuthorizeSerializer(data=request.data)
+
         if serializer.is_valid():
-            input_data = serializer.data
-            line_id = input_data.get('line_id')
+            line_code = serializer.data.get('code')
 
-            # line verification with line_id
-            is_line_ok = True
+            url = "https://api.line.me/oauth2/v2.1/token"
 
-            if is_line_ok:
-                if Member.objects.filter(line_id=line_id).count() == 0:
-                    user_obj = Member.objects.create(
-                        line_id=line_id, is_verified=True)
-                    user_obj.username = "user_{}".format(user_obj.id)
-                else:
-                    user_obj = Member.objects.filter(line_id=line_id).first()
+            payload = 'grant_type=authorization_code' + \
+                '&code=' + line_code + \
+                '&redirect_uri=' + settings.CLIENT_URL + '/account/result' + \
+                '&client_id=' + settings.LINE_CLIENT_ID + \
+                '&client_secret=' + settings.LINE_CLIENT_SECRET
 
-                # verify
-                if not user_obj.is_active:
-                    return {"Your account is blocked", status.HTTP_400_BAD_REQUEST}
+            headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
 
-                return {
+            response = requests.request(
+                "POST", url, headers=headers, data=payload)
+
+            id_token = json.loads(
+                response.text.encode('utf8')).get('id_token', '')
+
+            try:
+                decoded_payload = jwt.decode(id_token, None, None)
+                line_id = decoded_payload['sub']
+                line_email = decoded_payload['email']
+
+                user_obj, _ = Member.objects.get_or_create(email=line_email)
+                user_obj.social_type = 1
+                user_obj.social_id = line_id
+                user_obj.username = "user_{}".format(user_obj.id)
+                user_obj.is_verified = True
+                user_obj.save()
+
+                return Response({
                     'token': self.get_token(user_obj),
                     'user': MemberSerializer(user_obj).data
-                }
+                }, status.HTTP_200_OK)
+
+            except jwt.exceptions.InvalidSignatureError:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(status.HTTP_400_BAD_REQUEST)
 
@@ -75,6 +101,7 @@ class EmailRegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """Signup with Email"""
         serializer = EmailRegisterSerializer(data=request.data)
         if serializer.is_valid():
             input_data = serializer.data
@@ -114,12 +141,15 @@ class EmailRegisterView(APIView):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-# send email function
-def sendmail_thread(mail_subject, message, from_email, to_email, template):
-    send_mail(mail_subject, message, from_email, to_email, html_message=template)
 
-# verify token
+def sendmail_thread(mail_subject, message, from_email, to_email, template):
+    """Send Email using thread"""
+    send_mail(mail_subject, message, from_email,
+              to_email, html_message=template)
+
+
 def verify_token(email, email_token):
+    """Return token verification result"""
     try:
         users = get_user_model().objects.filter(
             email=urlsafe_b64decode(email).decode("utf-8"))
@@ -134,23 +164,29 @@ def verify_token(email, email_token):
         pass
     return False
 
-# verify
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def verify_email(request, email, email_token):
+    """Verify Email"""
     try:
         target_link = settings.CLIENT_URL + "/account/result?type=email_verified"
         if verify_token(email, email_token):
             return redirect(target_link)
         else:
-            return render(request, "emails\\email_error.html", {'success': False, 'link': target_link})
+            return render(
+                request,
+                "emails\\email_error.html",
+                {'success': False, 'link': target_link}
+            )
     except:
         pass
 
-# get user info
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_profile(request):
+    """Get User Information"""
     cur_user = request.user
     serializer = MemberSerializer(cur_user)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -158,9 +194,9 @@ def get_user_profile(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def resend_email(request, id = None):
-    user_id = id
-    user = Member.objects.get(pk = user_id)
+def resend_email(request, user_id=None):
+    """Resend Verification Email"""
+    user = Member.objects.get(pk=user_id)
 
     if user and not user.is_verified:
         # now send email
@@ -180,17 +216,21 @@ def resend_email(request, id = None):
     else:
         return Response(status.HTTP_400_BAD_REQUEST)
 
+
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
-    target_link = "{}/account/result?type=reset_password&token={}".format(settings.CLIENT_URL, reset_password_token.key)
-    html_template = render_to_string("emails\\password_forgotten.html", { 'link': target_link })
+    target_link = "{}/account/result?type=reset_password&token={}".format(
+        settings.CLIENT_URL, reset_password_token.key)
+    html_template = render_to_string(
+        "emails\\password_forgotten.html", {'link': target_link})
     print(reset_password_token.user.email)
 
     mail_subject = "パスワードリセット"
     message = "パスワードトークンを確認してください"
     from_user = settings.EMAIL_FROM_USER
     receipient = [reset_password_token.user.email]
-    
-    t = Thread(target=sendmail_thread, args=(mail_subject, message, from_user, receipient, html_template))
+
+    t = Thread(target=sendmail_thread, args=(
+        mail_subject, message, from_user, receipient, html_template))
     t.start()
