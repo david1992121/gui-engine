@@ -222,7 +222,7 @@ def resend_email(request):
         mail_subject = 'メールを確認してください'
         message = render_to_string('emails/email_verification.html', {
             'site_url': settings.SITE_URL,
-            'token': f'{email.decode("utf-8")}/{cur_token}',
+            'token': f'verify/{email.decode("utf-8")}/{cur_token}',
         })
 
         t = Thread(target=send_mail, args=(

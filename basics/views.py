@@ -69,8 +69,8 @@ class LocationChangeOrder(APIView):
             return Response(status = status.HTTP_400_BAD_REQUEST)
         
 class ClassesView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
-    queryset = Location.objects.all()
-    serializer_class = LocationSerializer
+    queryset = CastClass.objects.all()
+    serializer_class = ClassesSerializer
     
     def get_permissions(self):
         if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
@@ -78,5 +78,8 @@ class ClassesView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Destr
         else:
             self.permission_classes = [IsAuthenticated]
         
-        return super(LocationView, self).get_permissions()
-    
+        return super(ClassesView, self).get_permissions()
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
