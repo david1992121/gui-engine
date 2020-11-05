@@ -209,9 +209,12 @@ def get_user_profile(request):
 def resend_email(request):
     """Resend Verification Email"""
     email = request.data.get('email', "")
-    user = Member.objects.get(email = email)
+    try:
+        user = Member.objects.get(email = email)
+    except: 
+        return Response("Email is not correct", status.HTTP_400_BAD_REQUEST)
 
-    if user and not user.is_verified:
+    if not user.is_verified:
         # now send email
         to_email = [user.email]
         cur_token = default_token_generator.make_token(user)
@@ -227,7 +230,7 @@ def resend_email(request):
 
         return Response(status.HTTP_200_OK)
     else:
-        return Response(status.HTTP_400_BAD_REQUEST)
+        return Response("User is already verified", status.HTTP_400_BAD_REQUEST)
 
 
 @receiver(reset_password_token_created)
