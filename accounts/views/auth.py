@@ -225,7 +225,7 @@ def resend_email(request):
             'token': f'{email.decode("utf-8")}/{cur_token}',
         })
 
-        t = Thread(target=sendmail_thread, args=(
+        t = Thread(target=send_mail, args=(
             mail_subject, message, settings.EMAIL_FROM_USER, to_email))
         t.start()
 
