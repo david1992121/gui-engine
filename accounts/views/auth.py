@@ -217,6 +217,7 @@ def resend_email(request):
     if not user.is_verified:
         # now send email
         to_email = [user.email]
+        email = urlsafe_b64encode(str(user.email).encode('utf-8'))
         cur_token = default_token_generator.make_token(user)
         mail_subject = 'メールを確認してください'
         message = render_to_string('emails/email_verification.html', {
