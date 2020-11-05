@@ -30,7 +30,9 @@ from django_rest_passwordreset.signals import reset_password_token_created
 from accounts.models import Member
 from accounts.serializers.auth import *
 
+
 class EmailLoginView(JSONWebTokenAPIView):
+    """APIs for Email Login"""
     serializer_class = EmailJWTSerializer
 
 
@@ -91,11 +93,12 @@ class LineLoginView(APIView):
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
                 user_obj.is_verified = True
+                user_obj.last_login = timezone.now()
                 user_obj.save()
 
                 return Response({
                     'token': self.get_token(user_obj),
-                    'user': MemberSerializer(user_obj).data,                    
+                    'user': MemberSerializer(user_obj).data,
                 }, status.HTTP_200_OK)
 
             except jwt.exceptions.InvalidSignatureError:
@@ -105,6 +108,7 @@ class LineLoginView(APIView):
 
 
 class EmailRegisterView(APIView):
+    """APIs for Email Registeration"""
     permission_classes = [AllowAny]
 
     def post(self, request):

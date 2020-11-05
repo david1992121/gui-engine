@@ -77,6 +77,12 @@ gunicorn = "==20.0.4"
 toml = "==0.10.2"
 pyOpenSSL = "==19.1.0"
 django-rest-passwordreset = "==1.1.0"
+boto3 = "==1.16.11"
+botocore = "==1.19.11"
+django-storages = "==1.10.1"
+jmespath = "==0.10.0"
+python-dateutil = "==2.8.1"
+s3transfer = "==0.3.3"
 
 [requires]
 python_version = "3.7.5"
