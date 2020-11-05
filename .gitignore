@@ -123,3 +123,4 @@ media/
 /pac/uwsgi.ini
 /pac/uwsgi.pid
 /pac/uwsgi.status
+/static/images/*.jpg

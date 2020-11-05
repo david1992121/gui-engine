@@ -10,6 +10,7 @@ from rest_framework_jwt.settings import api_settings
 from drf_extra_fields.fields import Base64ImageField
 from accounts.models import Member, Media
 from datetime import datetime
+from dateutil import parser
 
 def file_validator(file):
     max_file_size = 1024 * 1024 * 1  # 1MB
@@ -20,7 +21,7 @@ def file_validator(file):
 
 class InitialInfoRegisterSerializer(serializers.Serializer):
     media = serializers.FileField( max_length = 1000000, allow_empty_file = False, use_url = False,
-        validators = [file_validator] )
+        validators = [file_validator], write_only = True )
     nickname = serializers.CharField()
     birthday = serializers.CharField()
 
@@ -31,7 +32,7 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 
         # save user
         instance.nickname = validated_data['nickname']
-        instance.birthday = datetime.fromisoformat(validated_data['birthday'])
+        instance.birthday = parser.isoparse(validated_data['birthday'])
         instance.avatars.add(media_image)
         instance.is_registered = True
         instance.save()

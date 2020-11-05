@@ -14,10 +14,9 @@ class InitialRegister(APIView):
         cur_user = request.user
         serializer = InitialInfoRegisterSerializer(cur_user, request.data)
         if not cur_user.is_registered and serializer.is_valid():
-            save_result = serializer.save()
-            if save_result:
-                return Response(MemberSerializer(serializer.data), status.HTTP_200_OK)
-            else:
-                return Response(status.HTTP_409_CONFLICT)
+            if Member.objects.exclude(id = cur_user.id).filter(nickname = request.data['nickname']).count() > 0:
+                return Response(status = status.HTTP_409_CONFLICT)
+            updated_user = serializer.save()
+            return Response(MemberSerializer(updated_user).data, status.HTTP_200_OK)
         else:
-            return Response(status.HTTP_400_BAD_REQUEST)
+            return Response(status = status.HTTP_400_BAD_REQUEST)

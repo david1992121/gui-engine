@@ -21,5 +21,5 @@ urlpatterns = [
     path('info', get_user_profile, name="user_info"),   
 
     # upload info
-    path('info/initialize', InitialRegister.as_view(), name="info_register")
+    path('initialize', InitialRegister.as_view(), name="info_register")
 ]
