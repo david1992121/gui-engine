@@ -3,6 +3,7 @@ Serializers for Member
 """
 
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings

@@ -12,12 +12,6 @@ from drf_extra_fields.fields import Base64ImageField
 from accounts.models import Member, Media
 
 
-def file_validator(file):
-    max_file_size = 1024 * 1024 * 1  # 1MB
-
-    if file.size > max_file_size:
-        raise serializers.ValidationError(_('Max file size is {} and your file size is {}'.
-            format(max_file_size, file.size)))
 class EmailRegisterSerializer(serializers.Serializer):
     """Serializer for Email Register"""
     email = serializers.EmailField()
