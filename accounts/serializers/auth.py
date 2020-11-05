@@ -21,6 +21,49 @@ class EmailRegisterSerializer(serializers.Serializer):
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
 
+class AdminEmailJWTSerializer(JSONWebTokenSerializer):
+    username_field = 'email'
+
+    def get_token(self, obj):
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+        payload = jwt_payload_handler(obj)
+        token = jwt_encode_handler(payload)
+        return token
+
+    def validate(self, attrs):
+        credentials = {
+            'email': '',
+            'password': attrs.get("password")
+        }
+
+        user_obj = Member.objects.filter(email=attrs.get("email"), role__lt = 0).first()
+        if user_obj:
+            credentials['email'] = user_obj.email
+
+            if all(credentials.values()):
+                if user_obj.check_password(attrs.get('password')):
+                    if not user_obj.is_active:
+                        msg = "Your account is blocked"
+                        raise serializers.ValidationError(msg)
+                    else:
+                        user_obj.last_login = timezone.now()
+                        user_obj.save()
+                        return {
+                            'token': self.get_token(user_obj),
+                            'user': MemberSerializer(user_obj).data
+                        }
+                else:
+                    msg = 'Password is not correct'
+                    raise serializers.ValidationError(msg)
+            else:
+                msg = 'Must include "email" and "password".'
+                msg = msg.format(username_field=self.username_field)
+                raise serializers.ValidationError(msg)
+        else:
+            msg = 'Account with this email does not exist'
+            raise serializers.ValidationError(msg)
+
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
 

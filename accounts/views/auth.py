@@ -33,7 +33,8 @@ from accounts.serializers.auth import *
 class EmailLoginView(JSONWebTokenAPIView):
     serializer_class = EmailJWTSerializer
 
-
+class AdminLoginView(JSONWebTokenAPIView):
+    serializer_class = AdminEmailJWTSerializer
 class LineLoginView(APIView):
     """APIs for LINE Authorization"""
     permission_classes = [AllowAny]
@@ -134,7 +135,7 @@ class EmailRegisterView(APIView):
                 mail_subject = 'メールを確認してください'
                 message = render_to_string('emails\\email_verification.html', {
                     'site_url': settings.SITE_URL,
-                    'token': f'{email.decode("utf-8")}/{cur_token}',
+                    'token': f'verify/{email.decode("utf-8")}/{cur_token}',
                 })
 
                 t = Thread(target=send_mail, args=(
@@ -199,11 +200,12 @@ def get_user_profile(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
-def resend_email(request, user_id=None):
+def resend_email(request):
     """Resend Verification Email"""
-    user = Member.objects.get(pk=user_id)
+    email = request.data.get('email', "")
+    user = Member.objects.get(email = email)
 
     if user and not user.is_verified:
         # now send email

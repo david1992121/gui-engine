@@ -29,13 +29,31 @@ class GuestLevel(models.Model):
         return self.name
 
     name = models.CharField('名前', unique=True, max_length=190)
-    en_name = models.CharField('名前', unique=True, max_length=190)
+    en_name = models.CharField('名前', unique=True, null = True, blank = True, max_length=190)
     point = models.IntegerField('しきい値', default=0)
+    color = models.CharField('色', null = True, blank = True, max_length=190)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
 
+    
 class CastClass(models.Model):
     def __str__(self):
         return self.name
 
     name = models.CharField('名前', unique=True, max_length=190)
-    en_name = models.CharField('名前', unique=True, max_length=190)
+    en_name = models.CharField('英語名前', unique=True, null = True, blank = True, max_length=190)
+    color = models.CharField('色', null = True, blank = True, max_length=190)
     point = models.IntegerField('しきい値', default=0)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class Location(models.Model):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField('エリア', max_length=190)
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, verbose_name='親エリア', null = True, blank = True)
+    shown = models.BooleanField('表示', default = False)
+    order = models.IntegerField('順序', default = 0)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
