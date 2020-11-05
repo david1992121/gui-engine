@@ -30,7 +30,9 @@ from django_rest_passwordreset.signals import reset_password_token_created
 from accounts.models import Member
 from accounts.serializers.auth import *
 
+
 class EmailLoginView(JSONWebTokenAPIView):
+    """APIs for Email Login"""
     serializer_class = EmailJWTSerializer
 
 class AdminLoginView(JSONWebTokenAPIView):
@@ -92,11 +94,12 @@ class LineLoginView(APIView):
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
                 user_obj.is_verified = True
+                user_obj.last_login = timezone.now()
                 user_obj.save()
 
                 return Response({
                     'token': self.get_token(user_obj),
-                    'user': MemberSerializer(user_obj).data,                    
+                    'user': MemberSerializer(user_obj).data,
                 }, status.HTTP_200_OK)
 
             except jwt.exceptions.InvalidSignatureError:
@@ -106,6 +109,7 @@ class LineLoginView(APIView):
 
 
 class EmailRegisterView(APIView):
+    """APIs for Email Registeration"""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -133,7 +137,7 @@ class EmailRegisterView(APIView):
 
                 # now send email
                 mail_subject = 'メールを確認してください'
-                message = render_to_string('emails\\email_verification.html', {
+                message = render_to_string('emails/email_verification.html', {
                     'site_url': settings.SITE_URL,
                     'token': f'verify/{email.decode("utf-8")}/{cur_token}',
                 })
@@ -184,7 +188,7 @@ def verify_email(request, email, email_token):
         else:
             return render(
                 request,
-                "emails\\email_error.html",
+                "emails/email_error.html",
                 {'success': False, 'link': target_link}
             )
     except:
@@ -212,7 +216,7 @@ def resend_email(request):
         to_email = [user.email]
         cur_token = default_token_generator.make_token(user)
         mail_subject = 'メールを確認してください'
-        message = render_to_string('emails\\email_verification.html', {
+        message = render_to_string('emails/email_verification.html', {
             'site_url': settings.SITE_URL,
             'token': f'{user.email.decode("utf-8")}/{cur_token}',
         })
@@ -232,7 +236,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
     target_link = "{}/account/result?type=reset_password&token={}".format(
         settings.CLIENT_URL, reset_password_token.key)
     html_template = render_to_string(
-        "emails\\password_forgotten.html", {'link': target_link})
+        "emails/password_forgotten.html", {'link': target_link})
     print(reset_password_token.user.email)
 
     mail_subject = "パスワードリセット"

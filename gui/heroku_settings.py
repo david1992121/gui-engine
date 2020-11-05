@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',
     'rest_framework',
+    'django_rest_passwordreset',
     'corsheaders',
     'channels',
     'chat',
@@ -177,7 +178,7 @@ REST_FRAMEWORK = {
 CORS_ORIGIN_ALLOW_ALL = True
 
 
-# Jwt Authentication
+# JWT Authentication
 JWT_AUTH = {
     'JWT_SECRET_KEY': SECRET_KEY,
     'JWT_VERIFY': True,
@@ -209,7 +210,7 @@ DJANGORESIZED_DEFAULT_FORMAT_EXTENSIONS = {'JPEG': ".jpg"}
 DJANGORESIZED_DEFAULT_NORMALIZE_ROTATION = True
 
 
-# Site URL
+# Base URLs
 SITE_URL = os.environ.get('SITE_URL')
 CLIENT_URL = os.environ.get('CLIENT_URL')
 
