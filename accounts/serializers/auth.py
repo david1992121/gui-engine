@@ -21,6 +21,7 @@ class EmailRegisterSerializer(serializers.Serializer):
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
 
+
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
 

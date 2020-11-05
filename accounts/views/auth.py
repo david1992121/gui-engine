@@ -136,7 +136,7 @@ class EmailRegisterView(APIView):
 
                 # now send email
                 mail_subject = 'メールを確認してください'
-                message = render_to_string('emails\\email_verification.html', {
+                message = render_to_string('emails/email_verification.html', {
                     'site_url': settings.SITE_URL,
                     'token': f'{email.decode("utf-8")}/{cur_token}',
                 })
@@ -187,7 +187,7 @@ def verify_email(request, email, email_token):
         else:
             return render(
                 request,
-                "emails\\email_error.html",
+                "emails/email_error.html",
                 {'success': False, 'link': target_link}
             )
     except:
@@ -214,7 +214,7 @@ def resend_email(request, user_id=None):
         to_email = [user.email]
         cur_token = default_token_generator.make_token(user)
         mail_subject = 'メールを確認してください'
-        message = render_to_string('emails\\email_verification.html', {
+        message = render_to_string('emails/email_verification.html', {
             'site_url': settings.SITE_URL,
             'token': f'{user.email.decode("utf-8")}/{cur_token}',
         })
@@ -234,7 +234,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
     target_link = "{}/account/result?type=reset_password&token={}".format(
         settings.CLIENT_URL, reset_password_token.key)
     html_template = render_to_string(
-        "emails\\password_forgotten.html", {'link': target_link})
+        "emails/password_forgotten.html", {'link': target_link})
     print(reset_password_token.user.email)
 
     mail_subject = "パスワードリセット"
