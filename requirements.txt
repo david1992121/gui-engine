@@ -6,6 +6,8 @@ attrs==20.2.0
 autobahn==20.7.1
 Automat==20.2.0
 autopep8==1.5.2
+boto3==1.16.11
+botocore==1.19.11
 certifi==2020.6.20
 cffi==1.14.3
 channels==3.0.0
@@ -24,6 +26,7 @@ django-environ==0.4.5
 django-extra-fields==3.0.2
 django-resized==0.3.11
 django-rest-passwordreset==1.1.0
+django-storages==1.10.1
 djangorestframework==3.12.1
 djangorestframework-jwt==1.11.0
 drf-yasg==1.20.0
@@ -35,6 +38,7 @@ inflection==0.5.1
 isort==4.3.21
 itypes==1.2.0
 Jinja2==2.11.2
+jmespath==0.10.0
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
@@ -57,6 +61,7 @@ pytz==2020.4
 requests==2.24.0
 ruamel.yaml==0.16.12
 ruamel.yaml.clib==0.2.2
+s3transfer==0.3.3
 service-identity==18.1.0
 six==1.15.0
 sqlparse==0.4.1
