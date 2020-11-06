@@ -53,12 +53,14 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'nickname',
             'birthday',
             'avatars',
+            'role'
         )
         model = Member
 
 class TweetSerializer(serializers.ModelSerializer):
     media = Base64ImageField(required = False, write_only = True)
     likers = serializers.SerializerMethodField()
+    user = MainInfoSerializer()
     class Meta:
         fields = ("id", "content", "image", "user", "likers", "created_at", "media")
         model = Tweet
