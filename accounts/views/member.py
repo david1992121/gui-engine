@@ -25,7 +25,7 @@ class InitialRegister(APIView):
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
-class TweetView(mixins.ListModelMixin, generics.GenericAPIView):
+class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TweetSerializer
     pagination_class = TweetPagination
@@ -35,6 +35,12 @@ class TweetView(mixins.ListModelMixin, generics.GenericAPIView):
         
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

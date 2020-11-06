@@ -95,8 +95,8 @@ class FavoriteTweet(models.Model):
     def __unicode__(self):
         return self.name()
 
-    liker = models.ForeignKey(Member, null = True, on_delete=models.SET_NULL, related_name="tweet_favorites", verbose_name="ユーザー")
-    tweet = models.ForeignKey(Tweet, null = True, on_delete = models.SET_NULL, related_name="tweet_likers", verbose_name="つぶやき")
+    liker = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, related_name="tweet_favorites", verbose_name="ユーザー")
+    tweet = models.ForeignKey(Tweet, on_delete = models.SET_NULL, null = True, related_name="tweet_likers", verbose_name="つぶやき")
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
 
     def name(self):
