@@ -1,11 +1,14 @@
 
 from rest_framework import status
+from rest_framework import generics
+from rest_framework import mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer
+from accounts.models import Member, Tweet
 
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]
@@ -20,3 +23,12 @@ class InitialRegister(APIView):
             return Response(MemberSerializer(updated_user).data, status.HTTP_200_OK)
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class TweetView(mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Tweet.objects.order_by("-created_at")
+        
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)

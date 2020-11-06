@@ -79,3 +79,32 @@ class Member(SoftDeletionModel):
         verbose_name = 'ユーザー'
         verbose_name_plural = 'ユーザー'
         unique_together = ('social_type', 'social_id')
+
+class Tweet(models.Model):
+    def __str__(self):
+        return self.title
+
+    content = models.TextField('内容', null = True, blank = True)
+    image = models.ForeignKey(Media, verbose_name='画像', on_delete=models.SET_NULL, null = True, blank = True)
+    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, blank = True)    
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+# Like Model
+class FavoriteTweet(models.Model):
+    def __unicode__(self):
+        return self.name()
+
+    liker = models.ForeignKey(Member, null = True, on_delete=models.SET_NULL, related_name="tweet_favorites", verbose_name="ユーザー")
+    favorite = models.ForeignKey(Tweet, null = True, on_delete = models.SET_NULL, related_name="tweet_likers", verbose_name="つぶやき")
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    def name(self):
+        return str(self.liker) + "💖" + self.favorite.title + "(" + str(self.favorite.creator) + ")"
+
+    name.short_description = "名称"
+    name.tags_allowed = True
+
+    class Meta:
+        verbose_name = "つぶやき-イイネ関係"
+        verbose_name_plural = "つぶやき-イイネ関係"

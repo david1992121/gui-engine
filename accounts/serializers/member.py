@@ -8,9 +8,11 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
 
+from rest_framework.pagination import PageNumberPagination
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Member, Media
+from accounts.models import Media, Tweet
 from datetime import datetime
+from rest_framework.response import Response
 
 
 def file_validator(file):
@@ -40,3 +42,19 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
         instance.save()
 
         return instance
+
+class TweetSerializer(serializers.ModelSerializer):
+    hearts = serializers.SerializerMethodField()
+    class Meta:
+        fields = ("id", "content", "image", "user", "hearts")
+
+    def get_hearts(self, obj):
+        return obj.tweet_likers.count()
+
+class TweetPagination(PageNumberPagination):
+    page_size = 10
+
+    def get_paginated_response(self, data):        
+        return Response({
+            'results': data
+        })
