@@ -158,7 +158,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'gui/static')]
 
 # Location where storage compressed manifest static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 # REST framework
@@ -232,3 +232,9 @@ LINE_CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
 # Django reset password
 DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = 24
 DJANGO_REST_MULTITOKENAUTH_REQUIRE_USABLE_PASSWORD = False
+
+# Amazon setting
+AWS_ACCESS_KEY_ID = 'AKIAXXBMENB4GK42NLG3'
+AWS_SECRET_ACCESS_KEY = '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'
+AWS_S3_BUCKET_NAME = 'gui-service'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
