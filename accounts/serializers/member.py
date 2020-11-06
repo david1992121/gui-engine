@@ -46,7 +46,7 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 class TweetSerializer(serializers.ModelSerializer):
     hearts = serializers.SerializerMethodField()
     class Meta:
-        fields = ("id", "content", "image", "user", "hearts")
+        fields = ("id", "content", "image", "user", "hearts", "updated_at")
 
     def get_hearts(self, obj):
         return obj.tweet_likers.count()
