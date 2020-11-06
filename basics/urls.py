@@ -14,5 +14,5 @@ urlpatterns = [
 
     # class
     path('classes', ClassesView.as_view(), name="classes_view"),
-    
+    path('classes/<int:pk>', ClassesView.as_view(), name="classes_detail_view"),
 ]

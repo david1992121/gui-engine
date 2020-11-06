@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import RegexValidator
 
 # Create your models here.
 class Setting(models.Model):
@@ -57,3 +58,32 @@ class Location(models.Model):
     order = models.IntegerField('順序', default = 0)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class Choice(models.Model):
+    def __str__(self):
+        return self.name
+    
+    CATEGORY_CHOICES = (
+        ('s', 'situation'),
+        ('r', 'request'),
+        ('c', 'condition')
+    )
+    name = models.CharField('名称', max_length=100)
+    category = models.CharField('カテゴリ', choices = CATEGORY_CHOICES, default = 's', max_length = 2)
+    subcategory = models.CharField('サブカテゴリ', default = "", max_length = 50)
+    order = models.IntegerField('順序', default = 0)
+    call_shown = models.BooleanField('有効設定', default = True)
+    cast_shown = models.BooleanField('キャスト表示', default = True)
+    customer_shown = models.BooleanField('カスタマ項目', default = True)
+    sub_one = models.BooleanField('サブカテゴリ内単一設定', default = False)
+
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class ReceiptSetting(models.Model):
+    company_name = models.CharField('会社名', max_length = 100)
+    postal_code = models.CharField('', max_length=8, validators=[RegexValidator(r'^\d\d\d-\d\d\d\d$')])
+    address = models.CharField('住所', max_length=100)
+    building = models.CharField('番地・建物名', max_length=100)
+    phone_number = models.CharField('電話番号', max_length=11, validators=[RegexValidator(r'^\d\d-\d\d\d\d-\d\d\d\d$')])
+    charger = models.CharField('担当者名', max_length=20)

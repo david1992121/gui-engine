@@ -17,5 +17,5 @@ class LocationSerializer(serializers.ModelSerializer):
 class ClassesSerializer(serializers.ModelSerializer):
     
     class Meta:
-        fields = ('id', 'name', 'color', 'point')
+        fields = ('id', 'name', 'color', 'point', 'updated_at')
         model = CastClass

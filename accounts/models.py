@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django_resized import ResizedImageField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from .softmodels import SoftDeletionModel
-from basics.models import Setting, CastClass, GuestLevel
+from basics.models import Setting, CastClass, GuestLevel, Location
 
 # Create your models here.
 class Media(models.Model):
@@ -46,7 +46,7 @@ class Member(SoftDeletionModel):
     word = models.CharField('今日のひとこと', null=True, blank=True, max_length=190)
     about = models.TextField('自己紹介', null=True, blank=True)
     point = models.IntegerField('ポイント', default = 0)
-    role = models.IntegerField('ユーザーロール', choices = SOCIAL_CHOICES, default = 1)
+    role = models.IntegerField('ユーザーロール', choices = ROLE_CHOICES, default = 1)
     status = models.BooleanField('オンライン', default=False)
     setting = models.ForeignKey(Setting, on_delete=models.SET_NULL, null=True, blank=True)
     is_joining = models.BooleanField('合流中', default=False)
@@ -66,6 +66,9 @@ class Member(SoftDeletionModel):
 
     ##### card and bank #####
     axes_exist = models.BooleanField('クレカ登録', default=False)
+
+    ##### location ####
+    location = models.ForeignKey(Location, on_delete = models.SET_NULL, null = True, blank = True, verbose_name='地域')
 
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)

@@ -49,9 +49,7 @@ class LocationView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Dest
         return self.create(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        content = self.get_object()
-        content.delete()
-        return Response(status = status.HTTP_200_OK)
+        return self.destroy(request, *args, **kwargs)
     
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
@@ -68,7 +66,7 @@ class LocationChangeOrder(APIView):
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
         
-class ClassesView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class ClassesView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
     queryset = CastClass.objects.all()
     serializer_class = ClassesSerializer
     
@@ -80,6 +78,15 @@ class ClassesView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Destr
         
         return super(ClassesView, self).get_permissions()
 
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
