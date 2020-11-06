@@ -64,7 +64,8 @@ class TweetSerializer(serializers.ModelSerializer):
         , write_only = True
     )
     likers = serializers.SerializerMethodField()
-    user = MainInfoSerializer()
+    user = MainInfoSerializer(read_only = True)
+    images = MediaImageSerializer(read_only = True, many = True)
     user_id = serializers.IntegerField(write_only = True)
     class Meta:
         fields = ("id", "content", "images", "user", "likers", "created_at", "medias", "user_id")
@@ -84,10 +85,12 @@ class TweetSerializer(serializers.ModelSerializer):
                 new_media = Media.objects.create(uri = media)
                 media_ids.append(new_media.id)
         
-        newTweet = self.objects.create(**validated_data)
+        newTweet = Tweet(**validated_data)
         newTweet.user = Member.objects.get(pk = user_id)
-        newTweet.images.set(media_ids)
         newTweet.save()
+        newTweet.images.set(media_ids)
+
+        return newTweet
 
 class TweetPagination(PageNumberPagination):
     page_size = 10
