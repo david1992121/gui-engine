@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 
 # Create your models here.
 class Setting(models.Model):
@@ -70,8 +70,9 @@ class Choice(models.Model):
     )
     name = models.CharField('名称', max_length=100)
     category = models.CharField('カテゴリ', choices = CATEGORY_CHOICES, default = 's', max_length = 2)
-    subcategory = models.CharField('サブカテゴリ', default = "", max_length = 50)
+    subcategory = models.CharField('サブカテゴリ', null = True, blank = True, max_length = 50)
     order = models.IntegerField('順序', default = 0)
+    score = models.IntegerField('スコア', validators=[MinValueValidator(1), MaxValueValidator(100)], default = 5)
     call_shown = models.BooleanField('有効設定', default = True)
     cast_shown = models.BooleanField('キャスト表示', default = True)
     customer_shown = models.BooleanField('カスタマ項目', default = True)

@@ -9,7 +9,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView
 from .serializers import *
 from django.db.models.deletion import ProtectedError
-from .models import Location, CastClass
+from .models import Location, CastClass, Choice
 
 # Create your views here.
 class IsAdminPermission(BasePermission):
@@ -77,6 +77,34 @@ class ClassesView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             self.permission_classes = [IsAuthenticated]
         
         return super(ClassesView, self).get_permissions()
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class ChoiceView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    queryset = Choice.objects.all()
+    serializer_class = ChoiceSerializer
+    pagination_class = ChoicePagination
+    
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(ChoiceView, self).get_permissions()
+
+    def get_queryset(self):
+        return Choice.objects.order_by('-category', 'subcategory', 'order')
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
