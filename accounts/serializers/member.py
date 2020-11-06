@@ -60,7 +60,7 @@ class TweetSerializer(serializers.ModelSerializer):
     media = Base64ImageField(required = False, write_only = True)
     likers = serializers.SerializerMethodField()
     class Meta:
-        fields = ("id", "content", "image", "user", "likers", "updated_at", "media")
+        fields = ("id", "content", "image", "user", "likers", "created_at", "media")
         model = Tweet
 
     def get_likers(self, obj):
