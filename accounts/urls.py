@@ -26,5 +26,6 @@ urlpatterns = [
 
     # tweet
     path('tweets', TweetView.as_view(), name = "tweet_view"),
+    path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_view"),
     path('toggle-tweet', toggle_tweet, name = "tweet_toggle"),
 ]
