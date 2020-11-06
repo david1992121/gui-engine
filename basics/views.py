@@ -9,7 +9,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView
 from .serializers import *
 from django.db.models.deletion import ProtectedError
-from .models import Location, CastClass, Choice
+from .models import Location, CastClass, Choice, GuestLevel
 
 # Create your views here.
 class IsAdminPermission(BasePermission):
@@ -77,6 +77,30 @@ class ClassesView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             self.permission_classes = [IsAuthenticated]
         
         return super(ClassesView, self).get_permissions()
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class LevelsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    queryset = GuestLevel.objects.all()
+    serializer_class = LevelsSerializer
+    
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(LevelsView, self).get_permissions()
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
-from .models import Location, CastClass, Choice
+from .models import Location, CastClass, Choice, GuestLevel
 from rest_framework.response import Response
 class LocationSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
@@ -19,6 +19,11 @@ class ClassesSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'name', 'color', 'point', 'updated_at')
         model = CastClass
+
+class LevelsSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'name', 'color', 'point', 'updated_at')
+        model = GuestLevel
 
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
