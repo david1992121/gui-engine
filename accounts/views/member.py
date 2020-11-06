@@ -26,6 +26,8 @@ class InitialRegister(APIView):
 
 class TweetView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = TweetSerializer
+    pagination_class = TweetPagination
 
     def get_queryset(self):
         return Tweet.objects.order_by("-created_at")

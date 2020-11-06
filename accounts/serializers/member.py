@@ -10,7 +10,8 @@ from rest_framework_jwt.settings import api_settings
 
 from rest_framework.pagination import PageNumberPagination
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Media, Tweet
+from accounts.models import Media, Tweet, Member
+from accounts.serializers.auth import MediaImageSerializer
 from datetime import datetime
 from rest_framework.response import Response
 
@@ -43,13 +44,29 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 
         return instance
 
-class TweetSerializer(serializers.ModelSerializer):
-    hearts = serializers.SerializerMethodField()
-    class Meta:
-        fields = ("id", "content", "image", "user", "hearts", "updated_at")
+class MainInfoSerializer(serializers.ModelSerializer):
+    avatars = MediaImageSerializer(read_only=True, many=True)
 
-    def get_hearts(self, obj):
-        return obj.tweet_likers.count()
+    class Meta:
+        fields = (
+            'id',
+            'nickname',
+            'birthday',
+            'avatars',
+        )
+        model = Member
+
+class TweetSerializer(serializers.ModelSerializer):
+    media = Base64ImageField(required = False, write_only = True)
+    likers = serializers.SerializerMethodField()
+    class Meta:
+        fields = ("id", "content", "image", "user", "likers", "updated_at", "media")
+        model = Tweet
+
+    def get_likers(self, obj):
+        likers_id = obj.tweet_likers.all().values_list('liker')
+        like_users = MainInfoSerializer(Member.objects.filter(id__in = likers_id, is_registered = True), many = True)
+        return like_users.data
 
 class TweetPagination(PageNumberPagination):
     page_size = 10
