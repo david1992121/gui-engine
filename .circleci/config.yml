@@ -8,16 +8,16 @@ workflows:
   build & deploy:
     jobs:
       - build
-      - heroku/deploy-via-git:
-          requires:
-            - build
-          filters:
-            branches:
-              only: master
-          post-steps:
-            - run:
-                command: |
-                  heroku run python manage.py migrate --app $HEROKU_APP_NAME
+      # - heroku/deploy-via-git:
+      #     requires:
+      #       - build
+      #     filters:
+      #       branches:
+      #         only: master
+      #     post-steps:
+      #       - run:
+      #           command: |
+      #             heroku run python manage.py migrate --app $HEROKU_APP_NAME
 
 jobs:
   build:
