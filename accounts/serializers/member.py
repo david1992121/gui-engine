@@ -55,6 +55,4 @@ class TweetPagination(PageNumberPagination):
     page_size = 10
 
     def get_paginated_response(self, data):        
-        return Response({
-            'results': data
-        })
+        return Response(data)
