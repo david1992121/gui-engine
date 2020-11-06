@@ -25,5 +25,6 @@ urlpatterns = [
     path('initialize', InitialRegister.as_view(), name="info_register"),
 
     # tweet
-    path('tweets', TweetView.as_view(), name = "tweet_view")
+    path('tweets', TweetView.as_view(), name = "tweet_view"),
+    path('toggle-tweet', toggle_tweet, name = "tweet_toggle"),
 ]

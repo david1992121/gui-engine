@@ -66,7 +66,7 @@ class TweetSerializer(serializers.ModelSerializer):
         model = Tweet
 
     def get_likers(self, obj):
-        likers_id = obj.tweet_likers.all().values_list('liker')
+        likers_id = obj.tweet_likers.all().order_by('-created_at').values_list('liker')
         like_users = MainInfoSerializer(Member.objects.filter(id__in = likers_id, is_registered = True), many = True)
         return like_users.data
 
