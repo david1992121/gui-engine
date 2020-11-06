@@ -29,7 +29,7 @@ class ChoiceSerializer(serializers.ModelSerializer):
 class ChoicePagination(PageNumberPagination):
     page_size = 20
 
-    def get_paginated_response(self, data):        
+    def get_paginated_response(self, data):
         return Response({
             'total': Choice.objects.count(),
             'results': data

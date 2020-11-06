@@ -51,5 +51,4 @@ def toggle_tweet(request):
         like_users = MainInfoSerializer(Member.objects.filter(id__in = likers_id, is_registered = True), many = True)    
         return Response(like_users.data)
     except Exception as e:
-        print(e)
         return Response(status.HTTP_400_BAD_REQUEST)

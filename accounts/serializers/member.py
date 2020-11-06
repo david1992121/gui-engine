@@ -58,17 +58,32 @@ class MainInfoSerializer(serializers.ModelSerializer):
         model = Member
 
 class TweetSerializer(serializers.ModelSerializer):
-    media = Base64ImageField(required = False, write_only = True)
+    medias = serializers.ListField(
+        child = serializers.FileField( max_length = 100000,
+            allow_empty_file=False, use_url=False, validators=[file_validator] )
+    )
     likers = serializers.SerializerMethodField()
     user = MainInfoSerializer()
     class Meta:
-        fields = ("id", "content", "image", "user", "likers", "created_at", "media")
+        fields = ("id", "content", "images", "user", "likers", "created_at", "medias")
         model = Tweet
 
     def get_likers(self, obj):
         likers_id = obj.tweet_likers.all().order_by('-created_at').values_list('liker')
         like_users = MainInfoSerializer(Member.objects.filter(id__in = likers_id, is_registered = True), many = True)
         return like_users.data
+
+    def create(self, validated_data):
+        media_ids = []
+        if 'medias' in validated_data.keys():
+            media_images = validated_data.pop('medias')
+            for media in media_images:
+                new_media = Media.objects.create(uri = media)
+                media_ids.append(new_media.id)
+        
+        newTweet = self.objects.create(**validated_data)
+        newTweet.images.set(media_ids)
+
 
 class TweetPagination(PageNumberPagination):
     page_size = 10
