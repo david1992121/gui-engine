@@ -23,4 +23,12 @@ urlpatterns = [
     # matching choices
     path('choices', ChoiceView.as_view(), name="chioces_view"),
     path('choices/<int:pk>', ChoiceView.as_view(), name="chioces_detail_view"),
+
+    # receipt
+    path('receipt', ReceiptView.as_view(), name = "receipt_view"),
+    path('receipt/<int:pk>', ReceiptView.as_view(), name = "receipt_detail_view"),
+
+    # banner
+    path('banners', BannerView.as_view(), name = "banner_view"),
+    path('banners/<int:pk>', BannerView.as_view(), name = "banner_detail_view")
 ]

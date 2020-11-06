@@ -86,5 +86,22 @@ class ReceiptSetting(models.Model):
     postal_code = models.CharField('', max_length=8, validators=[RegexValidator(r'^\d\d\d-\d\d\d\d$')])
     address = models.CharField('住所', max_length=100)
     building = models.CharField('番地・建物名', max_length=100)
-    phone_number = models.CharField('電話番号', max_length=11, validators=[RegexValidator(r'^\d\d-\d\d\d\d-\d\d\d\d$')])
+    phone_number = models.CharField('電話番号', max_length=15, validators=[RegexValidator(r'^\d\d-\d\d\d\d-\d\d\d\d$')])
     charger = models.CharField('担当者名', max_length=20)
+
+class Banner(models.Model):
+    def __str__(self):
+        return self.name
+
+    CATEGORY_CHOICES = (
+        ('u', '上表示'),
+        ('m', '中表示'),
+        ('d', '下表示'),
+        ('n', '非表示'),
+    )
+    name = models.CharField('名称', max_length=100)
+    banner_image = models.ImageField('バナー画像', null = True, blank = True, upload_to = "static/image")
+    main_image = models.ImageField("メイン画像", null = True, blank = True, upload_to = "static/image")
+    category = models.CharField('カテゴリ', choices = CATEGORY_CHOICES, default = 'u', max_length = 2)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)

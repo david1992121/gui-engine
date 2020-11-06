@@ -9,7 +9,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView
 from .serializers import *
 from django.db.models.deletion import ProtectedError
-from .models import Location, CastClass, Choice, GuestLevel
+from .models import Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner
 
 # Create your views here.
 class IsAdminPermission(BasePermission):
@@ -142,3 +142,40 @@ class ChoiceView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMo
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+class ReceiptView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
+    queryset = ReceiptSetting.objects.all()
+    serializer_class = ReceiptSerializer    
+    
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(ReceiptView, self).get_permissions()
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+class BannerView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    queryset = Banner.objects.all()
+    serializer_class = BannerSerializer
+    
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+    

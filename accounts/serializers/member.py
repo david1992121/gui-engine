@@ -61,8 +61,7 @@ class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(
         child = serializers.FileField( max_length = 100000,
             allow_empty_file=False, use_url=False, validators=[file_validator] )
-        , write_only = True
-    )
+        , write_only = True)
     likers = serializers.SerializerMethodField()
     user = MainInfoSerializer(read_only = True)
     images = MediaImageSerializer(read_only = True, many = True)
