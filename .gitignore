@@ -124,3 +124,5 @@ media/
 /pac/uwsgi.pid
 /pac/uwsgi.status
 /static/images/*.jpg
+/static/admin
+/static/rest_framework
