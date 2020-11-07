@@ -29,6 +29,10 @@ urlpatterns = [
     path('avatars/order', change_avatar_order, name = "avatar_change_order"),
     path('avatars/<int:pk>', AvatarView.as_view(), name = "avatar_detail_view"),
 
+    # update profile
+    path('member/line', change_line, name = "avatar_view"),
+    path('member/password', change_password, name = "password_change"),
+
     # tweet
     path('tweets', TweetView.as_view(), name = "tweet_view"),
     path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_view"),

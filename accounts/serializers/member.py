@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.utils import serializer_helpers
 from rest_framework_jwt.settings import api_settings
 
 from drf_extra_fields.fields import Base64ImageField
@@ -131,3 +132,7 @@ class AvatarChanger(serializers.Serializer):
     uris = serializers.ListField(
         child = serializers.CharField()
     )
+
+class PasswordChange(serializers.Serializer):
+    old = serializers.CharField(required = False)
+    new = serializers.CharField(required = False)

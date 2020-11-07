@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
 from rest_framework.decorators import permission_classes, api_view
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -100,5 +101,38 @@ def change_avatar_order(self, request):
             media_obj = Media.objects.create(uri = uri_item)
             cur_user.avatars.add(media_obj)
         return Response(MediaImageSerializer(cur_user.avatars, many = True), status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_line(self, request):
+    if 'line_id' in request.data.keys():
+        line_id = request.data.get('line_id')
+        cur_user = request.user
+        if Member.objects.exclude(pk = cur_user.id).filter(line_id = line_id).count() > 0:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            cur_user.line_id = line_id
+            cur_user.save()
+            return Response(status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(self, request):
+    serializer = PasswordChange(data = request.data)
+    if serializer.is_valid():
+        input_data = serializer.data
+        old_pwd = input_data.get('old', "")
+        new_pwd = input_data.get('new', "")
+        confirm_pwd = input_data.get('confirm', "")
+        user = request.user
+        if old_pwd != "":
+            if not user.check_password(old_pwd):
+                return Response(status = status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_pwd)
+        return Response(status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
