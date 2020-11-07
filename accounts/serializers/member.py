@@ -45,7 +45,6 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 
         return instance
 
-
 class MainInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
 
@@ -58,7 +57,6 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'role'
         )
         model = Member
-
 
 class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(
@@ -103,9 +101,28 @@ class TweetSerializer(serializers.ModelSerializer):
 
         return new_tweet
 
-
 class TweetPagination(PageNumberPagination):
     page_size = 10
 
     def get_paginated_response(self, data):
         return Response(data)
+
+class AvatarSerializer(serializers.ModelSerializer):
+    media = serializers.FileField(
+        max_length = 1000000, allow_empty_file = False, use_url = False, validators = [file_validator],
+        write_only = True, required = False)
+    
+    class Meta:
+        fields = ('id', 'media')
+        model = Media
+
+    def create(self, validated_data):
+        uri_img = validated_data.pop('media')
+        new_media = Media.objects.create(uri = uri_img)
+        return new_media
+
+    def update(self, instance, validated_data):
+        uri_img = validated_data.pop('media')
+        instance.uri = uri_img
+        instance.save()
+        return instance

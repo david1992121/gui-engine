@@ -50,8 +50,10 @@ class ReceiptSerializer(serializers.ModelSerializer):
 class BannerSerializer(serializers.ModelSerializer):
     banner_image = Base64ImageField(required = False)
     main_image = Base64ImageField(required = False)
+    delete_banner = serializers.BooleanField(default = False, write_only = True)
+    delete_main = serializers.BooleanField(default = False, write_only = True)
     class Meta:
-        fields = ('id', 'name', 'banner_image', 'main_image', 'category', 'updated_at')
+        fields = ('id', 'name', 'banner_image', 'main_image', 'category', 'updated_at', 'delete_banner', 'delete_main')
         model = Banner
 
     def create(self, validated_data):
@@ -70,17 +72,34 @@ class BannerSerializer(serializers.ModelSerializer):
         return new_banner
 
     def update(self, instance, validated_data):
+        print(validated_data)
         banner_img = None
         main_img = None
+        delete_banner = validated_data['delete_banner']
+        delete_main = validated_data['delete_main']
         if "banner_image" in validated_data.keys():
             banner_img = validated_data.pop("banner_image")
             
         if "main_image" in validated_data.keys():    
             main_img = validated_data.pop("main_image")
 
-        instance.update(**validated_data)
-        instance.banner_image = banner_img
-        instance.main_image = main_img
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        # delete banner
+        if delete_banner:
+            instance.banner_image = None
+        else:
+            if banner_img:
+                instance.banner_image = banner_img
+
+        # delete main        
+        if delete_main:
+            instance.main_image = None
+        else:
+            if main_img:
+                instance.main_image = main_img            
+
         instance.save()
         return instance
 

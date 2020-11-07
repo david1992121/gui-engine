@@ -24,8 +24,12 @@ urlpatterns = [
     # upload info
     path('initialize', InitialRegister.as_view(), name="info_register"),
 
+    # update info
+    path('avatars', AvatarView.as_view(), name = "avatar_view"),
+    path('avatars/<int:pk>', AvatarView.as_view(), name = "avatar_detail_view"),
+
     # tweet
     path('tweets', TweetView.as_view(), name = "tweet_view"),
     path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_view"),
-    path('toggle-tweet', toggle_tweet, name = "tweet_toggle"),    
+    path('toggle-tweet', toggle_tweet, name = "tweet_toggle"),
 ]

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from accounts.serializers.member import *
-from accounts.serializers.auth import MemberSerializer
+from accounts.serializers.auth import MemberSerializer, MediaImageSerializer
 from accounts.models import Member, Tweet, FavoriteTweet
 
 class InitialRegister(APIView):
@@ -58,3 +58,32 @@ def toggle_tweet(request):
         return Response(like_users.data)
     except Exception as e:
         return Response(status.HTTP_400_BAD_REQUEST)
+
+class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AvatarSerializer
+
+    def post(self, request, *args, **kwargs):
+        avatar_serializer = self.get_serializer(data = request.data)
+        if avatar_serializer.is_valid():
+            new_avatar = avatar_serializer.save()
+            user = request.user
+            user.avatars.add(new_avatar)
+            return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk, *args, **kwargs):
+        avatar_serializer = self.get_serializer(instance = Media.objects.get(pk = pk), data = request.data)
+        if avatar_serializer.is_valid():
+            new_avatar = avatar_serializer.save()
+            user = request.user
+            return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, *args, **kwargs):
+        user = request.user
+        user.avatars.delete(Media.objects.get(pk = pk))
+        Media.objects.get(pk = pk).delete()
+        return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
