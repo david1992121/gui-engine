@@ -136,3 +136,28 @@ def change_password(self, request):
         return Response(status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class DetailView(APIView):
+
+    def post(self, request):
+        serializer = DetailSerializer(data = request.data, partial = True)
+        if serializer.is_valid():
+            detail_obj = serializer.save()
+            user = request.user
+            user.detail = detail_obj
+            user.save()
+            return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        detail_obj = Detail.objects.get(pk = pk)
+        serializer = DetailSerializer(detail_obj, data = request.data, partial = True)
+        if serializer.is_valid():
+            detail_obj = serializer.save()
+            user = request.user
+            user.detail = detail_obj
+            user.save()
+            return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)

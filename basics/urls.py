@@ -30,5 +30,9 @@ urlpatterns = [
 
     # banner
     path('banners', BannerView.as_view(), name = "banner_view"),
-    path('banners/<int:pk>', BannerView.as_view(), name = "banner_detail_view")
+    path('banners/<int:pk>', BannerView.as_view(), name = "banner_detail_view"),
+
+    # setting
+    path('settings', SettingView.as_view(), name = "setting_view"),
+    path('settings/<int:pk>', SettingView.as_view(), name = "setting_detail_view")
 ]

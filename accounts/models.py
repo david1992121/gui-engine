@@ -1,3 +1,4 @@
+from re import T
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django_resized import ResizedImageField
@@ -12,7 +13,83 @@ class Media(models.Model):
    
     uri = ResizedImageField('URI',  size = [400, 400], crop=['middle', 'center'], null=True, blank=True, upload_to = "static/images", quality = 75)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
-    updated_at = models.DateTimeField('更新日時', auto_now = True)    
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class Detail(models.Model):
+    
+    QUALIFICATION_CHOICES = (
+        (0, '未定'),
+        (1, '中卒'),
+        (2, '高卒'),
+        (3, '大卒'),
+        (4, '大学院卒'),
+        (5, '専門卒'),
+        (6, 'その他'),
+    )
+
+    ANNUAL_CHOICES = (
+        (0, '未定'),
+        (1, '500万以下'),
+        (2, '500万～1000万'),
+        (3, '1000万～1500万'),
+        (4, '1500万～2000万'),
+        (5, '2000万～3000万'),
+        (6, '3000万～5000万'),
+        (7, '5000万～1億'),
+        (8, '1億以上'),
+    )
+    
+    GUEST_STYLE_CHOICES = (
+        (0, '未定'),
+        (1, '細身'),
+        (2, '普通'),
+        (3, 'ガッチリ'),
+        (4, 'ぽっちゃり'),
+        (5, '太め'),
+    )
+
+    CAST_STYLE_CHOICES = (
+        (0, '未定'),
+        (1, '細身'),
+        (2, '普通'),
+        (3, 'グラマラス'),
+    )
+
+    # 自己紹介    
+    about = models.TextField('自己紹介', null = True, blank = True)
+
+    # 基本情報
+    residence = models.CharField('居住地', null = True, blank = True, max_length = 100)
+    birthplace = models.CharField('出身地', null = True, blank = True, max_length = 100)
+    qualification = models.IntegerField('学歴', choices = QUALIFICATION_CHOICES, default = 0)
+    annual = models.IntegerField('学歴', choices = QUALIFICATION_CHOICES, default = 0)
+    job = models.CharField('お仕事', null = True, blank=True, max_length = 100)
+    favorite = models.CharField('よく飲む地域', null = True, blank=True, max_length=100)
+    drink = models.CharField('お酒', null = True, blank = True, max_length=100)
+    sibling = models.CharField('兄弟姉妹', null = True, blank = True, max_length=100)  # cast only
+    smoke = models.CharField('タバコ', null = True, blank=True, max_length=100)
+    language = models.CharField('外国語', null=True, blank=True, max_length=100)
+
+    # 外見
+    height = models.IntegerField('身長', null = True, blank=True)
+    guest_style = models.IntegerField('ゲストスタイル', choices = GUEST_STYLE_CHOICES, default = 0) # guest only
+    cast_style = models.IntegerField('キャストスタイル', choices = CAST_STYLE_CHOICES, default = 0) # cast only
+    hair = models.CharField('髪色・髪型', null = True, blank = True, max_length=100)
+    entertainment = models.CharField('似ている芸能人', null = True, blank = True, max_length=100)
+    charm = models.CharField('チャームポイント', null = True, blank = True, max_length=100)
+
+    # 好みのタイプ　guest only
+    girl_type = models.CharField('好きな女性のタイプ', null = True, blank = True, max_length=100)
+    costume = models.CharField('好きな服装', null=True, blank=True, max_length=100)
+    dislike = models.CharField('こういうタイプはNG', null=True, blank=True, max_length=100)
+
+    # 性格　cast only
+    character = models.CharField('性格', null=True, blank=True, max_length=100)
+
+    # お話 cast only
+    talk_type = models.CharField('話し上手？聞き上手？', null=True, blank=True, max_length=100)
+    want_type = models.CharField('こんな話を話したい・聞きたい', null=True, blank=True, max_length=100)
+
 class Member(SoftDeletionModel):
     def __str__(self):
         return self.username if self.username else "Undefined"
@@ -49,6 +126,7 @@ class Member(SoftDeletionModel):
     role = models.IntegerField('ユーザーロール', choices = ROLE_CHOICES, default = 1)
     status = models.BooleanField('オンライン', default=False)
     setting = models.ForeignKey(Setting, on_delete=models.SET_NULL, null=True, blank=True)
+    detail = models.ForeignKey(Detail, on_delete=models.SET_NULL, null=True, blank=True)
     is_joining = models.BooleanField('合流中', default=False)
     # location = models.ManyToManyField(Location, on_delete = models.PROTECT, verbose_name='よく遊ぶ場所')
 

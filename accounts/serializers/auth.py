@@ -2,6 +2,7 @@
 Serializers for Auth
 """
 
+from basics.models import Setting
 from django.utils import timezone
 
 from rest_framework import serializers
@@ -10,6 +11,7 @@ from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
 from accounts.models import Member, Media
+from basics.serializers import SettingSerializer
 
 
 class EmailRegisterSerializer(serializers.Serializer):
@@ -110,7 +112,6 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
             msg = 'Account with this email does not exist'
             raise serializers.ValidationError(msg)
 
-
 class MediaImageSerializer(serializers.ModelSerializer):
     uri = Base64ImageField()
 
@@ -128,7 +129,7 @@ class MediaImageSerializer(serializers.ModelSerializer):
 
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
-
+    setting = SettingSerializer(read_only = True)
     class Meta:
         fields = (
             'id',
@@ -137,6 +138,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'birthday',
             'avatars',
             'role',
-            'is_registered'
+            'is_registered',
+            'setting',
         )
         model = Member

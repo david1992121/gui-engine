@@ -5,16 +5,19 @@ from django.core.validators import RegexValidator, MinValueValidator, MaxValueVa
 class Setting(models.Model):
 
     ##### app setting #####
-    app_footprint = models.BooleanField('app_footprint', default=True)
+    app_footprint = models.BooleanField('app_footprint', default=True)       # gui use
     app_tweetlike = models.BooleanField('app_tweetlike', default=True)
     app_autodelay = models.BooleanField('app_autodelay', default=True)
     app_autocharge = models.BooleanField('app_autocharge', default=True)
     app_autoremove = models.BooleanField('app_autoremove', default=True)
 
+    ##### ranking #####
+    ranking_display = models.BooleanField('ranking_display', default = True) # gui use
+
     ##### email setting #####
     email_footprint = models.BooleanField('email_footprint', default=True)
     email_like = models.BooleanField('email_like', default=True)
-    email_message = models.BooleanField('email_message', default=True)
+    email_message = models.BooleanField('email_message', default=True)       # gui use
     email_admin = models.BooleanField('email_admin', default=True)
     email_join_leave = models.BooleanField('email_join_leave', default=True)
     email_auto_delay = models.BooleanField('email_auto_delay', default=True)

@@ -14,7 +14,7 @@ from rest_framework.utils import serializer_helpers
 from rest_framework_jwt.settings import api_settings
 
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Media, Tweet, Member
+from accounts.models import Media, Tweet, Member, Detail
 from accounts.serializers.auth import MediaImageSerializer
 
 
@@ -136,3 +136,11 @@ class AvatarChanger(serializers.Serializer):
 class PasswordChange(serializers.Serializer):
     old = serializers.CharField(required = False)
     new = serializers.CharField(required = False)
+
+class DetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'about', 'residence', 'birthplace', 'qualification', 'annual',
+            'job', 'favorite', 'drink', 'sibling', 'smoke', 'language',
+            'height', 'guest_style', 'cast_style', 'hair', 'entertainment', 'charm',
+            'girl_type', 'costume', 'dislike', 'character', 'talk_type', 'want_type', )
+        model = Detail

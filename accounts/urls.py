@@ -33,6 +33,10 @@ urlpatterns = [
     path('member/line', change_line, name = "avatar_view"),
     path('member/password', change_password, name = "password_change"),
 
+    # detail profile
+    path('details', DetailView.as_view(), name = "detail_view"),
+    path('details/<int:pk>', DetailView.as_view(), name = "detail_view"),
+
     # tweet
     path('tweets', TweetView.as_view(), name = "tweet_view"),
     path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_view"),

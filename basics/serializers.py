@@ -4,7 +4,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
 from rest_framework.response import Response
 
-from .models import Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner
+from .models import Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner, Setting
 from drf_extra_fields.fields import Base64ImageField
 class LocationSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
@@ -103,4 +103,7 @@ class BannerSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-        
+class SettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'app_footprint', 'ranking_display', 'email_message')
+        model = Setting

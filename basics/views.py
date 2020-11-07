@@ -1,15 +1,16 @@
+from accounts.serializers.auth import MemberSerializer
 from django.shortcuts import render
-from rest_framework.serializers import Serializer
-from rest_framework_jwt.views import JSONWebTokenAPIView
+from django.db.models.deletion import ProtectedError
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission, SAFE_METHODS
 from rest_framework.response import Response
 from rest_framework import generics, status, mixins
 from rest_framework.parsers import JSONParser 
 from rest_framework.views import APIView
+
 from .serializers import *
-from django.db.models.deletion import ProtectedError
-from .models import Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner
+from .models import *
 
 # Create your views here.
 class IsAdminPermission(BasePermission):
@@ -166,6 +167,14 @@ class ReceiptView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
 class BannerView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
     queryset = Banner.objects.all()
     serializer_class = BannerSerializer
+
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(ReceiptView, self).get_permissions()
     
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -178,4 +187,22 @@ class BannerView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMo
 
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
-    
+
+class SettingView(mixins.UpdateModelMixin, generics.GenericAPIView):
+    queryset = Setting.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = SettingSerializer
+        
+    def post(self, request, *args, **kwargs):
+        cur_user = request.user
+        serializer = self.get_serializer(data = request.data)
+        if serializer.is_valid():
+            setting_obj = serializer.save()
+            cur_user.setting = setting_obj
+            cur_user.save()
+            return Response(MemberSerializer(cur_user).data, status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
