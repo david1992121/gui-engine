@@ -87,3 +87,18 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
         user.avatars.delete(Media.objects.get(pk = pk))
         Media.objects.get(pk = pk).delete()
         return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_avatar_order(self, request):
+    serializer = AvatarChanger(data = request.data)
+    if serializer.is_valid():
+        uris_data = serializer.data
+        cur_user = request.user
+        cur_user.avatars.clear()
+        for uri_item in uris_data:
+            media_obj = Media.objects.create(uri = uri_item)
+            cur_user.avatars.add(media_obj)
+        return Response(MediaImageSerializer(cur_user.avatars, many = True), status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

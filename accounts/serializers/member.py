@@ -126,3 +126,8 @@ class AvatarSerializer(serializers.ModelSerializer):
         instance.uri = uri_img
         instance.save()
         return instance
+
+class AvatarChanger(serializers.Serializer):
+    uris = serializers.ListField(
+        child = serializers.CharField()
+    )

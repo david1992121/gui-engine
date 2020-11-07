@@ -26,6 +26,7 @@ urlpatterns = [
 
     # update info
     path('avatars', AvatarView.as_view(), name = "avatar_view"),
+    path('avatars/order', change_avatar_order, name = "avatar_change_order"),
     path('avatars/<int:pk>', AvatarView.as_view(), name = "avatar_detail_view"),
 
     # tweet
