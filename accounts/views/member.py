@@ -6,7 +6,7 @@ from rest_framework.decorators import permission_classes, api_view
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer
@@ -91,22 +91,22 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def change_avatar_order(self, request):
-    serializer = AvatarChanger(data = request.data)
+def change_avatar_order(request):
+    serializer = AvatarChangerSerializer(data = request.data)
     if serializer.is_valid():
-        uris_data = serializer.data
+        uris_data = serializer.validated_data
         cur_user = request.user
         cur_user.avatars.clear()
-        for uri_item in uris_data:
+        for uri_item in uris_data['uris']:
             media_obj = Media.objects.create(uri = uri_item)
             cur_user.avatars.add(media_obj)
-        return Response(MediaImageSerializer(cur_user.avatars, many = True), status = status.HTTP_200_OK)
+        return Response(MediaImageSerializer(cur_user.avatars, many = True).data, status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def change_line(self, request):
+def change_line(request):
     if 'line_id' in request.data.keys():
         line_id = request.data.get('line_id')
         cur_user = request.user
@@ -121,10 +121,10 @@ def change_line(self, request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def change_password(self, request):
+def change_password(request):
     serializer = PasswordChange(data = request.data)
     if serializer.is_valid():
-        input_data = serializer.data
+        input_data = serializer.validated_data
         old_pwd = input_data.get('old', "")
         new_pwd = input_data.get('new', "")
         confirm_pwd = input_data.get('confirm', "")
@@ -176,3 +176,21 @@ class ProfileView(APIView):
             return Response(MemberSerializer(updated_user).data, status = status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class AdminView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        admins = Member.objects.filter(role__lt = 0)
+        return Response(MemberSerializer(admins, many = True).data)
+
+class MemberView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        is_all = int(request.GET.get("is_all", "0"))
+        if is_all > 0:
+            members = Member.objects.filter(is_registered = True)
+        else:
+            members = Member.objects.filter(role__gte = 0, is_registered = True)
+        return Response(MemberSerializer(members, many = True).data)

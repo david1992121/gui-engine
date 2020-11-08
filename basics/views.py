@@ -59,7 +59,7 @@ class LocationChangeOrder(APIView):
     def post(self, request):
         serializer = LocationSerializer(data = request.data, many = True)
         if serializer.is_valid():
-            input_data = serializer.data
+            input_data = serializer.validated_data
             for item in input_data:
                 cur_id = item.pop('id')
                 Location.objects.filter(pk = cur_id).update(**item)                

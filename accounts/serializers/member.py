@@ -128,9 +128,10 @@ class AvatarSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class AvatarChanger(serializers.Serializer):
+class AvatarChangerSerializer(serializers.Serializer):
     uris = serializers.ListField(
-        child = serializers.CharField()
+        child = serializers.CharField(),
+        write_only = True
     )
 
 class PasswordChange(serializers.Serializer):

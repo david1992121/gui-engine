@@ -8,6 +8,12 @@ from .views.auth import *
 from .views.member import *
 
 urlpatterns = [
+    # account management
+    path('admins', AdminView.as_view(), name = "admin_view"),
+
+    # member management
+    path('members', MemberView.as_view(), name = "member_view"),
+    
     # authorization
     path('email/register', EmailRegisterView.as_view(), name="email_view"),
     path('email/login', EmailLoginView.as_view(), name="email_login"),

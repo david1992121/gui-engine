@@ -169,7 +169,7 @@ class Tweet(models.Model):
     content = models.TextField('内容', null = True, blank = True)
     images = models.ManyToManyField(Media, verbose_name='画像')
     user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, blank = True)
-    cast_only = models.IntegerField('キャストのみ', choices = CATEGORY_CHOICES, default = 0)
+    category = models.IntegerField('キャストのみ', choices = CATEGORY_CHOICES, default = 0)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
 

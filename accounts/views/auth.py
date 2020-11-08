@@ -54,8 +54,8 @@ class LineLoginView(APIView):
         serializer = SNSAuthorizeSerializer(data=request.data)
 
         if serializer.is_valid():
-            line_code = serializer.data.get('code')
-            role = serializer.data.get('role')
+            line_code = serializer.validated_data.get('code')
+            role = serializer.validated_data.get('role')
 
             url = "https://api.line.me/oauth2/v2.1/token"
 
@@ -116,7 +116,7 @@ class EmailRegisterView(APIView):
         """Signup with Email"""
         serializer = EmailRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            input_data = serializer.data
+            input_data = serializer.validated_data
             email = input_data.get('email').strip()
             password = input_data.get('password')
             if Member.objects.filter(email=email).count() > 0:
