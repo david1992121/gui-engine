@@ -138,6 +138,9 @@ class MemberSerializer(serializers.ModelSerializer):
             'birthday',
             'avatars',
             'role',
+            'word',
+            'point_half',
+            'video_point_half',
             'is_registered',
             'setting',
         )

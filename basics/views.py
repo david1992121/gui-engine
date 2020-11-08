@@ -174,7 +174,7 @@ class BannerView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMo
         else:
             self.permission_classes = [IsAuthenticated]
         
-        return super(ReceiptView, self).get_permissions()
+        return super(BannerView, self).get_permissions()
     
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -206,3 +206,63 @@ class SettingView(mixins.UpdateModelMixin, generics.GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
+
+class GiftView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    queryset = Gift.objects.all()
+    serializer_class = GiftSerializer
+    pagination_class = GiftPagination
+
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(GiftView, self).get_permissions()
+    
+    def get(self, request, *args, **kwargs):
+        is_shown = request.GET.get('is_shown', "")
+        if is_shown != "":
+            queryset = Gift.objects.filter(is_shown = True)
+            return Response(GiftSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
+        else:
+            return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class CostPlanView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    queryset = CostPlan.objects.all()
+    serializer_class = CostplanSerializer
+    pagination_class = CostplanPagination
+
+    def get_permissions(self):
+        if self.request.method in ["POST", "PUT", "DELETE", "UPDATE"]:
+            self.permission_classes = [IsAdminPermission]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        
+        return super(CostPlanView, self).get_permissions()
+    
+    def get(self, request, *args, **kwargs):
+        location_id = int(request.GET.get('location', "0"))
+        if location_id > 0:
+            queryset = CostPlan.objects.filter(location_id = location_id, is_shown = True)
+            return Response(CostplanSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
+        else:
+            return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)

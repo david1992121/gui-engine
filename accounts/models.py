@@ -121,7 +121,6 @@ class Member(SoftDeletionModel):
     verify_code = models.CharField('認証コード', null=True, blank=True, max_length=100)
     birthday = models.DateTimeField('誕生日', null=True, blank=True)
     word = models.CharField('今日のひとこと', null=True, blank=True, max_length=190)
-    about = models.TextField('自己紹介', null=True, blank=True)
     point = models.IntegerField('ポイント', default = 0)
     role = models.IntegerField('ユーザーロール', choices = ROLE_CHOICES, default = 1)
     status = models.BooleanField('オンライン', default=False)
@@ -137,6 +136,7 @@ class Member(SoftDeletionModel):
 
     ##### cast info #####
     point_half = models.IntegerField('30分あたりのポイント', default = 3000, validators=[MaxValueValidator(100000),  MinValueValidator(1000)])
+    video_point_half = models.IntegerField('ビデオオーダー料金', default = 3000, validators=[MaxValueValidator(100000),  MinValueValidator(1000)])
     is_applied = models.BooleanField('キャスト応募', default=False)
     is_present = models.BooleanField('出勤', default = False)
     presented_at = models.DateTimeField('出勤日時', null=True)
@@ -162,9 +162,14 @@ class Tweet(models.Model):
     def __str__(self):
         return self.title
 
+    CATEGORY_CHOICES = (
+        (0, '全て'),
+        (1, 'キャストのみ'),
+    )
     content = models.TextField('内容', null = True, blank = True)
     images = models.ManyToManyField(Media, verbose_name='画像')
-    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, blank = True)    
+    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, blank = True)
+    cast_only = models.IntegerField('キャストのみ', choices = CATEGORY_CHOICES, default = 0)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
 

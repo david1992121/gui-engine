@@ -161,3 +161,18 @@ class DetailView(APIView):
             return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ProfileSerializer(request.user, data = request.data, partial = True)        
+        user = request.user
+        if serializer.is_valid():
+            new_nickname = request.data.get('nickname', "")
+            if Member.objects.exclude(id = user.id).filter(nickname = new_nickname).count() > 0:
+                return Response(status = status.HTTP_409_CONFLICT)
+            updated_user = serializer.save()
+            return Response(MemberSerializer(updated_user).data, status = status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)

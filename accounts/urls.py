@@ -32,6 +32,7 @@ urlpatterns = [
     # update profile
     path('member/line', change_line, name = "avatar_view"),
     path('member/password', change_password, name = "password_change"),
+    path('member/profile', ProfileView.as_view(), name = "update_profile"),
 
     # detail profile
     path('details', DetailView.as_view(), name = "detail_view"),

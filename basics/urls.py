@@ -34,5 +34,13 @@ urlpatterns = [
 
     # setting
     path('settings', SettingView.as_view(), name = "setting_view"),
-    path('settings/<int:pk>', SettingView.as_view(), name = "setting_detail_view")
+    path('settings/<int:pk>', SettingView.as_view(), name = "setting_detail_view"),
+
+    # gift
+    path('gifts', GiftView.as_view(), name = "gift_view"),
+    path('gifts/<int:pk>', GiftView.as_view(), name = "gift_detail_view"),
+
+    # cost plan
+    path("plans", CostPlanView.as_view(), name = "plan_view"),
+    path("plans/<int:pk>", CostPlanView.as_view(), name = "plan_detail_view"),
 ]

@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django_resized.forms import ResizedImageField
 
 # Create your models here.
 class Setting(models.Model):
@@ -106,5 +107,29 @@ class Banner(models.Model):
     banner_image = models.ImageField('バナー画像', null = True, blank = True, upload_to = "static/image")
     main_image = models.ImageField("メイン画像", null = True, blank = True, upload_to = "static/image")
     category = models.CharField('カテゴリ', choices = CATEGORY_CHOICES, default = 'u', max_length = 2)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class Gift(models.Model):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField('名称', max_length=100)
+    location = models.ForeignKey(Location, verbose_name='支店', on_delete=models.SET_NULL, null = True)
+    image = ResizedImageField('URI',  size = [200, 200], crop=['middle', 'center'], null=True, blank=True, upload_to = "static/images", quality = 75)
+    point = models.IntegerField('価格')
+    back = models.IntegerField('バック値', default=0)
+    is_shown = models.BooleanField('表示', default = True)
+    created_at = models.DateTimeField('作成日時', auto_now_add = True)
+    updated_at = models.DateTimeField('更新日時', auto_now = True)
+
+class CostPlan(models.Model):
+    def __str__(self):
+        return self.name
+
+    name = models.CharField('名称', max_length=100)
+    location = models.ForeignKey(Location, verbose_name='支店', on_delete=models.SET_NULL, null = True)
+    cost = models.IntegerField('料金')
+    extend_cost = models.IntegerField('延長料金')
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)

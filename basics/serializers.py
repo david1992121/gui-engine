@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
 from rest_framework.pagination import PageNumberPagination
-from rest_framework_jwt.serializers import JSONWebTokenSerializer
 from rest_framework.response import Response
 
-from .models import Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner, Setting
+from .models import CostPlan, Gift, Location, CastClass, Choice, GuestLevel, ReceiptSetting, Banner, Setting
 from drf_extra_fields.fields import Base64ImageField
 class LocationSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
@@ -107,3 +106,97 @@ class SettingSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'app_footprint', 'ranking_display', 'email_message')
         model = Setting
+
+class GiftSerializer(serializers.ModelSerializer):
+    image = Base64ImageField(required = False)
+    location = LocationSerializer(required = False)
+
+    class Meta:
+        fields = ('id', 'name', 'image', 'location', 'point', 'back', 'is_shown', 'updated_at')
+        model = Gift
+
+    def create(self, validated_data):
+        # handle image
+        gift_img = None
+        if 'image' in validated_data.keys():
+            gift_img = validated_data.pop('image')
+
+        # handle location
+        location = None
+        if 'location' in validated_data.keys():
+            location_data = validated_data.pop('location')
+            location = Location.objects.get(pk = location_data.get('id'))
+        new_gift = Gift.objects.create(**validated_data)
+        if location:
+            new_gift.location = location
+        new_gift.image = gift_img
+        new_gift.save()
+        return new_gift
+
+    def update(self, instance, validated_data):
+        gift_img = None
+        if 'image' in validated_data.keys():
+            gift_img = validated_data.pop('image')
+        
+        # handle location
+        location = None
+        if 'location' in validated_data.keys():
+            location_data = validated_data.pop('location')
+            location = Location.objects.get(pk = location_data.get('id'))
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if gift_img:
+            instance.image = gift_img
+        instance.location = location
+        instance.save()
+        return instance
+
+class GiftPagination(PageNumberPagination):
+    page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total': Gift.objects.count(),
+            'results': data
+        })
+
+class CostplanSerializer(serializers.ModelSerializer):
+    location = LocationSerializer(required = False)
+
+    class Meta:
+        fields = ('id', 'name', 'location', 'cost', 'extend_cost', 'updated_at')
+        model = CostPlan
+
+    def create(self, validated_data):
+        # handle location
+        location = None
+        if 'location' in validated_data.keys():
+            location_data = validated_data.pop('location')
+            location = Location.objects.get(pk = location_data.get('id'))
+        new_plan = CostPlan.objects.create(**validated_data)
+        if location:
+            new_plan.location = location
+        new_plan.save()
+        return new_plan
+
+    def update(self, instance, validated_data):       
+        # handle location
+        location = None
+        if 'location' in validated_data.keys():
+            location_data = validated_data.pop('location')
+            location = Location.objects.get(pk = location_data.get('id'))
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.location = location
+        instance.save()
+        return instance
+
+class CostplanPagination(PageNumberPagination):
+    page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total': CostPlan.objects.count(),
+            'results': data
+        })

@@ -139,8 +139,10 @@ class PasswordChange(serializers.Serializer):
 
 class DetailSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'about', 'residence', 'birthplace', 'qualification', 'annual',
-            'job', 'favorite', 'drink', 'sibling', 'smoke', 'language',
-            'height', 'guest_style', 'cast_style', 'hair', 'entertainment', 'charm',
-            'girl_type', 'costume', 'dislike', 'character', 'talk_type', 'want_type', )
+        fields = '__all__'
         model = Detail
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('nickname', 'birthday', 'word', 'point_half', 'video_point_half')
+        model = Member
