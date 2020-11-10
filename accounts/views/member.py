@@ -60,6 +60,11 @@ def toggle_tweet(request):
     except Exception as e:
         return Response(status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def count_tweet(request):
+    return Response(Tweet.objects.count(), status = status.HTTP_200_OK)
+
 class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AvatarSerializer
