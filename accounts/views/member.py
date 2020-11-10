@@ -90,7 +90,7 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
 
     def delete(self, request, pk, *args, **kwargs):
         user = request.user
-        user.avatars.delete(Media.objects.get(pk = pk))
+        user.avatars.remove(Media.objects.get(pk = pk))
         Media.objects.get(pk = pk).delete()
         return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
 
@@ -178,7 +178,7 @@ class ProfileView(APIView):
             if Member.objects.exclude(id = user.id).filter(nickname = new_nickname).count() > 0:
                 return Response(status = status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
-            return Response(MemberSerializer(updated_user).data, status = status.HTTP_400_BAD_REQUEST)
+            return Response(MemberSerializer(updated_user).data, status = status.HTTP_200_OK)
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
