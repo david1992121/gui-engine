@@ -62,12 +62,13 @@ class Detail(models.Model):
     residence = models.CharField('居住地', null = True, blank = True, max_length = 100)
     birthplace = models.CharField('出身地', null = True, blank = True, max_length = 100)
     qualification = models.IntegerField('学歴', choices = QUALIFICATION_CHOICES, default = 0)
-    annual = models.IntegerField('学歴', choices = QUALIFICATION_CHOICES, default = 0)
+    annual = models.IntegerField('学歴', choices = ANNUAL_CHOICES, default = 0)
     job = models.CharField('お仕事', null = True, blank=True, max_length = 100)
     favorite = models.CharField('よく飲む地域', null = True, blank=True, max_length=100)
     drink = models.CharField('お酒', null = True, blank = True, max_length=100)
-    sibling = models.CharField('兄弟姉妹', null = True, blank = True, max_length=100)  # cast only
     smoke = models.CharField('タバコ', null = True, blank=True, max_length=100)
+    sibling = models.CharField('兄弟姉妹', null = True, blank = True, max_length=100)  # cast only
+    housemate = models.CharField('同居人', null=True, blank=True, max_length=100) # cast only
     language = models.CharField('外国語', null=True, blank=True, max_length=100)
 
     # 外見
