@@ -19,7 +19,7 @@ from basics.serializers import LevelsSerializer, ClassesSerializer
 
 
 def file_validator(file):
-    max_file_size = 1024 * 1024 * 1  # 1MB
+    max_file_size = 1024 * 1024 * 100  # 100MB
 
     if file.size > max_file_size:
         raise serializers.ValidationError(_('Max file size is {} and your file size is {}'.
