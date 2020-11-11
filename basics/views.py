@@ -134,7 +134,14 @@ class ChoiceView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMo
     def get(self, request, *args, **kwargs):
         category = request.GET.get('category', "")
         if category != "":
-            return Response(ChoiceSerializer(Choice.objects.filter(category = category)).data, status = status.HTTP_200_OK)
+            subcategory_values = list(Choice.objects.filter(category = category).values_list('subcategory').distinct())
+            return_value = []
+            for sub_item in subcategory_values:
+                cur_data = {}
+                cur_data['name'] = sub_item[0]
+                cur_data['data'] = ChoiceSerializer(Choice.objects.filter(category = category, subcategory = sub_item[0]).order_by('order'), many = True).data
+                return_value.append(cur_data)
+            return Response(return_value, status = status.HTTP_200_OK)
         else:
             return self.list(request, *args, **kwargs)
 
