@@ -23,6 +23,8 @@ class InitialRegister(APIView):
 
     def post(self, request):
         cur_user = request.user
+        if cur_user.role == 10:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
         serializer = InitialInfoRegisterSerializer(cur_user, request.data)
         if not cur_user.is_registered and serializer.is_valid():
             if Member.objects.exclude(id=cur_user.id).filter(nickname=request.data['nickname']).count() > 0:
@@ -250,3 +252,14 @@ class MemberView(APIView):
         else:
             members = Member.objects.filter(role__gte=0, is_registered=True)
         return Response(MemberSerializer(members, many=True).data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_fresh_casts(request):
+    from dateutil.relativedelta import relativedelta
+
+    today = datetime.now()
+    three_months_ago = today - relativedelta(months = 3)
+
+    casts = Member.objects.filter(role = 0, cast_started_at__gt = three_months_ago)
+    return Response(GeneralInfoSerializer(casts, many = True).data, status = status.HTTP_200_OK)

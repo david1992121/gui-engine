@@ -15,6 +15,7 @@ from rest_framework_jwt.settings import api_settings
 
 from accounts.models import Media, Tweet, Member
 from .auth import MediaImageSerializer
+from basics.serializers import LevelsSerializer, ClassesSerializer
 
 
 def file_validator(file):
@@ -41,6 +42,10 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
         instance.birthday = validated_data['birthday']
         instance.avatars.add(media_image)
         instance.is_registered = True
+        if instance.role == 1:
+            instance.guest_started_at = timezone.now()
+        elif instance.role == 0:
+            instance.cast_started_at = timezone.now()        
         instance.save()
 
         return instance
@@ -54,7 +59,25 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'nickname',
             'birthday',
             'avatars',
-            'role'
+            'role',
+            'point'
+        )
+        model = Member
+
+class GeneralInfoSerializer(serializers.ModelSerializer):
+    avatars = MediaImageSerializer(read_only=True, many=True)
+    guest_level = LevelsSerializer(read_only=True)
+    cast_class = ClassesSerializer(read_only=True)
+    class Meta:
+        fields = (
+            'id',
+            'nickname',
+            'birthday',
+            'status',
+            'left_at',
+            'avatars',
+            'guest_level',
+            'cast_class'
         )
         model = Member
 

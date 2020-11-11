@@ -125,6 +125,7 @@ class Member(SoftDeletionModel):
     point = models.IntegerField('ポイント', default = 0)
     role = models.IntegerField('ユーザーロール', choices = ROLE_CHOICES, default = 1)
     status = models.BooleanField('オンライン', default=False)
+    left_at = models.DateTimeField('オフライン日時', null=True, blank=True)
     setting = models.ForeignKey(Setting, on_delete=models.SET_NULL, null=True, blank=True)
     detail = models.ForeignKey(Detail, on_delete=models.SET_NULL, null=True, blank=True)
     is_joining = models.BooleanField('合流中', default=False)
@@ -134,6 +135,7 @@ class Member(SoftDeletionModel):
     point_used = models.IntegerField('利用ポイント', default = 0, validators=[MinValueValidator(0)])
     guest_level = models.ForeignKey(GuestLevel, on_delete=models.SET_NULL, null=True, blank=True)
     call_times = models.IntegerField('合流利用回数', default=0)
+    guest_started_at = models.DateTimeField('ゲスト登録日時', null=True, blank=True)
 
     ##### cast info #####
     point_half = models.IntegerField('30分あたりのポイント', default = 3000, validators=[MaxValueValidator(100000),  MinValueValidator(1000)])
@@ -142,6 +144,7 @@ class Member(SoftDeletionModel):
     is_present = models.BooleanField('出勤', default = False)
     presented_at = models.DateTimeField('出勤日時', null=True)
     cast_class = models.ForeignKey(CastClass, on_delete=models.SET_NULL, null=True, blank=True)
+    cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
 
     ##### card and bank #####
     axes_exist = models.BooleanField('クレカ登録', default=False)
