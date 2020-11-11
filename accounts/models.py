@@ -121,7 +121,7 @@ class Member(SoftDeletionModel):
     ##### private info #####
     verify_code = models.CharField('認証コード', null=True, blank=True, max_length=100)
     birthday = models.DateTimeField('誕生日', null=True, blank=True)
-    word = models.CharField('今日のひとこと', null=True, blank=True, max_length=190)
+    word = models.CharField('今日のひとこと', default = "", max_length=190)
     point = models.IntegerField('ポイント', default = 0)
     role = models.IntegerField('ユーザーロール', choices = ROLE_CHOICES, default = 1)
     status = models.BooleanField('オンライン', default=False)

@@ -39,7 +39,6 @@ class GuestLevel(models.Model):
     color = models.CharField('色', null = True, blank = True, max_length=190)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
-
     
 class CastClass(models.Model):
     def __str__(self):
