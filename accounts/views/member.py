@@ -1,3 +1,8 @@
+import json
+import jwt
+import requests
+
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework import generics
@@ -12,6 +17,7 @@ from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail
 
+
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -19,12 +25,13 @@ class InitialRegister(APIView):
         cur_user = request.user
         serializer = InitialInfoRegisterSerializer(cur_user, request.data)
         if not cur_user.is_registered and serializer.is_valid():
-            if Member.objects.exclude(id = cur_user.id).filter(nickname = request.data['nickname']).count() > 0:
-                return Response(status = status.HTTP_409_CONFLICT)
+            if Member.objects.exclude(id=cur_user.id).filter(nickname=request.data['nickname']).count() > 0:
+                return Response(status=status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
             return Response(MemberSerializer(updated_user).data, status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -33,7 +40,7 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def get_queryset(self):
         return Tweet.objects.order_by("-created_at")
-        
+
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
@@ -43,91 +50,129 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_tweet(request):
     cur_user = request.user
     try:
         target_id = request.data['id']
-        cur_tweet = Tweet.objects.get(pk = target_id)
-        if FavoriteTweet.objects.filter(liker = cur_user, tweet = cur_tweet).count() > 0:
-            FavoriteTweet.objects.filter(liker = cur_user, tweet = cur_tweet).delete()
+        cur_tweet = Tweet.objects.get(pk=target_id)
+        if FavoriteTweet.objects.filter(liker=cur_user, tweet=cur_tweet).count() > 0:
+            FavoriteTweet.objects.filter(
+                liker=cur_user, tweet=cur_tweet).delete()
         else:
-            FavoriteTweet.objects.create(liker = cur_user, tweet = cur_tweet)
-        likers_id = cur_tweet.tweet_likers.all().order_by('-created_at').values_list('liker')
-        like_users = MainInfoSerializer(Member.objects.filter(id__in = likers_id, is_registered = True), many = True)    
+            FavoriteTweet.objects.create(liker=cur_user, tweet=cur_tweet)
+        likers_id = cur_tweet.tweet_likers.all().order_by(
+            '-created_at').values_list('liker')
+        like_users = MainInfoSerializer(Member.objects.filter(
+            id__in=likers_id, is_registered=True), many=True)
         return Response(like_users.data)
     except Exception as e:
         return Response(status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def count_tweet(request):
-    return Response(Tweet.objects.count(), status = status.HTTP_200_OK)
+    return Response(Tweet.objects.count(), status=status.HTTP_200_OK)
+
 
 class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AvatarSerializer
 
     def post(self, request, *args, **kwargs):
-        avatar_serializer = self.get_serializer(data = request.data)
+        avatar_serializer = self.get_serializer(data=request.data)
         if avatar_serializer.is_valid():
             new_avatar = avatar_serializer.save()
             user = request.user
             user.avatars.add(new_avatar)
-            return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+            return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk, *args, **kwargs):
-        avatar_serializer = self.get_serializer(instance = Media.objects.get(pk = pk), data = request.data)
+        avatar_serializer = self.get_serializer(
+            instance=Media.objects.get(pk=pk), data=request.data)
         if avatar_serializer.is_valid():
             new_avatar = avatar_serializer.save()
             user = request.user
-            return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+            return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, *args, **kwargs):
         user = request.user
-        user.avatars.remove(Media.objects.get(pk = pk))
-        Media.objects.get(pk = pk).delete()
-        return Response(MediaImageSerializer(user.avatars, many = True).data, status = status.HTTP_200_OK)
+        user.avatars.remove(Media.objects.get(pk=pk))
+        Media.objects.get(pk=pk).delete()
+        return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_avatar_order(request):
-    serializer = AvatarChangerSerializer(data = request.data)
+    serializer = AvatarChangerSerializer(data=request.data)
     if serializer.is_valid():
         uris_data = serializer.validated_data
         cur_user = request.user
         cur_user.avatars.clear()
         for uri_item in uris_data['uris']:
-            media_obj = Media.objects.create(uri = uri_item)
+            media_obj = Media.objects.create(uri=uri_item)
             cur_user.avatars.add(media_obj)
-        return Response(MediaImageSerializer(cur_user.avatars, many = True).data, status = status.HTTP_200_OK)
+        return Response(MediaImageSerializer(cur_user.avatars, many=True).data, status=status.HTTP_200_OK)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_line(request):
-    if 'line_id' in request.data.keys():
-        line_id = request.data.get('line_id')
-        cur_user = request.user
-        if Member.objects.exclude(pk = cur_user.id).filter(line_id = line_id).count() > 0:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
-        else:
-            cur_user.line_id = line_id
-            cur_user.save()
-            return Response(status = status.HTTP_200_OK)
+    if 'code' in request.data.keys():
+        line_code = request.data.get('code')
+
+        url = "https://api.line.me/oauth2/v2.1/token"
+
+        payload = 'grant_type=authorization_code' + \
+            '&code=' + line_code + \
+            '&redirect_uri=' + settings.CLIENT_URL + '/main/mypage/help/signin-method' + \
+            '&client_id=' + settings.LINE_CLIENT_ID + \
+            '&client_secret=' + settings.LINE_CLIENT_SECRET
+
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+
+        response = requests.request(
+            "POST", url, headers=headers, data=payload)
+
+        id_token = json.loads(
+            response.text.encode('utf8')).get('id_token', '')
+
+        try:
+            decoded_payload = jwt.decode(id_token, None, None)
+            line_id = decoded_payload['sub']
+
+            cur_user = request.user
+
+            if Member.objects.exclude(pk=cur_user.id).filter(social_id=line_id).count() > 0:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+            else:
+                cur_user.social_id = line_id
+                cur_user.save()
+                return Response(status=status.HTTP_200_OK)
+
+        except jwt.exceptions.InvalidSignatureError:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password(request):
-    serializer = PasswordChange(data = request.data)
+    serializer = PasswordChange(data=request.data)
     if serializer.is_valid():
         input_data = serializer.validated_data
         old_pwd = input_data.get('old', "")
@@ -136,16 +181,17 @@ def change_password(request):
         user = request.user
         if old_pwd != "":
             if not user.check_password(old_pwd):
-                return Response(status = status.HTTP_400_BAD_REQUEST)
+                return Response(status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_pwd)
-        return Response(status = status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class DetailView(APIView):
 
     def post(self, request):
-        serializer = DetailSerializer(data = request.data, partial = True)
+        serializer = DetailSerializer(data=request.data, partial=True)
         if serializer.is_valid():
             detail_obj = serializer.save()
             user = request.user
@@ -153,11 +199,12 @@ class DetailView(APIView):
             user.save()
             return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk):
-        detail_obj = Detail.objects.get(pk = pk)
-        serializer = DetailSerializer(detail_obj, data = request.data, partial = True)
+        detail_obj = Detail.objects.get(pk=pk)
+        serializer = DetailSerializer(
+            detail_obj, data=request.data, partial=True)
         if serializer.is_valid():
             detail_obj = serializer.save()
             user = request.user
@@ -165,29 +212,33 @@ class DetailView(APIView):
             user.save()
             return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ProfileSerializer(request.user, data = request.data, partial = True)        
+        serializer = ProfileSerializer(
+            request.user, data=request.data, partial=True)
         user = request.user
         if serializer.is_valid():
             new_nickname = request.data.get('nickname', "")
-            if Member.objects.exclude(id = user.id).filter(nickname = new_nickname).count() > 0:
-                return Response(status = status.HTTP_409_CONFLICT)
+            if Member.objects.exclude(id=user.id).filter(nickname=new_nickname).count() > 0:
+                return Response(status=status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
-            return Response(MemberSerializer(updated_user).data, status = status.HTTP_200_OK)
+            return Response(MemberSerializer(updated_user).data, status=status.HTTP_200_OK)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class AdminView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        admins = Member.objects.filter(role__lt = 0)
-        return Response(MemberSerializer(admins, many = True).data)
+        admins = Member.objects.filter(role__lt=0)
+        return Response(MemberSerializer(admins, many=True).data)
+
 
 class MemberView(APIView):
     permission_classes = [IsAdminUser]
@@ -195,7 +246,7 @@ class MemberView(APIView):
     def get(self, request):
         is_all = int(request.GET.get("is_all", "0"))
         if is_all > 0:
-            members = Member.objects.filter(is_registered = True)
+            members = Member.objects.filter(is_registered=True)
         else:
-            members = Member.objects.filter(role__gte = 0, is_registered = True)
-        return Response(MemberSerializer(members, many = True).data)
+            members = Member.objects.filter(role__gte=0, is_registered=True)
+        return Response(MemberSerializer(members, many=True).data)
