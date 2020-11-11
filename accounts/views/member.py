@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 
 from accounts.serializers.member import *
-from accounts.serializers.auth import MemberSerializer, MediaImageSerializer
-from accounts.models import Member, Tweet, FavoriteTweet
+from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer
+from accounts.models import Member, Tweet, FavoriteTweet, Detail
 
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]

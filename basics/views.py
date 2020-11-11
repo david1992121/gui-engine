@@ -1,4 +1,3 @@
-from accounts.serializers.auth import MemberSerializer
 from django.shortcuts import render
 from django.db.models.deletion import ProtectedError
 
@@ -11,6 +10,7 @@ from rest_framework.views import APIView
 
 from .serializers import *
 from .models import *
+from accounts.serializers.auth import MemberSerializer
 
 # Create your views here.
 class IsAdminPermission(BasePermission):

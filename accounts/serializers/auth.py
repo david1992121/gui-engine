@@ -2,7 +2,6 @@
 Serializers for Auth
 """
 
-from accounts.serializers.member import DetailSerializer
 from basics.models import Setting
 from django.utils import timezone
 
@@ -11,7 +10,7 @@ from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Member, Media
+from accounts.models import Member, Media, Detail
 from basics.serializers import SettingSerializer
 
 
@@ -127,6 +126,10 @@ class MediaImageSerializer(serializers.ModelSerializer):
         current_media_image.save()
         return True
 
+class DetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = '__all__'
+        model = Detail
 
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)

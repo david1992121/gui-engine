@@ -13,9 +13,8 @@ from rest_framework.response import Response
 from rest_framework.utils import serializer_helpers
 from rest_framework_jwt.settings import api_settings
 
-from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Media, Tweet, Member, Detail
-from accounts.serializers.auth import MediaImageSerializer
+from accounts.models import Media, Tweet, Member
+from .auth import MediaImageSerializer
 
 
 def file_validator(file):
@@ -137,11 +136,6 @@ class AvatarChangerSerializer(serializers.Serializer):
 class PasswordChange(serializers.Serializer):
     old = serializers.CharField(required = False)
     new = serializers.CharField(required = False)
-
-class DetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = '__all__'
-        model = Detail
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
