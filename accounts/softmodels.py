@@ -33,6 +33,8 @@ class SoftDeletionManager(BaseUserManager):
         if password:
             user.set_password(password)
         user.save(using=self._db)
+        user.username = "user_{}".format(user.id)
+        user.save()
         return user
 
     def create_superuser(self, username, email, password, **extra_fields):
