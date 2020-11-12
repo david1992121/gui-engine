@@ -1,6 +1,7 @@
 import json
 from django.db.models.query import QuerySet
 import jwt
+from dateutil.relativedelta import relativedelta
 import requests
 
 from django.conf import settings
@@ -270,7 +271,6 @@ def get_fresh_casts(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def search_casts(request):
-    from dateutil.relativedelta import relativedelta
     serializer = CastFilterSerializer(data=request.GET, partial=True)
     if serializer.is_valid():
         input_data = serializer.validated_data
@@ -285,7 +285,7 @@ def search_casts(request):
 
         cast_class = input_data.get('cast_class', 0)
         if cast_class > 0:
-            queryset = queryset.filter(class__id=cast_class)
+            queryset = queryset.filter(cast_class__id=cast_class)
 
         nickname = input_data.get('nickname', "")
         if nickname != "":
@@ -326,8 +326,7 @@ def search_casts(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def search_guests(request):
-    from dateutil.relativedelta import relativedelta
-    serializer = GuestFilterSerializer(data=request.data, partial=True)
+    serializer = GuestFilterSerializer(data=request.GET, partial=True)
     if serializer.is_valid():
         input_data = serializer.validated_data
         queryset = Member.objects.filter(
@@ -335,7 +334,7 @@ def search_guests(request):
         page = input_data.get('page', 1)
         size = 10
         start_index = (page - 1) * size
-        
+
         # age min and max
         year_now = datetime.now().year
         age_min = input_data.get('age_min', 20)
@@ -345,17 +344,18 @@ def search_guests(request):
 
         from_date = datetime(year_min, 1, 1, 0, 0, 0)
         to_date = datetime(year_max, 1, 1, 0, 0, 0)
-        queryset = queryset.filter(birthday__gte = from_date, birthday__lt = to_date)
+        queryset = queryset.filter(
+            birthday__gte=from_date, birthday__lt=to_date)
 
         # nickname
         nickname = input_data.get('nickname', "")
         if nickname != "":
             queryset = queryset.filter(nickname__icontains=nickname)
-        
+
         # salary
         salary = input_data.get('salary', 0)
         if salary > 0:
-            queryset = queryset.filter(detail__annual = salary)
+            queryset = queryset.filter(detail__annual=salary)
 
         # favorite
         favorite = input_data.get('favorite', "")
@@ -371,4 +371,3 @@ def search_guests(request):
             status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
