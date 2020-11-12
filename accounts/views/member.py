@@ -18,12 +18,16 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, B
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail
+from basics.serializers import ChoiceSerializer
+
 
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
 
     def has_permission(self, request, view):
         return request.user.is_superuser
+
+
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -246,7 +250,7 @@ class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateMo
     pagination_class = AdminPagination
 
     def get_queryset(self):
-        return Member.objects.filter(role__lt = 0, is_superuser = False)
+        return Member.objects.filter(role__lt=0, is_superuser=False)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -259,6 +263,8 @@ class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateMo
 
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
+
+
 class MemberView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -386,17 +392,18 @@ def search_guests(request):
             status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def edit_choice(request):
-    choice_serializer = ChoiceSerializer(data = request.data)
+    choice_serializer = ChoiceIdSerializer(data=request.data)
     if choice_serializer.is_valid():
         user = request.user
-        choice_data = choice_serializer.validated_data        
+        choice_data = choice_serializer.validated_data
         user.cast_status.clear()
-        user.cast_status.set(choice_data)
+        user.cast_status.set(choice_data.get('choice'))
         user.save()
-        return Response(status = status.HTTP_200_OK)
+        return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
