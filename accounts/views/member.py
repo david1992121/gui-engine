@@ -303,7 +303,7 @@ def search_casts(request):
         queryset = queryset.filter(point_half__lte = point_max)
 
         # choice
-        choice = input_data.get('choice')
+        choice = input_data.get('choices', [])
         for choice_item in choice:
             queryset = queryset.filter(cast_status__id = choice_item)
 

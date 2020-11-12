@@ -167,8 +167,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Member
 
 class CastFilterSerializer(serializers.Serializer):
-    choice = serializers.ListField(
-        child = serializers.IntegerField()
+    choices = serializers.ListField(
+        child = serializers.IntegerField(), required = False
     )
     location = serializers.IntegerField()
     nickname = serializers.CharField(required = False)
