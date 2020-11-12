@@ -11,7 +11,7 @@ from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
 from accounts.models import Member, Media, Detail
-from basics.serializers import SettingSerializer
+from basics.serializers import SettingSerializer, ChoiceSerializer
 
 
 class EmailRegisterSerializer(serializers.Serializer):
@@ -135,6 +135,7 @@ class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     setting = SettingSerializer(read_only = True)
     detail = DetailSerializer(read_only = True)
+    choice = ChoiceSerializer(read_only=True, many=True)
     class Meta:
         fields = (
             'id',
@@ -148,6 +149,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'video_point_half',
             'is_registered',
             'setting',
-            'detail'
+            'detail',
+            'choice'
         )
         model = Member
