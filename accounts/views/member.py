@@ -314,7 +314,7 @@ def search_casts(request):
 
         return Response(
             GeneralInfoSerializer(
-                queryset.order_by("-guest_started_at")
+                queryset.order_by("-cast_started_at")
                 .all()[(start_index):(start_index + size)],
                 many=True
             ).data,
@@ -331,4 +331,44 @@ def search_guests(request):
     if serializer.is_valid():
         input_data = serializer.validated_data
         queryset = Member.objects.filter(
-            role=0, is_active=True, is_registered=True)
+            role=1, is_active=True, is_registered=True)
+        page = input_data.get('page', 1)
+        size = 10
+        start_index = (page - 1) * size
+        
+        # age min and max
+        year_now = datetime.now().year
+        age_min = input_data.get('age_min', 20)
+        age_max = input_data.get('age_max', 50)
+        year_min = year_now - age_max
+        year_max = year_now - age_min + 1
+
+        from_date = datetime(year_min, 1, 1, 0, 0, 0)
+        to_date = datetime(year_max, 1, 1, 0, 0, 0)
+        queryset = queryset.filter(birthday__gte = from_date, birthday__lt = to_date)
+
+        # nickname
+        nickname = input_data.get('nickname', "")
+        if nickname != "":
+            queryset = queryset.filter(nickname__icontains=nickname)
+        
+        # salary
+        salary = input_data.get('salary', 0)
+        if salary > 0:
+            queryset = queryset.filter(detail__annual = salary)
+
+        # favorite
+        favorite = input_data.get('favorite', "")
+        if favorite != "":
+            queryset = queryset.filter(favorite__icontains=favorite)
+
+        return Response(
+            GeneralInfoSerializer(
+                queryset.order_by("-guest_started_at")
+                .all()[(start_index):(start_index + size)],
+                many=True
+            ).data,
+            status=status.HTTP_200_OK)
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    

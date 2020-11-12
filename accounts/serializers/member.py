@@ -187,8 +187,8 @@ class CastFilterSerializer(serializers.Serializer):
 
 class GuestFilterSerializer(serializers.Serializer):
     page = serializers.IntegerField()
-    age = serializers.IntegerField()
+    age_min = serializers.IntegerField()
+    age_max = serializers.IntegerField()
     nickname = serializers.CharField(required = False)
     salary = serializers.IntegerField()
-    place = serializers.CharField()
-    page = serializers.IntegerField()
+    favorite = serializers.CharField(required = False)
