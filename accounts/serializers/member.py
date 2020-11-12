@@ -73,6 +73,7 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'id',
             'nickname',
             'birthday',
+            'word',
             'status',
             'left_at',
             'avatars',
