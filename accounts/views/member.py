@@ -244,7 +244,7 @@ class ProfileView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class AdminView(mixins.ListModelMixin, generics.GenericAPIView):
+class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
     serializer_class = AdminSerializer
     pagination_class = AdminPagination
@@ -254,6 +254,15 @@ class AdminView(mixins.ListModelMixin, generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 
 class MemberView(APIView):
