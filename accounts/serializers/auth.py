@@ -24,7 +24,7 @@ class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
 
 class AdminEmailJWTSerializer(JSONWebTokenSerializer):
-    username_field = 'email'
+    username_field = 'username'
 
     def get_token(self, obj):
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
@@ -35,13 +35,13 @@ class AdminEmailJWTSerializer(JSONWebTokenSerializer):
 
     def validate(self, attrs):
         credentials = {
-            'email': '',
+            'username': '',
             'password': attrs.get("password")
         }
 
-        user_obj = Member.objects.filter(email=attrs.get("email"), role__lt = 0).first()
+        user_obj = Member.objects.filter(username=attrs.get("username"), role__lt = 0).first()
         if user_obj:
-            credentials['email'] = user_obj.email
+            credentials['username'] = user_obj.username
 
             if all(credentials.values()):
                 if user_obj.check_password(attrs.get('password')):

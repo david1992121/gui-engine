@@ -10,6 +10,7 @@ from .views.member import *
 urlpatterns = [
     # account management
     path('admins', AdminView.as_view(), name = "admin_view"),
+    path('admins/<int:pk>', AdminView.as_view(), name = "admin_view"),
 
     # member management
     path('members', MemberView.as_view(), name = "member_view"),

@@ -7,11 +7,9 @@ from datetime import datetime
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.utils import serializer_helpers
-from rest_framework_jwt.settings import api_settings
 
 from accounts.models import Media, Tweet, Member
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
@@ -104,10 +102,11 @@ class TweetSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer(read_only=True)
     images = MediaImageSerializer(read_only=True, many=True)
     user_id = serializers.IntegerField(write_only=True)
+    category = serializers.IntegerField(default = 0)  
 
     class Meta:
         fields = ("id", "content", "images", "user",
-                  "likers", "created_at", "medias", "user_id")
+                  "likers", "created_at", "medias", "user_id", "category")
         model = Tweet
 
     def get_likers(self, obj):
@@ -195,9 +194,54 @@ class GuestFilterSerializer(serializers.Serializer):
 
 class AdminSerializer(serializers.ModelSerializer):
     location_id = serializers.IntegerField(write_only = True)
-    location = LocationSerializer()
+    location = LocationSerializer(read_only = True)
+    password = serializers.CharField(write_only = True, required = False)
     class Meta:
-        fields = ('id', 'username', 'location')
+        fields = ('id', 'username', 'location', 'location_id', 'password')
+        model = Member
+    
+    def create(self, validated_data):
+        password = ""
+        if 'password' in validated_data.keys():
+            password = validated_data.pop('password')
+        else:
+            return serializers.ValidationError("Password is required")
+        
+        username = validated_data['username']
+        location_id = int(validated_data['location_id'])
+        if Member.objects.filter(username = username).count() > 0:
+            return serializers.ValidationError("Username already exists")
+        else:
+            new_user = Member.objects.create(username = username)
+            if location_id > 0:
+                new_user.location_id = location_id
+            
+            if password != "":
+                new_user.set_password(password)
+            new_user.role = -1
+            new_user.save()
+
+            return new_user
+
+    def update(self, instance, validated_data):
+        password = ""
+        if 'password' in validated_data.keys():
+            password = validated_data.pop('password')
+
+        username = validated_data['username']
+        location_id = int(validated_data['location_id'])
+        if Member.objects.exclude(pk = instance.pk).filter(username = username).count() > 0:
+            return serializers.ValidationError({"username": "Username already exists"})
+        else:
+            instance.username = username
+            if location_id > 0:
+                instance.location_id = location_id
+            
+            if password != "":
+                instance.set_password(password)
+            instance.save()
+
+            return instance
 
 class ChoiceSerializer(serializers.Serializer):
     choice = serializers.ListSerializer(
