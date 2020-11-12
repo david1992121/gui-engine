@@ -135,7 +135,7 @@ class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     setting = SettingSerializer(read_only = True)
     detail = DetailSerializer(read_only = True)
-    choice = ChoiceSerializer(read_only=True, many=True)
+    cast_status = ChoiceSerializer(read_only=True, many=True)
     class Meta:
         fields = (
             'id',
@@ -150,6 +150,6 @@ class MemberSerializer(serializers.ModelSerializer):
             'is_registered',
             'setting',
             'detail',
-            'choice'
+            'cast_status'
         )
         model = Member

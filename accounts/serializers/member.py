@@ -15,7 +15,7 @@ from rest_framework_jwt.settings import api_settings
 
 from accounts.models import Media, Tweet, Member
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
-from .auth import MediaImageSerializer,DetailSerializer
+from .auth import MediaImageSerializer, DetailSerializer
 
 
 def file_validator(file):
@@ -45,10 +45,11 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
         if instance.role == 1:
             instance.guest_started_at = timezone.now()
         elif instance.role == 0:
-            instance.cast_started_at = timezone.now()        
+            instance.cast_started_at = timezone.now()
         instance.save()
 
         return instance
+
 
 class MainInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
@@ -64,11 +65,13 @@ class MainInfoSerializer(serializers.ModelSerializer):
         )
         model = Member
 
+
 class GeneralInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     guest_level = LevelsSerializer(read_only=True)
     cast_class = ClassesSerializer(read_only=True)
     job = serializers.SerializerMethodField()
+
     class Meta:
         fields = (
             'id',
@@ -84,7 +87,7 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'cast_class'
         )
         model = Member
-    
+
     def get_job(self, obj):
         return "" if not obj.detail.job else obj.detail.job
 
@@ -132,24 +135,26 @@ class TweetSerializer(serializers.ModelSerializer):
 
         return new_tweet
 
+
 class TweetPagination(PageNumberPagination):
     page_size = 10
 
     def get_paginated_response(self, data):
         return Response(data)
 
+
 class AvatarSerializer(serializers.ModelSerializer):
     media = serializers.FileField(
-        max_length = 1000000, allow_empty_file = False, use_url = False, validators = [file_validator],
-        write_only = True, required = False)
-    
+        max_length=1000000, allow_empty_file=False, use_url=False, validators=[file_validator],
+        write_only=True, required=False)
+
     class Meta:
         fields = ('id', 'media')
         model = Media
 
     def create(self, validated_data):
         uri_img = validated_data.pop('media')
-        new_media = Media.objects.create(uri = uri_img)
+        new_media = Media.objects.create(uri=uri_img)
         return new_media
 
     def update(self, instance, validated_data):
@@ -158,57 +163,67 @@ class AvatarSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class AvatarChangerSerializer(serializers.Serializer):
     uris = serializers.ListField(
-        child = serializers.CharField(),
-        write_only = True
+        child=serializers.CharField(),
+        write_only=True
     )
 
+
 class PasswordChange(serializers.Serializer):
-    old = serializers.CharField(required = False)
-    new = serializers.CharField(required = False)
+    old = serializers.CharField(required=False)
+    new = serializers.CharField(required=False)
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('nickname', 'birthday', 'word', 'point_half', 'video_point_half')
+        fields = ('nickname', 'birthday', 'word',
+                  'point_half', 'video_point_half')
         model = Member
+
 
 class CastFilterSerializer(serializers.Serializer):
     choices = serializers.ListField(
-        child = serializers.IntegerField(), required = False
+        child=serializers.IntegerField(), required=False
     )
     location = serializers.IntegerField()
-    nickname = serializers.CharField(required = False)
+    nickname = serializers.CharField(required=False)
     cast_class = serializers.IntegerField()
     is_new = serializers.BooleanField()
     point_min = serializers.IntegerField()
     point_max = serializers.IntegerField()
     page = serializers.IntegerField()
 
+
 class GuestFilterSerializer(serializers.Serializer):
     page = serializers.IntegerField()
     age_min = serializers.IntegerField()
     age_max = serializers.IntegerField()
-    nickname = serializers.CharField(required = False)
+    nickname = serializers.CharField(required=False)
     salary = serializers.IntegerField()
-    favorite = serializers.CharField(required = False)
+    favorite = serializers.CharField(required=False)
+
 
 class AdminSerializer(serializers.ModelSerializer):
-    location_id = serializers.IntegerField(write_only = True)
+    location_id = serializers.IntegerField(write_only=True)
     location = LocationSerializer()
+
     class Meta:
         fields = ('id', 'username', 'location')
 
-class ChoiceSerializer(serializers.Serializer):
-    choice = serializers.ListSerializer(
-        child = serializers.IntegerField()
+
+class ChoiceIdSerializer(serializers.Serializer):
+    choice = serializers.ListField(
+        child=serializers.IntegerField()
     )
+
 
 class AdminPagination(PageNumberPagination):
     page_size = 10
 
     def get_paginated_response(self, data):
         return Response({
-            'total': Member.objects.filter(role__lt = 0, is_superuser = False).count(),
+            'total': Member.objects.filter(role__lt=0, is_superuser=False).count(),
             'results': data
         })
