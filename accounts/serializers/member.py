@@ -14,7 +14,7 @@ from rest_framework.utils import serializer_helpers
 from rest_framework_jwt.settings import api_settings
 
 from accounts.models import Media, Tweet, Member
-from basics.serializers import LevelsSerializer, ClassesSerializer
+from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
 from .auth import MediaImageSerializer,DetailSerializer
 
 
@@ -192,3 +192,23 @@ class GuestFilterSerializer(serializers.Serializer):
     nickname = serializers.CharField(required = False)
     salary = serializers.IntegerField()
     favorite = serializers.CharField(required = False)
+
+class AdminSerializer(serializers.ModelSerializer):
+    location_id = serializers.IntegerField(write_only = True)
+    location = LocationSerializer()
+    class Meta:
+        fields = ('id', 'username', 'location')
+
+class ChoiceSerializer(serializers.Serializer):
+    choice = serializers.ListSerializer(
+        child = serializers.IntegerField()
+    )
+
+class AdminPagination(PageNumberPagination):
+    page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total': Member.objects.filter(role__lt = 0, is_superuser = False).count(),
+            'results': data
+        })

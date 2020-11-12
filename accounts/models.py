@@ -128,8 +128,7 @@ class Member(SoftDeletionModel):
     left_at = models.DateTimeField('オフライン日時', null=True, blank=True)
     setting = models.ForeignKey(Setting, on_delete=models.SET_NULL, null=True, blank=True)
     detail = models.ForeignKey(Detail, on_delete=models.SET_NULL, null=True, blank=True)
-    is_joining = models.BooleanField('合流中', default=False)
-    # location = models.ManyToManyField(Location, on_delete = models.PROTECT, verbose_name='よく遊ぶ場所')
+    is_joining = models.BooleanField('合流中', default=False)    
 
     ##### guest info #####
     point_used = models.IntegerField('利用ポイント', default = 0, validators=[MinValueValidator(0)])
@@ -150,7 +149,7 @@ class Member(SoftDeletionModel):
     ##### card and bank #####
     axes_exist = models.BooleanField('クレカ登録', default=False)
 
-    ##### location ####
+    ##### admin location ####
     location = models.ForeignKey(Location, on_delete = models.SET_NULL, null = True, blank = True, verbose_name='地域')
 
     created_at = models.DateTimeField('作成日時', auto_now_add = True)

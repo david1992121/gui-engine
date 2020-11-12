@@ -33,7 +33,10 @@ class SoftDeletionManager(BaseUserManager):
         if password:
             user.set_password(password)
         user.save(using=self._db)
-        user.username = "user_{}".format(user.id)
+        if username != "":
+            user.username = username
+        else:
+            user.username = "user_{}".format(user.id)
         user.save()
         return user
 
