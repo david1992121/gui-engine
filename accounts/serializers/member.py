@@ -106,7 +106,7 @@ class TweetSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = ("id", "content", "images", "user",
-                  "likers", "created_at", "medias", "user_id", "category")
+                  "likers", "created_at", "medias", "user_id", "category", "updated_at")
         model = Tweet
 
     def get_likers(self, obj):
