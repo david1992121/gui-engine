@@ -45,13 +45,16 @@ class InitialRegister(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
+class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TweetSerializer
     pagination_class = TweetPagination
 
     def get_queryset(self):
-        return Tweet.objects.order_by("-created_at")
+        if self.request.user.role == 1:
+            return Tweet.objects.filter(category = 0).order_by("-created_at")
+        else:
+            return Tweet.objects.order_by("-created_at")
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -62,6 +65,8 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -269,11 +274,13 @@ class MemberView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        from django.db.models import Q
+
         is_all = int(request.GET.get("is_all", "0"))
         if is_all > 0:
-            members = Member.objects.filter(is_registered=True)
+            members = Member.objects.filter(Q(is_registered=True, is_active = True, role__gte = 0) | Q(role__lt = 0))
         else:
-            members = Member.objects.filter(role__gte=0, is_registered=True)
+            members = Member.objects.filter(role__gte=0, is_registered=True, is_active = True)
         return Response(MemberSerializer(members, many=True).data)
 
 

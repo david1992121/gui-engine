@@ -56,6 +56,7 @@ class MainInfoSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'nickname',
+            'username',
             'birthday',
             'avatars',
             'role',
@@ -105,7 +106,7 @@ class TweetSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer(read_only=True)
     images = MediaImageSerializer(read_only=True, many=True)
     user_id = serializers.IntegerField(write_only=True)
-    category = serializers.IntegerField(default=0)
+    category = serializers.IntegerField(default = 0)
 
     class Meta:
         fields = ("id", "content", "images", "user",
@@ -133,6 +134,24 @@ class TweetSerializer(serializers.ModelSerializer):
         new_tweet.images.set(media_ids)
 
         return new_tweet
+
+    def update(self, instance, validated_data):
+        media_ids = []
+        user_id = validated_data.pop('user_id')
+        if 'medias' in validated_data.keys():
+            media_images = validated_data.pop('medias')
+            for media in media_images:
+                new_media = Media.objects.create(uri=media)
+                media_ids.append(new_media.id)
+
+        instance.category = validated_data.pop('category')
+        instance.user = Member.objects.get(pk=user_id)
+        instance.content = validated_data.pop('content')
+        instance.save()
+        if len(media_ids) > 0:
+            instance.images.set(media_ids)
+
+        return instance
 
 
 class TweetPagination(PageNumberPagination):
@@ -225,13 +244,14 @@ class AdminSerializer(serializers.ModelSerializer):
         if Member.objects.filter(username=username).count() > 0:
             return serializers.ValidationError("Username already exists")
         else:
-            new_user = Member.objects.create(username=username)
+            new_user = Member.objects.create(username = username)
             if location_id > 0:
                 new_user.location_id = location_id
 
             if password != "":
                 new_user.set_password(password)
             new_user.role = -1
+            new_user.is_registered = True
             new_user.save()
 
             return new_user

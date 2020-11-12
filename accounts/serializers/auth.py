@@ -149,7 +149,8 @@ class MemberSerializer(serializers.ModelSerializer):
             'video_point_half',
             'is_registered',
             'setting',
-            'detail',
-            'cast_status'
+            'detail',            
+            'cast_status',
+            'username'
         )
         model = Member
