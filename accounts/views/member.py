@@ -25,7 +25,7 @@ class InitialRegister(APIView):
     def post(self, request):
         cur_user = request.user
         if cur_user.role == 10:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
         serializer = InitialInfoRegisterSerializer(cur_user, request.data)
         if not cur_user.is_registered and serializer.is_valid():
             if Member.objects.exclude(id=cur_user.id).filter(nickname=request.data['nickname']).count() > 0:
@@ -254,71 +254,81 @@ class MemberView(APIView):
             members = Member.objects.filter(role__gte=0, is_registered=True)
         return Response(MemberSerializer(members, many=True).data)
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_fresh_casts(request):
     from dateutil.relativedelta import relativedelta
 
     today = datetime.now()
-    three_months_ago = today - relativedelta(months = 3)
+    three_months_ago = today - relativedelta(months=3)
 
-    casts = Member.objects.filter(role = 0, cast_started_at__gt = three_months_ago)
-    return Response(GeneralInfoSerializer(casts, many = True).data, status = status.HTTP_200_OK)
+    casts = Member.objects.filter(role=0, cast_started_at__gt=three_months_ago)
+    return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def search_casts(request):
     from dateutil.relativedelta import relativedelta
-    serializer = CastFilterSerializer(data = request.data, partial = True)
+    serializer = CastFilterSerializer(data=request.GET, partial=True)
     if serializer.is_valid():
         input_data = serializer.validated_data
-        queryset = Member.objects.filter(role = 0, is_active = True, is_registered = True)
-        page = input_data.get('page')
+        queryset = Member.objects.filter(
+            role=0, is_active=True, is_registered=True)
+        page = input_data.get('page', 1)
         size = 10
 
-        location = input_data.get('location', 0)
+        # location = input_data.get('location', 0)
         # if location > 0:
         #     queryset = queryset.filter()
-        
+
         cast_class = input_data.get('cast_class', 0)
         if cast_class > 0:
-            queryset = queryset.filter(class__id = cast_class)
+            queryset = queryset.filter(class__id=cast_class)
 
         nickname = input_data.get('nickname', "")
         if nickname != "":
-            queryset = queryset.filter(nickname__icontains = nickname)
+            queryset = queryset.filter(nickname__icontains=nickname)
 
         # is new
         is_new = input_data.get('is_new', False)
         if is_new:
             today = datetime.now()
-            three_months_ago = today - relativedelta(months = 3)
-            queryset = queryset.filter(cast_started_at__gt = three_months_ago)
-        
+            three_months_ago = today - relativedelta(months=3)
+            queryset = queryset.filter(cast_started_at__gt=three_months_ago)
+
         # point min and max
         point_min = input_data.get('point_min', 0)
-        queryset = queryset.filter(point_half__gte = point_min)
+        queryset = queryset.filter(point_half__gte=point_min)
 
         point_max = input_data.get('point_max', 30000)
-        queryset = queryset.filter(point_half__lte = point_max)
+        queryset = queryset.filter(point_half__lte=point_max)
 
-        # choice
-        choice = input_data.get('choices', [])
-        for choice_item in choice:
-            queryset = queryset.filter(cast_status__id = choice_item)
+        # choices
+        choices = input_data.get('choices', [])
+        for choice_item in choices:
+            queryset = queryset.filter(cast_status__id=choice_item)
 
         start_index = (page - 1) * size
 
-        return Response(GeneralInfoSerializer(queryset.order_by("-guest_start").all()[start_index, start_index + size], many = True).data, 
-            status = status.HTTP_200_OK)
+        return Response(
+            GeneralInfoSerializer(
+                queryset.order_by("-guest_started_at")
+                .all()[(start_index):(start_index + size)],
+                many=True
+            ).data,
+            status=status.HTTP_200_OK)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def search_guests(request):
     from dateutil.relativedelta import relativedelta
-    serializer = GuestFilterSerializer(data = request.data, partial = True)
+    serializer = GuestFilterSerializer(data=request.data, partial=True)
     if serializer.is_valid():
         input_data = serializer.validated_data
-        queryset = Member.objects.filter(role = 0, is_active = True, is_registered = True)
+        queryset = Member.objects.filter(
+            role=0, is_active=True, is_registered=True)
