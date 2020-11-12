@@ -176,4 +176,12 @@ class CastFilterSerializer(serializers.Serializer):
     is_new = serializers.BooleanField()
     point_min = serializers.IntegerField()
     point_max = serializers.IntegerField()
-    
+    page = serializers.IntegerField()
+
+class GuestFilterSerializer(serializers.Serializer):
+    page = serializers.IntegerField()
+    age = serializers.IntegerField()
+    nickname = serializers.CharField(required = False)
+    salary = serializers.IntegerField()
+    place = serializers.CharField()
+    page = serializers.IntegerField()

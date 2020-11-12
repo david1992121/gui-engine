@@ -53,4 +53,5 @@ urlpatterns = [
     # search
     path('casts/fresh', get_fresh_casts, name = "fresh_casts"),
     path('casts/search', search_casts, name = "search_casts"),
+    path('guests/search', search_guests, name = "search_guests"),
 ]

@@ -269,10 +269,13 @@ def get_fresh_casts(request):
 @permission_classes([IsAuthenticated])
 def search_casts(request):
     from dateutil.relativedelta import relativedelta
-    serializer = CastFilterSerializer(data = request.data)
+    serializer = CastFilterSerializer(data = request.data, partial = True)
     if serializer.is_valid():
         input_data = serializer.validated_data
         queryset = Member.objects.filter(role = 0, is_active = True, is_registered = True)
+        page = input_data.get('page')
+        size = 10
+
         location = input_data.get('location', 0)
         # if location > 0:
         #     queryset = queryset.filter()
@@ -304,4 +307,18 @@ def search_casts(request):
         for choice_item in choice:
             queryset = queryset.filter(cast_status__id = choice_item)
 
-        return Response(GeneralInfoSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
+        start_index = (page - 1) * size
+
+        return Response(GeneralInfoSerializer(queryset.order_by("-guest_start").all()[start_index, start_index + size], many = True).data, 
+            status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_guests(request):
+    from dateutil.relativedelta import relativedelta
+    serializer = GuestFilterSerializer(data = request.data, partial = True)
+    if serializer.is_valid():
+        input_data = serializer.validated_data
+        queryset = Member.objects.filter(role = 0, is_active = True, is_registered = True)
