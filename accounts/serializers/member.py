@@ -14,8 +14,8 @@ from rest_framework.utils import serializer_helpers
 from rest_framework_jwt.settings import api_settings
 
 from accounts.models import Media, Tweet, Member
-from .auth import MediaImageSerializer
 from basics.serializers import LevelsSerializer, ClassesSerializer
+from .auth import MediaImageSerializer,DetailSerializer
 
 
 def file_validator(file):
@@ -68,12 +68,15 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     guest_level = LevelsSerializer(read_only=True)
     cast_class = ClassesSerializer(read_only=True)
+    job = serializers.SerializerMethodField()
     class Meta:
         fields = (
             'id',
             'nickname',
             'birthday',
             'word',
+            'job',
+            'point_half',
             'status',
             'left_at',
             'avatars',
@@ -81,6 +84,10 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'cast_class'
         )
         model = Member
+    
+    def get_job(self, obj):
+        return "" if not obj.detail.job else obj.detail.job
+
 
 class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(
