@@ -164,3 +164,15 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('nickname', 'birthday', 'word', 'point_half', 'video_point_half')
         model = Member
+
+class CastFilterSerializer(serializers.Serializer):
+    choice = serializers.ListField(
+        child = serializers.IntegerField()
+    )
+    location = serializers.IntegerField()
+    nickname = serializers.CharField(required = False)
+    cast_class = serializers.IntegerField()
+    is_new = serializers.BooleanField()
+    point_min = serializers.IntegerField()
+    point_max = serializers.IntegerField()
+    

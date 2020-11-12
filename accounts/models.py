@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django_resized import ResizedImageField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from .softmodels import SoftDeletionModel
-from basics.models import Setting, CastClass, GuestLevel, Location
+from basics.models import Setting, CastClass, GuestLevel, Location, Choice
 
 # Create your models here.
 class Media(models.Model):
@@ -143,6 +143,7 @@ class Member(SoftDeletionModel):
     is_applied = models.BooleanField('キャスト応募', default=False)
     is_present = models.BooleanField('出勤', default = False)
     presented_at = models.DateTimeField('出勤日時', null=True)
+    cast_status = models.ManyToManyField(Choice, verbose_name='ステータス')
     cast_class = models.ForeignKey(CastClass, on_delete=models.SET_NULL, null=True, blank=True)
     cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
 

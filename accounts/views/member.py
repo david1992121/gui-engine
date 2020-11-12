@@ -1,4 +1,5 @@
 import json
+from django.db.models.query import QuerySet
 import jwt
 import requests
 
@@ -263,3 +264,44 @@ def get_fresh_casts(request):
 
     casts = Member.objects.filter(role = 0, cast_started_at__gt = three_months_ago)
     return Response(GeneralInfoSerializer(casts, many = True).data, status = status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def search_casts(request):
+    from dateutil.relativedelta import relativedelta
+    serializer = CastFilterSerializer(data = request.data)
+    if serializer.is_valid():
+        input_data = serializer.validated_data
+        queryset = Member.objects.filter(role = 0, is_active = True, is_registered = True)
+        location = input_data.get('location', 0)
+        # if location > 0:
+        #     queryset = queryset.filter()
+        
+        cast_class = input_data.get('cast_class', 0)
+        if cast_class > 0:
+            queryset = queryset.filter(class__id = cast_class)
+
+        nickname = input_data.get('nickname', "")
+        if nickname != "":
+            queryset = queryset.filter(nickname__icontains = nickname)
+
+        # is new
+        is_new = input_data.get('is_new', False)
+        if is_new:
+            today = datetime.now()
+            three_months_ago = today - relativedelta(months = 3)
+            queryset = queryset.filter(cast_started_at__gt = three_months_ago)
+        
+        # point min and max
+        point_min = input_data.get('point_min', 0)
+        queryset = queryset.filter(point_half__gte = point_min)
+
+        point_max = input_data.get('point_max', 30000)
+        queryset = queryset.filter(point_half__lte = point_max)
+
+        # choice
+        choice = input_data.get('choice')
+        for choice_item in choice:
+            queryset = queryset.filter(cast_status__id = choice_item)
+
+        return Response(GeneralInfoSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
