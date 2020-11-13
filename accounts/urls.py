@@ -10,7 +10,7 @@ from .views.member import *
 urlpatterns = [
     # account management
     path('admins', AdminView.as_view(), name = "admin_view"),
-    path('admins/<int:pk>', AdminView.as_view(), name = "admin_view"),
+    path('admins/<int:pk>', AdminView.as_view(), name = "admin_detail_view"),
 
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
@@ -44,11 +44,11 @@ urlpatterns = [
 
     # detail profile
     path('details', DetailView.as_view(), name = "detail_view"),
-    path('details/<int:pk>', DetailView.as_view(), name = "detail_view"),
+    path('details/<int:pk>', DetailView.as_view(), name = "detail_detail_view"),
 
     # tweet
     path('tweets', TweetView.as_view(), name = "tweet_view"),
-    path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_view"),
+    path('tweets/<int:pk>', TweetView.as_view(), name = "tweet_detail_view"),
     path('count-tweet', count_tweet, name = "tweet_count"),
     path('toggle-tweet', toggle_tweet, name = "tweet_toggle"),
 

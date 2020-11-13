@@ -15,6 +15,9 @@ from accounts.models import Media, Tweet, Member
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
 from .auth import MediaImageSerializer, DetailSerializer
 
+# use channel
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 def file_validator(file):
     max_file_size = 1024 * 1024 * 100  # 100MB
@@ -132,6 +135,16 @@ class TweetSerializer(serializers.ModelSerializer):
         new_tweet.user = Member.objects.get(pk=user_id)
         new_tweet.save()
         new_tweet.images.set(media_ids)
+
+        # send message via channels
+        channel_layer = get_channel_layer()
+        all_users = list(Member.objects.filter(is_active = True).values_list('id', flat = True))
+        print(all_users)
+        for user_id in all_users:
+            async_to_sync(channel_layer.group_send)(
+                "chat_{}".format(user_id),
+                { "type": "tweet_send", "content": TweetSerializer(new_tweet).data }
+            )
 
         return new_tweet
 
