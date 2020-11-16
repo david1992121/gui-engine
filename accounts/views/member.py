@@ -277,8 +277,11 @@ class MemberView(APIView):
         from django.db.models import Q
 
         is_all = int(request.GET.get("is_all", "0"))
+        is_cast = int(request.GET.get("is_cast", "0"))
         if is_all > 0:
             members = Member.objects.filter(Q(is_registered=True, is_active = True, role__gte = 0) | Q(role__lt = 0))
+        elif is_cast > 0:
+            members = Member.objects.filter(is_registered=True, role = 0)
         else:
             members = Member.objects.filter(role__gte=0, is_registered=True, is_active = True)
         return Response(MemberSerializer(members, many=True).data)

@@ -11,9 +11,9 @@ from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from accounts.models import Media, Tweet, Member
+from accounts.models import Media, Tweet, Member, TransferApplication
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
-from .auth import MediaImageSerializer, DetailSerializer
+from .auth import MediaImageSerializer
 
 # use channel
 from channels.layers import get_channel_layer
@@ -289,12 +289,10 @@ class AdminSerializer(serializers.ModelSerializer):
 
             return instance
 
-
 class ChoiceIdSerializer(serializers.Serializer):
     choice = serializers.ListField(
         child=serializers.IntegerField()
     )
-
 
 class AdminPagination(PageNumberPagination):
     page_size = 10
@@ -304,3 +302,14 @@ class AdminPagination(PageNumberPagination):
             'total': Member.objects.filter(role__lt=0, is_superuser=False).count(),
             'results': data
         })
+
+class TransferSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        fields = ('status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
+        extra_kwargs = {
+            'status': {'required': False},
+            'location': {'required': False},
+            'user': {'required': False}
+        }
+        model = TransferApplication
