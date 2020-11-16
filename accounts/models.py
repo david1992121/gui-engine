@@ -219,13 +219,6 @@ class Member(SoftDeletionModel):
         unique_together = ('social_type', 'social_id')
 
 
-class Channel(models.Model):
-
-    name = models.CharField("name", max_length=190, default="")
-    user = models.ForeignKey(Member, on_delete=models.SET_NULL, null=True,
-                             blank=True, related_name="channels", verbose_name="チャネル")
-
-
 class TransferInfo(models.Model):
 
     ACCOUNT_TYPES = (
