@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, BasePermission
 
 from accounts.serializers.member import *
-from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer
+from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail
 from basics.serializers import ChoiceSerializer
 
@@ -26,6 +26,12 @@ class IsSuperuserPermission(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_superuser
+
+class IsCast(BasePermission):
+    message = "Only Cast is allowed"
+
+    def has_permission(self, request, view):
+        return request.user.role == 0
 
 
 class InitialRegister(APIView):
@@ -417,3 +423,38 @@ def edit_choice(request):
         return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsCast])
+def apply_transfer(request):
+    import math
+    cur_user = request.user
+    amount = request.user.point - 440 - math.ceil(request.user.point / 50)
+    if amount < 0:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    else:
+        TransferApplication.objects.create(
+            location = cur_user.location,
+            user = cur_user,
+            amount = amount,
+            point = request.user.point,
+            apply_type = 1,
+            currency_type = 'jpy'
+        )
+        return Response(status = status.HTTP_200_OK)
+
+class TransferView(mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [IsSuperuserPermission]
+    serializer_class = TransferSerializer
+    pagination_class = TransferPagination
+
+    def get_queryset(self):
+        return TransferApplication.objects.order_by("-created_at")
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+class TransferInfoView(mixins.CreateModelMixin, generics.GenericAPIView):
+    permission_classes = [IsCast, IsSuperuserPermission]
+    serializer_class = TransferInfoSerializer
+    

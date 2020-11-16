@@ -137,7 +137,7 @@ class IntroducerSerializer(serializers.ModelSerializer):
 
 class TransferInfoSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'rank_name', 'rank_no', 'site_name', 'site_no', 'account_no', 'account_cat', 'transfer_name')
+        fields = ('id', 'bank_name', 'bank_no', 'site_name', 'site_no', 'account_no', 'account_cat', 'transfer_name')
         model = TransferInfo
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)

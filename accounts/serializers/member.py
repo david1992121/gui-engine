@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from accounts.models import Media, Tweet, Member, TransferApplication
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
-from .auth import MediaImageSerializer
+from .auth import MediaImageSerializer, MemberSerializer
 
 # use channel
 from channels.layers import get_channel_layer
@@ -304,12 +304,17 @@ class AdminPagination(PageNumberPagination):
         })
 
 class TransferSerializer(serializers.ModelSerializer):
+    user = MemberSerializer()
     
     class Meta:
         fields = ('status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
-        extra_kwargs = {
-            'status': {'required': False},
-            'location': {'required': False},
-            'user': {'required': False}
-        }
         model = TransferApplication
+
+class TransferPagination(PageNumberPagination):
+    page_size = 10
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total': TransferApplication.objects.filter().count(),
+            'results': data
+        })

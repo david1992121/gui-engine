@@ -182,8 +182,8 @@ class TransferInfo(models.Model):
         (1, '当座'),        
     )
 
-    rank_name = models.CharField('銀行名', default = "", max_length = 190)
-    rank_no = models.CharField('金融機関番号', default = "", max_length = 190)
+    bank_name = models.CharField('銀行名', default = "", max_length = 190)
+    bank_no = models.CharField('金融機関番号', default = "", max_length = 190)
     site_name = models.CharField('支店名', default = "", max_length = 190)
     site_no = models.CharField('支店番号', default = "", max_length = 190)
     account_no = models.CharField('口座番号', default = "", max_length = 190)

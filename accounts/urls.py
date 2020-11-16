@@ -56,4 +56,11 @@ urlpatterns = [
     path('casts/fresh', get_fresh_casts, name = "fresh_casts"),
     path('casts/search', search_casts, name = "search_casts"),
     path('guests/search', search_guests, name = "search_guests"),
+
+    # transfer info
+    path('casts/transfer', apply_transfer, name = "transfer_apply"),
+    path('casts/tranfser_info', TransferInfoView.as_view(), name = "transfer_info"),
+
+    # transfer view
+    path('casts/transfers', TransferView.as_view(), name = "transfer_view")
 ]
