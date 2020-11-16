@@ -143,7 +143,7 @@ class TweetSerializer(serializers.ModelSerializer):
         for user_id in all_users:
             async_to_sync(channel_layer.group_send)(
                 "chat_{}".format(user_id),
-                { "type": "tweet_send", "content": TweetSerializer(new_tweet).data }
+                { "type": "tweet.send", "content": TweetSerializer(new_tweet).data }
             )
 
         return new_tweet
@@ -307,7 +307,7 @@ class TransferSerializer(serializers.ModelSerializer):
     user = MemberSerializer()
     
     class Meta:
-        fields = ('status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
+        fields = ('id', 'status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
         model = TransferApplication
 
 class TransferPagination(PageNumberPagination):

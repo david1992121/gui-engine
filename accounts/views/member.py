@@ -17,7 +17,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, B
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
-from accounts.models import Member, Tweet, FavoriteTweet, Detail
+from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo
 from basics.serializers import ChoiceSerializer
 
 
@@ -454,7 +454,21 @@ class TransferView(mixins.ListModelMixin, generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
-class TransferInfoView(mixins.CreateModelMixin, generics.GenericAPIView):
-    permission_classes = [IsCast, IsSuperuserPermission]
+class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
+    permission_classes = ( IsCast | IsSuperuserPermission, )
     serializer_class = TransferInfoSerializer
+    queryset = TransferInfo.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
     
+@api_view(["GET"])
+@permission_classes([IsSuperuserPermission])
+def proceed_transfer(request, id):
+    cur_transfer = TransferApplication.objects.get(pk = id)
+    cur_transfer.status = 1
+    cur_transfer.save()
+    return Response({ "success": True }, status = status.HTTP_200_OK)

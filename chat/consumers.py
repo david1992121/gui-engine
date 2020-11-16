@@ -50,8 +50,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # Send tweet
     async def tweet_send(self, event):
-        print('imhere')
-        print(self.room_group_name)
         content = event['content']
 
         # Send message to WebSocket

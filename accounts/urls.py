@@ -59,8 +59,10 @@ urlpatterns = [
 
     # transfer info
     path('casts/transfer', apply_transfer, name = "transfer_apply"),
-    path('casts/tranfser_info', TransferInfoView.as_view(), name = "transfer_info"),
+    path('casts/transfer_info', TransferInfoView.as_view(), name = "transfer_info"),
+    path('casts/transfer_info/<int:pk>', TransferInfoView.as_view(), name = "transfer_info"),
 
     # transfer view
-    path('casts/transfers', TransferView.as_view(), name = "transfer_view")
+    path('transfers', TransferView.as_view(), name = "transfer_view"),
+    path('transfers/proceed/<int:id>', proceed_transfer, name = "proceed_transfer"),
 ]
