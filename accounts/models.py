@@ -1,6 +1,7 @@
 from re import T
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.fields import related
 from django_resized import ResizedImageField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from .softmodels import SoftDeletionModel
@@ -165,6 +166,8 @@ class Member(SoftDeletionModel):
     detail = models.ForeignKey(
         Detail, on_delete=models.SET_NULL, null=True, blank=True)
     is_joining = models.BooleanField('合流中', default=False)
+    introducer = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, related_name='intros', verbose_name='紹介者')
 
     ##### guest info #####
     point_used = models.IntegerField(
@@ -223,6 +226,48 @@ class Channel(models.Model):
                              blank=True, related_name="channels", verbose_name="チャネル")
 
 
+class TransferInfo(models.Model):
+
+    ACCOUNT_TYPES = (
+        (0, '通常'),
+        (1, '当座'),
+    )
+
+    rank_name = models.CharField('銀行名', default="", max_length=190)
+    rank_no = models.CharField('金融機関番号', default="", max_length=190)
+    site_name = models.CharField('支店名', default="", max_length=190)
+    site_no = models.CharField('支店番号', default="", max_length=190)
+    account_no = models.CharField('口座番号', default="", max_length=190)
+    account_cat = models.IntegerField('口座種別', choices=ACCOUNT_TYPES, default=0)
+    transfer_name = models.CharField('名義', default="", max_length=190)
+    user = models.ForeignKey(Member, related_name="transfer_infos",
+                             verbose_name='ユーザー', on_delete=models.SET_NULL, null=True, blank=True)
+
+
+class TransferApplication(models.Model):
+
+    STATUS_TYPES = (
+        (0, '未処理'),
+        (1, '処理済み')
+    )
+
+    APPLY_TYPES = (
+        (0, '通常入金'),
+        (1, 'すぐ入金')
+    )
+
+    status = models.IntegerField('ステータス', choices=STATUS_TYPES, default=0)
+    location = models.ForeignKey(
+        Location, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='支店')
+    user = models.ForeignKey(Member, related_name='transfer_applications',
+                             on_delete=models.SET_NULL, null=True, verbose_name='対象者')
+    amount = models.IntegerField('現金', default=0)
+    apply_type = models.IntegerField('種別', choices=APPLY_TYPES,)
+    currency_type = models.CharField('通貨種別', default="", max_length=190)
+    point = models.IntegerField('ポイント', default=0)
+    created_at = models.DateTimeField('申請日時', auto_now_add=True)
+
+
 class Tweet(models.Model):
 
     CATEGORY_CHOICES = (
@@ -242,17 +287,12 @@ class Tweet(models.Model):
 
 
 class FavoriteTweet(models.Model):
-    def __unicode__(self):
-        return self.name()
 
     liker = models.ForeignKey(Member, on_delete=models.SET_NULL,
                               null=True, related_name="tweet_favorites", verbose_name="ユーザー")
     tweet = models.ForeignKey(Tweet, on_delete=models.SET_NULL,
                               null=True, related_name="tweet_likers", verbose_name="つぶやき")
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
-
-    name.short_description = "名称"
-    name.tags_allowed = True
 
     class Meta:
         verbose_name = "つぶやき-イイネ関係"

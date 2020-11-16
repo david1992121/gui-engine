@@ -2,7 +2,6 @@
 Serializers for Auth
 """
 
-from basics.models import Setting
 from django.utils import timezone
 
 from rest_framework import serializers
@@ -10,7 +9,7 @@ from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Member, Media, Detail
+from accounts.models import Member, Media, Detail, TransferInfo
 from basics.serializers import SettingSerializer, ChoiceSerializer
 
 
@@ -131,11 +130,22 @@ class DetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
         model = Detail
 
+class IntroducerSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'nickname')
+        model = Member
+
+class TransferInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('id', 'rank_name', 'rank_no', 'site_name', 'site_no', 'account_no', 'account_cat', 'transfer_name')
+        model = TransferInfo
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     setting = SettingSerializer(read_only = True)
     detail = DetailSerializer(read_only = True)
     cast_status = ChoiceSerializer(read_only=True, many=True)
+    introducer = IntroducerSerializer(read_only = True)
+    transfer_infos = TransferInfoSerializer(many = True)
     class Meta:
         fields = (
             'id',
@@ -145,12 +155,14 @@ class MemberSerializer(serializers.ModelSerializer):
             'avatars',
             'role',
             'word',
+            'introducer',
             'point_half',
             'video_point_half',
             'is_registered',
             'setting',
             'detail',            
             'cast_status',
+            'transfer_infos',
             'username'
         )
         model = Member
