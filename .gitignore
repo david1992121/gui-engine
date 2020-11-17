@@ -113,16 +113,7 @@ media/
 # **/migrations/**
 # !**/migrations
 # !**/migrations/__init__.py
-/pac/static/import_export
-/pac/static/rest_framework
-/pac/static/staticfiles.json
-/pac/static/admin
-/pac/static/drf-yasg
-/pac/static/import_export
-/pac/pac/local_settings.py
-/pac/uwsgi.ini
-/pac/uwsgi.pid
-/pac/uwsgi.status
 /static/images/*.jpg
 /static/admin
 /static/rest_framework
+requirements.txt
