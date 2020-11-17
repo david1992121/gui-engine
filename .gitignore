@@ -116,4 +116,3 @@ media/
 /static/images/*.jpg
 /static/admin
 /static/rest_framework
-requirements.txt
