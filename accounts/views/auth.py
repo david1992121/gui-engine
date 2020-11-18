@@ -37,6 +37,7 @@ class EmailLoginView(JSONWebTokenAPIView):
 
 class AdminLoginView(JSONWebTokenAPIView):
     serializer_class = AdminEmailJWTSerializer
+
 class LineLoginView(APIView):
     """APIs for LINE Authorization"""
     permission_classes = [AllowAny]
@@ -87,6 +88,8 @@ class LineLoginView(APIView):
 
                 if is_created:
                     user_obj.username = 'user_{}'.format(user_obj.id)
+                    new_code = getInviterCode()
+                    user_obj.inviter_code = new_code
 
                 if role == 0 and user_obj.role == 1:
                     user_obj.role = 10
@@ -107,28 +110,56 @@ class LineLoginView(APIView):
 
         return Response(status.HTTP_400_BAD_REQUEST)
 
+def getInviterCode():
+    import random
+    random_id = ""
+    while True:
+        random_id = ''.join([str(random.randint(0, 999)).zfill(3) for _ in range(2)])
+        if Member.objects.filter(inviter_code = random_id).count() > 0:
+            continue
+        break
+    return random_id
 
 class EmailRegisterView(APIView):
+
     """APIs for Email Registeration"""
     permission_classes = [AllowAny]
 
     def post(self, request):
+
         """Signup with Email"""
         serializer = EmailRegisterSerializer(data=request.data)
         if serializer.is_valid():
             input_data = serializer.validated_data
             email = input_data.get('email').strip()
             password = input_data.get('password')
+            nickname = input_data.get('nickname')
+
+            # additional info
+            inviter_code = input_data.get('inviter_code', "")
+            if inviter_code != "":
+                if Member.objects.filter(inviter_code = inviter_code).count() == 0:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
+
             if Member.objects.filter(email=email).count() > 0:
                 return Response({
                     "success": False,
                     "reason": "Email already exists"
                 }, status.HTTP_200_OK)
             else:
+                
                 # create user
                 user = Member.objects.create(email=email)
                 user.username = "user_{}".format(user.id)
+                user.nickname = nickname
+                user.inviter_code = getInviterCode()
                 user.set_password(password)
+
+                # additional info
+                if inviter_code != "":
+                    introducer = Member.objects.get(inviter_code = inviter_code)
+                    user.introducer = introducer
+
                 user.save()
 
                 to_email = [user.email]

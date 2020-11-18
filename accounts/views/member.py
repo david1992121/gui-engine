@@ -3,7 +3,9 @@ import jwt
 from dateutil.relativedelta import relativedelta
 import requests
 
+from django.core.paginator import Paginator
 from django.conf import settings
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.http import Http404
 
@@ -283,8 +285,6 @@ class MemberView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        from django.db.models import Q
-
         is_all = int(request.GET.get("is_all", "0"))
         is_cast = int(request.GET.get("is_cast", "0"))
         if is_all > 0:
@@ -296,6 +296,92 @@ class MemberView(APIView):
             members = Member.objects.filter(
                 role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
+
+
+class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = UserSerializer
+    queryset = Member.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        page = request.GET.get('page', 1)
+        cur_request = request.query_params.get("query", "")
+        user_type = request.GET.get('user_type', 'guest')
+
+        # user type
+        if user_type == 'guest':
+            query_set = Member.objects.filter(role=1)
+        elif user_type == 'cast':
+            query_set = Member.objects.filter(Q(role=0) | Q(role=10))
+        else:
+            query_set = Member.objects
+
+        # query
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            # location
+            location_val = query_obj.get("location", 0)
+            if location_val > 0:
+                query_set = query_set.filter(location_id=location_val)
+
+            # cast level
+            cast_class = query_obj.get("cast_class", 0)
+            if cast_class > 0:
+                query_set = query_set.filter(cast_class_id=cast_class)
+
+            # location
+            user_id = query_obj.get("user_id", 0)
+            if user_id > 0:
+                query_set = query_set.filter(pk=user_id)
+
+            # nickname
+            nickname = query_obj.get("nickname", "")
+            if nickname != "":
+                query_set = query_set.filter(nickname__icontains=nickname)
+
+            # phone_number
+            phone_number = query_obj.get("phone_number", "")
+            if phone_number != "":
+                query_set = query_set.filter(
+                    phone_number__icontains=phone_number)
+
+            # username
+            username = query_obj.get("username", "")
+            query_set = query_set.filter(username__icontains=username)
+
+            # is_applied
+            is_applied = query_obj.get("is_applied", -1)
+            if is_applied > -1:
+                if is_applied == 0:
+                    query_set = query_set.filter(role=0)
+                else:
+                    query_set = query_set.filter(role=10)
+
+            # register status
+            reg_status = query_obj.get("reg_status", -1)
+            if reg_status > -1:
+                if reg_status == 0:
+                    query_set = query_set.filter(is_registered=False)
+                else:
+                    query_set = query_set.filter(is_registered=True)
+
+            # introducer id
+            introducer_id = query_obj.get("introducer_id", 0)
+            if introducer_id > 0:
+                query_set = query_set.filter(introducer_id=introducer_id)
+
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('-created_at'), 10)
+        members = paginator.page(page)
+
+        return Response({"total": total, "results": UserSerializer(members, many=True).data}, status=status.HTTP_200_OK)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 
 class MemberDetailView(APIView):
@@ -463,16 +549,73 @@ def apply_transfer(request):
         return Response(status=status.HTTP_200_OK)
 
 
-class TransferView(mixins.ListModelMixin, generics.GenericAPIView):
+class TransferView(generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
     serializer_class = TransferSerializer
-    pagination_class = TransferPagination
 
-    def get_queryset(self):
-        return TransferApplication.objects.order_by("-created_at")
+    def get(self, request):
+        import json
+        from dateutil.parser import parse
 
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+        page = request.GET.get('page', 1)
+        cur_request = request.query_params.get("query", "")
+        query_set = TransferApplication.objects
+
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            # status
+            status_val = query_obj.get("status", -1)
+            if status_val > -1:
+                query_set = query_set.filter(status=status_val)
+
+            # user category
+            user_cat = query_obj.get("user_cat", -1)
+            if user_cat > -1:
+                if user_cat == 1:
+                    query_set = query_set.filter(
+                        user__introducer__isnull=False)
+                else:
+                    query_set = query_set.filter(user__introducer__isnull=True)
+
+            # location
+            location_id = query_obj.get("location", 0)
+            if location_id > 0:
+                query_set = query_set.filter(location_id=location_id)
+
+            # nickname
+            nickname = query_obj.get("nickname", "")
+            if nickname != "":
+                query_set = query_set.filter(
+                    user__nickname__icontains=nickname)
+
+            # transfer category
+            transfer_cat = query_obj.get("transfer_cat", -1)
+            if transfer_cat > -1:
+                query_set = query_set.filter(apply_type=transfer_cat)
+
+            # transfer from
+            date_from = query_obj.get("from", "")
+            if date_from != "":
+                from_date = parse(date_from)
+                query_set = query_set.filter(
+                    created_at__date__gte=from_date.strftime("%Y-%m-%d"))
+
+            # transfer to
+            date_to = query_obj.get("to", "")
+            if date_to != "":
+                to_date = parse(date_to)
+                query_set = query_set.filter(
+                    created_at__date__lte=to_date.strftime("%Y-%m-%d"))
+
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('-created_at'), 10)
+        transfers = paginator.page(page)
+
+        return Response({"total": total, "results": TransferSerializer(transfers, many=True).data}, status=status.HTTP_200_OK)
 
 
 class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
