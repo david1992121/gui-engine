@@ -156,6 +156,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'birthday',
             'avatars',
             'role',
+            'point',
             'word',
             'introducer',
             'point_half',

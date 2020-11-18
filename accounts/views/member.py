@@ -1,10 +1,11 @@
 import json
-from django.db.models.query import QuerySet
 import jwt
 from dateutil.relativedelta import relativedelta
 import requests
 
 from django.conf import settings
+from django.db.models.query import QuerySet
+from django.http import Http404
 
 from rest_framework import status
 from rest_framework import generics
@@ -26,6 +27,7 @@ class IsSuperuserPermission(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_superuser
+
 
 class IsCast(BasePermission):
     message = "Only Cast is allowed"
@@ -58,7 +60,7 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def get_queryset(self):
         if self.request.user.role == 1:
-            return Tweet.objects.filter(category = 0).order_by("-created_at")
+            return Tweet.objects.filter(category=0).order_by("-created_at")
         else:
             return Tweet.objects.order_by("-created_at")
 
@@ -73,6 +75,7 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -285,12 +288,27 @@ class MemberView(APIView):
         is_all = int(request.GET.get("is_all", "0"))
         is_cast = int(request.GET.get("is_cast", "0"))
         if is_all > 0:
-            members = Member.objects.filter(Q(is_registered=True, is_active = True, role__gte = 0) | Q(role__lt = 0))
+            members = Member.objects.filter(
+                Q(is_registered=True, is_active=True, role__gte=0) | Q(role__lt=0))
         elif is_cast > 0:
-            members = Member.objects.filter(is_registered=True, role = 0)
+            members = Member.objects.filter(is_registered=True, role=0)
         else:
-            members = Member.objects.filter(role__gte=0, is_registered=True, is_active = True)
+            members = Member.objects.filter(
+                role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
+
+
+class MemberDetailView(APIView):
+    def get_object(self, pk):
+        try:
+            return Member.objects.get(pk=pk)
+        except Member.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        member = self.get_object(pk)
+        serializer = GeneralInfoSerializer(member)
+        return Response(serializer.data)
 
 
 @api_view(["GET"])
@@ -424,6 +442,7 @@ def edit_choice(request):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(["GET"])
 @permission_classes([IsCast])
 def apply_transfer(request):
@@ -431,17 +450,18 @@ def apply_transfer(request):
     cur_user = request.user
     amount = request.user.point - 440 - math.ceil(request.user.point / 50)
     if amount < 0:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     else:
         TransferApplication.objects.create(
-            location = cur_user.location,
-            user = cur_user,
-            amount = amount,
-            point = request.user.point,
-            apply_type = 1,
-            currency_type = 'jpy'
+            location=cur_user.location,
+            user=cur_user,
+            amount=amount,
+            point=request.user.point,
+            apply_type=1,
+            currency_type='jpy'
         )
-        return Response(status = status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
+
 
 class TransferView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
@@ -454,8 +474,9 @@ class TransferView(mixins.ListModelMixin, generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
+
 class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
-    permission_classes = ( IsCast | IsSuperuserPermission, )
+    permission_classes = (IsCast | IsSuperuserPermission, )
     serializer_class = TransferInfoSerializer
     queryset = TransferInfo.objects.all()
 
@@ -464,11 +485,12 @@ class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generic
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
-    
+
+
 @api_view(["GET"])
 @permission_classes([IsSuperuserPermission])
 def proceed_transfer(request, id):
-    cur_transfer = TransferApplication.objects.get(pk = id)
+    cur_transfer = TransferApplication.objects.get(pk=id)
     cur_transfer.status = 1
     cur_transfer.save()
-    return Response({ "success": True }, status = status.HTTP_200_OK)
+    return Response({"success": True}, status=status.HTTP_200_OK)
