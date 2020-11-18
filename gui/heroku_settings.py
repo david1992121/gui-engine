@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'whitenoise.runserver_nostatic',
+    'storages',
     'rest_framework',
     'django_rest_passwordreset',
     'corsheaders',
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'chat',
     'basics',
     'accounts',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [

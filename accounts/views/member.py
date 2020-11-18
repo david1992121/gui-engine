@@ -1,12 +1,13 @@
 import json
-from django.db.models.query import QuerySet
-from django.conf import settings
-from django.db.models import Q
-from django.core.paginator import Paginator
-
 import jwt
 from dateutil.relativedelta import relativedelta
 import requests
+
+from django.core.paginator import Paginator
+from django.conf import settings
+from django.db.models import Q
+from django.db.models.query import QuerySet
+from django.http import Http404
 
 from rest_framework import status
 from rest_framework import generics
@@ -28,6 +29,7 @@ class IsSuperuserPermission(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_superuser
+
 
 class IsCast(BasePermission):
     message = "Only Cast is allowed"
@@ -60,7 +62,7 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def get_queryset(self):
         if self.request.user.role == 1:
-            return Tweet.objects.filter(category = 0).order_by("-created_at")
+            return Tweet.objects.filter(category=0).order_by("-created_at")
         else:
             return Tweet.objects.order_by("-created_at")
 
@@ -75,6 +77,7 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -212,6 +215,7 @@ def change_password(request):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
 class DetailView(APIView):
 
     def post(self, request):
@@ -238,6 +242,7 @@ class DetailView(APIView):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -253,6 +258,7 @@ class ProfileView(APIView):
             return Response(MemberSerializer(updated_user).data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
@@ -282,14 +288,16 @@ class MemberView(APIView):
         is_all = int(request.GET.get("is_all", "0"))
         is_cast = int(request.GET.get("is_cast", "0"))
         if is_all > 0:
-            members = Member.objects.filter(Q(is_registered=True, is_active = True, role__gte = 0) | Q(role__lt = 0))
+            members = Member.objects.filter(
+                Q(is_registered=True, is_active=True, role__gte=0) | Q(role__lt=0))
         elif is_cast > 0:
-            members = Member.objects.filter(is_registered=True, role = 0)
+            members = Member.objects.filter(is_registered=True, role=0)
         else:
-            members = Member.objects.filter(role__gte=0, is_registered=True, is_active = True)
+            members = Member.objects.filter(
+                role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
 
-class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, mixins.RetrieveModelMixin, generics.GenericAPIView):
+class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
@@ -301,9 +309,9 @@ class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, mixins.RetrieveM
 
         # user type
         if user_type == 'guest':
-            query_set = Member.objects.filter(role = 1)
+            query_set = Member.objects.filter(role=1)
         elif user_type == 'cast':
-            query_set = Member.objects.filter(Q(role = 0) | Q(role = 10))
+            query_set = Member.objects.filter(Q(role=0) | Q(role=10))
         else:
             query_set = Member.objects
 
@@ -312,63 +320,64 @@ class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, mixins.RetrieveM
             try:
                 query_obj = json.loads(cur_request)
             except:
-                return Response({ "total" : 0, "results" : [] }, status = status.HTTP_200_OK)
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
 
             # location
             location_val = query_obj.get("location", 0)
             if location_val > 0:
-                query_set = query_set.filter(location_id = location_val)
+                query_set = query_set.filter(location_id=location_val)
 
             # cast level
             cast_class = query_obj.get("cast_class", 0)
             if cast_class > 0:
-                query_set = query_set.filter(cast_class_id = cast_class)
-            
+                query_set = query_set.filter(cast_class_id=cast_class)
+
             # location
             user_id = query_obj.get("user_id", 0)
             if user_id > 0:
-                query_set = query_set.filter(pk = user_id)
+                query_set = query_set.filter(pk=user_id)
 
             # nickname
             nickname = query_obj.get("nickname", "")
             if nickname != "":
-                query_set = query_set.filter(nickname__icontains = nickname)
+                query_set = query_set.filter(nickname__icontains=nickname)
 
             # phone_number
             phone_number = query_obj.get("phone_number", "")
             if phone_number != "":
-                query_set = query_set.filter(phone_number__icontains = phone_number)
+                query_set = query_set.filter(
+                    phone_number__icontains=phone_number)
 
             # username
             username = query_obj.get("username", "")
-            query_set = query_set.filter(username__icontains = username)
-            
+            query_set = query_set.filter(username__icontains=username)
+
             # is_applied
             is_applied = query_obj.get("is_applied", -1)
             if is_applied > -1:
                 if is_applied == 0:
-                    query_set = query_set.filter(role = 0)
+                    query_set = query_set.filter(role=0)
                 else:
-                    query_set = query_set.filter(role = 10)
+                    query_set = query_set.filter(role=10)
 
             # register status
             reg_status = query_obj.get("reg_status", -1)
             if reg_status > -1:
                 if reg_status == 0:
-                    query_set = query_set.filter(is_registered = False)
+                    query_set = query_set.filter(is_registered=False)
                 else:
-                    query_set = query_set.filter(is_registered = True)
+                    query_set = query_set.filter(is_registered=True)
 
             # introducer id
             introducer_id = query_obj.get("introducer_id", 0)
             if introducer_id > 0:
-                query_set = query_set.filter(introducer_id = introducer_id)
+                query_set = query_set.filter(introducer_id=introducer_id)
 
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-created_at'), 10)
         members = paginator.page(page)
 
-        return Response({ "total" : total, "results" : UserSerializer(members, many = True).data }, status = status.HTTP_200_OK)
+        return Response({"total": total, "results": UserSerializer(members, many=True).data}, status=status.HTTP_200_OK)
 
 class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -380,6 +389,20 @@ class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, generi
     
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
+
+
+class MemberDetailView(APIView):
+    def get_object(self, pk):
+        try:
+            return Member.objects.get(pk=pk)
+        except Member.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        member = self.get_object(pk)
+        serializer = GeneralInfoSerializer(member)
+        return Response(serializer.data)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -511,6 +534,7 @@ def edit_choice(request):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(["GET"])
 @permission_classes([IsCast])
 def apply_transfer(request):
@@ -518,17 +542,18 @@ def apply_transfer(request):
     cur_user = request.user
     amount = request.user.point - 440 - math.ceil(request.user.point / 50)
     if amount < 0:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     else:
         TransferApplication.objects.create(
-            location = cur_user.location,
-            user = cur_user,
-            amount = amount,
-            point = request.user.point,
-            apply_type = 1,
-            currency_type = 'jpy'
+            location=cur_user.location,
+            user=cur_user,
+            amount=amount,
+            point=request.user.point,
+            apply_type=1,
+            currency_type='jpy'
         )
-        return Response(status = status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
+
 
 class TransferView(generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
@@ -537,7 +562,7 @@ class TransferView(generics.GenericAPIView):
     def get(self, request):
         import json
         from dateutil.parser import parse
-        
+
         page = request.GET.get('page', 1)
         cur_request = request.query_params.get("query", "")
         query_set = TransferApplication.objects
@@ -546,56 +571,61 @@ class TransferView(generics.GenericAPIView):
             try:
                 query_obj = json.loads(cur_request)
             except:
-                return Response({ "total" : 0, "results" : [] }, status = status.HTTP_200_OK)
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
 
             # status
             status_val = query_obj.get("status", -1)
             if status_val > -1:
-                query_set = query_set.filter(status = status_val)
+                query_set = query_set.filter(status=status_val)
 
             # user category
             user_cat = query_obj.get("user_cat", -1)
             if user_cat > -1:
                 if user_cat == 1:
-                    query_set = query_set.filter(user__introducer__isnull = False)
+                    query_set = query_set.filter(
+                        user__introducer__isnull=False)
                 else:
-                    query_set = query_set.filter(user__introducer__isnull = True)
-            
+                    query_set = query_set.filter(user__introducer__isnull=True)
+
             # location
             location_id = query_obj.get("location", 0)
             if location_id > 0:
-                query_set = query_set.filter(location_id = location_id)
+                query_set = query_set.filter(location_id=location_id)
 
             # nickname
             nickname = query_obj.get("nickname", "")
             if nickname != "":
-                query_set = query_set.filter(user__nickname__icontains = nickname)
+                query_set = query_set.filter(
+                    user__nickname__icontains=nickname)
 
             # transfer category
             transfer_cat = query_obj.get("transfer_cat", -1)
             if transfer_cat > -1:
-                query_set = query_set.filter(apply_type = transfer_cat)
-            
+                query_set = query_set.filter(apply_type=transfer_cat)
+
             # transfer from
             date_from = query_obj.get("from", "")
             if date_from != "":
                 from_date = parse(date_from)
-                query_set = query_set.filter(created_at__date__gte = from_date.strftime("%Y-%m-%d"))
+                query_set = query_set.filter(
+                    created_at__date__gte=from_date.strftime("%Y-%m-%d"))
 
             # transfer to
             date_to = query_obj.get("to", "")
             if date_to != "":
-                to_date = parse(date_to)                
-                query_set = query_set.filter(created_at__date__lte = to_date.strftime("%Y-%m-%d"))
+                to_date = parse(date_to)
+                query_set = query_set.filter(
+                    created_at__date__lte=to_date.strftime("%Y-%m-%d"))
 
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-created_at'), 10)
         transfers = paginator.page(page)
 
-        return Response({ "total" : total, "results" : TransferSerializer(transfers, many = True).data }, status = status.HTTP_200_OK)
+        return Response({"total": total, "results": TransferSerializer(transfers, many=True).data}, status=status.HTTP_200_OK)
+
 
 class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
-    permission_classes = ( IsCast | IsSuperuserPermission, )
+    permission_classes = (IsCast | IsSuperuserPermission, )
     serializer_class = TransferInfoSerializer
     queryset = TransferInfo.objects.all()
 
@@ -604,11 +634,12 @@ class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generic
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
-    
+
+
 @api_view(["GET"])
 @permission_classes([IsSuperuserPermission])
 def proceed_transfer(request, id):
-    cur_transfer = TransferApplication.objects.get(pk = id)
+    cur_transfer = TransferApplication.objects.get(pk=id)
     cur_transfer.status = 1
     cur_transfer.save()
-    return Response({ "success": True }, status = status.HTTP_200_OK)
+    return Response({"success": True}, status=status.HTTP_200_OK)

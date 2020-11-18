@@ -55,8 +55,12 @@ class LineLoginView(APIView):
         serializer = SNSAuthorizeSerializer(data=request.data)
 
         if serializer.is_valid():
-            line_code = serializer.validated_data.get('code')
-            role = serializer.validated_data.get('role')
+            line_code = serializer.validated_data.get('code', "")
+            inviter_code = serializer.validated_data.get('inviter_code', "")
+
+            if inviter_code != "":
+                if Member.objects.filter(inviter_code = inviter_code).count() == 0:
+                    return Response(status = status.HTTP_400_BAD_REQUEST)
 
             url = "https://api.line.me/oauth2/v2.1/token"
 
@@ -88,8 +92,11 @@ class LineLoginView(APIView):
 
                 if is_created:
                     user_obj.username = 'user_{}'.format(user_obj.id)
+                    user_obj.nickname = decoded_payload['name']
                     new_code = getInviterCode()
                     user_obj.inviter_code = new_code
+                    if inviter_code != "":
+                        user_obj.introducer = Member.objects.get(inviter_code=inviter_code)
                     user_obj.is_registered = True
 
                 if role == 0 and user_obj.role == 1:
@@ -109,7 +116,7 @@ class LineLoginView(APIView):
             except jwt.exceptions.InvalidSignatureError:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response(status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 def getInviterCode():
     import random
