@@ -314,8 +314,6 @@ class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.Generic
             except:
                 return Response({ "total" : 0, "results" : [] }, status = status.HTTP_200_OK)
 
-            print(query_obj)
-
             # location
             location_val = query_obj.get("location", 0)
             if location_val > 0:

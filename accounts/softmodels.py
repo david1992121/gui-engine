@@ -37,7 +37,7 @@ class SoftDeletionManager(BaseUserManager):
             user.username = username
             user.nickname = username         
         else:
-            user.username = "user_{}".format(user.id)            
+            user.username = "user_{}".format(user.id)
         user.save()
         return user
 
