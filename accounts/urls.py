@@ -12,6 +12,10 @@ urlpatterns = [
     path('admins', AdminView.as_view(), name = "admin_view"),
     path('admins/<int:pk>', AdminView.as_view(), name = "admin_detail_view"),
 
+    # user management
+    path('users', UserView.as_view(), name = "user_view"),
+    path('users/<int:pk>', UserView.as_view(), name = "user_detail_view"),
+
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
     

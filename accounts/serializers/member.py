@@ -93,6 +93,45 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
     def get_job(self, obj):
         return "" if not obj.detail.job else obj.detail.job
 
+class UserSerializer(serializers.ModelSerializer):
+    average_review = serializers.SerializerMethodField()
+    five_reviews = serializers.SerializerMethodField()
+    introducer = MainInfoSerializer()
+    cast_class = ClassesSerializer()
+    guest_level = LevelsSerializer()
+    class Meta:
+        fields = (
+            'id',
+            'nickname',
+            'cast_class',
+            'guest_level',
+            'back_ratio',
+            'expire_times',
+            'call_times',
+            'expire_amount',
+            'average_review',
+            'five_reviews',
+            'introducer',
+            'memo',
+            'guest_started_at',
+            'cast_started_at',
+            'last_login',
+            'username',
+            'is_registered',
+            'is_active',
+        )
+        model = Member
+
+    def get_average_review(self, obj):
+        from django.db.models import Avg
+        average_stars = obj.review_sources.aggregate(Avg('stars'))['stars__avg']
+        if average_stars:
+            return round(average_stars, 2)
+        else:
+            return 0
+
+    def get_five_reviews(self, obj):
+        return obj.review_sources.filter(stars = 5).count()
 
 class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(
@@ -206,7 +245,6 @@ class PasswordChange(serializers.Serializer):
     old = serializers.CharField(required=False)
     new = serializers.CharField(required=False)
 
-
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('nickname', 'birthday', 'word',
@@ -304,17 +342,7 @@ class AdminPagination(PageNumberPagination):
         })
 
 class TransferSerializer(serializers.ModelSerializer):
-    user = MemberSerializer()
-    
+    user = MemberSerializer()    
     class Meta:
         fields = ('id', 'status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
         model = TransferApplication
-
-class TransferPagination(PageNumberPagination):
-    page_size = 10
-
-    def get_paginated_response(self, data):
-        return Response({
-            'total': TransferApplication.objects.filter().count(),
-            'results': data
-        })

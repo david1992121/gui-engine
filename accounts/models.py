@@ -146,7 +146,7 @@ class Member(SoftDeletionModel):
     phone_number = models.CharField(
         '電話番号', unique=True, null=True, blank=True, max_length=20)
     nickname = models.CharField(
-        'ニックネーム', unique=True, null=True, blank=True, max_length=190)
+        'ニックネーム', null=True, blank=True, max_length=190)
     avatars = models.ManyToManyField(
         Media, related_name="avatar", verbose_name='アバタ')
     is_registered = models.BooleanField('初期登録', default=False)
@@ -166,6 +166,7 @@ class Member(SoftDeletionModel):
     detail = models.ForeignKey(
         Detail, on_delete=models.SET_NULL, null=True, blank=True)
     is_joining = models.BooleanField('合流中', default=False)
+    inviter_code = models.CharField('紹介者コード', unique=True, null=True, blank=True, max_length=7)
     introducer = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, related_name='intros', verbose_name='紹介者')
 
@@ -189,6 +190,12 @@ class Member(SoftDeletionModel):
     cast_class = models.ForeignKey(
         CastClass, on_delete=models.SET_NULL, null=True, blank=True)
     cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
+    back_ratio = models.IntegerField('バック率', null = True, blank = True)
+    expire_amount = models.IntegerField('延長時間', default = 0)
+    expire_times = models.IntegerField('延長回数', default = 0)
+
+    ##### extra info in admin #####
+    memo = models.CharField('メモ', max_length=190, default = "")
 
     ##### card and bank #####
     axes_exist = models.BooleanField('クレカ登録', default=False)
@@ -275,8 +282,6 @@ class Tweet(models.Model):
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
 # Like Model
-
-
 class FavoriteTweet(models.Model):
 
     liker = models.ForeignKey(Member, on_delete=models.SET_NULL,
@@ -288,3 +293,24 @@ class FavoriteTweet(models.Model):
     class Meta:
         verbose_name = "つぶやき-イイネ関係"
         verbose_name_plural = "つぶやき-イイネ関係"
+        unique_together = ('liker', 'tweet')
+
+# Friendships between users
+class Friendship(models.Model):
+    follower = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='favorites', verbose_name = "イイネ元")
+    favorite = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='followers', verbose_name = "イイネ先")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'フォロー関係'
+        verbose_name_plural = 'フォロー関係'
+        unique_together = ('follower', 'favorite')
+
+class Review(models.Model):
+    source = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_targets', verbose_name='レビュー元')
+    target = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_sources', verbose_name='レビュー先')
+    stars = models.IntegerField('スター', default = 5, validators=[MaxValueValidator(5),  MinValueValidator(1)])
+    content = models.TextField('内容', null = True, blank = True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+

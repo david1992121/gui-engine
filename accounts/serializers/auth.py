@@ -165,6 +165,8 @@ class MemberSerializer(serializers.ModelSerializer):
             'detail',            
             'cast_status',
             'transfer_infos',
-            'username'
+            'username',
+            'inviter_code'
         )
         model = Member
+
