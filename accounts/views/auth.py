@@ -90,6 +90,7 @@ class LineLoginView(APIView):
                     user_obj.username = 'user_{}'.format(user_obj.id)
                     new_code = getInviterCode()
                     user_obj.inviter_code = new_code
+                    user_obj.is_registered = True
 
                 if role == 0 and user_obj.role == 1:
                     user_obj.role = 10
@@ -149,10 +150,11 @@ class EmailRegisterView(APIView):
             else:
                 
                 # create user
-                user = Member.objects.create(email=email)
+                user = Member.objects.create(email = email)
                 user.username = "user_{}".format(user.id)
                 user.nickname = nickname
                 user.inviter_code = getInviterCode()
+                user.is_registered = True
                 user.set_password(password)
 
                 # additional info
