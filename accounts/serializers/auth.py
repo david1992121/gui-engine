@@ -23,6 +23,7 @@ class EmailRegisterSerializer(serializers.Serializer):
 
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
+    inviter_code = serializers.CharField(required=False, allow_blank=True)
 
 class AdminEmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'username'
