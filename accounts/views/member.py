@@ -289,7 +289,7 @@ class MemberView(APIView):
             members = Member.objects.filter(role__gte=0, is_registered=True, is_active = True)
         return Response(MemberSerializer(members, many=True).data)
 
-class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
@@ -370,6 +370,14 @@ class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.Generic
 
         return Response({ "total" : total, "results" : UserSerializer(members, many = True).data }, status = status.HTTP_200_OK)
 
+class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+    queryset = Member.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+    
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
@@ -383,7 +391,6 @@ def get_fresh_casts(request):
 
     casts = Member.objects.filter(role=0, cast_started_at__gt=three_months_ago)
     return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

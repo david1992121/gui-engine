@@ -14,7 +14,7 @@ urlpatterns = [
 
     # user management
     path('users', UserView.as_view(), name = "user_view"),
-    path('users/<int:pk>', UserView.as_view(), name = "user_detail_view"),
+    path('users/<int:pk>', UserDetailView.as_view(), name = "user_detail_view"),
 
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
