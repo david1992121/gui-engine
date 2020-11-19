@@ -1,7 +1,12 @@
+"""
+Serializers for Chat
+"""
 from rest_framework import serializers
-
+from accounts.serializers.auth import MediaImageSerializer
 from accounts.serializers.member import MainInfoSerializer
-from chat.models import Notice
+from basics.serializers import GiftSerializer
+from calls.serializers import OrderSerializer
+from chat.models import Room, Message, Notice
 
 
 class NoticeSerializer(serializers.ModelSerializer):
@@ -35,3 +40,48 @@ class NoticeSerializer(serializers.ModelSerializer):
                 'required': True
             }
         }
+
+
+class RoomSerializer(serializers.ModelSerializer):
+    """
+    Room Serializer
+    """
+    users = MainInfoSerializer(read_only=True, many=True)
+    joins = MainInfoSerializer(read_only=True, many=True)
+    order = OrderSerializer(read_only=True)
+
+    class Meta:
+        model = Room
+        fields = (
+            'is_group',
+            'last_message',
+            'users',
+            'room_type',
+            'order',
+            'title',
+            'joins'
+        )
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    """
+    Message Serializer
+    """
+    medias = MediaImageSerializer(many=True)
+    gift = GiftSerializer()
+    sender = MainInfoSerializer()
+    receiver = MainInfoSerializer()
+
+    class Meta:
+        model = Message
+        fields = (
+            'content',
+            'medias',
+            'gift',
+            'is_read',
+            'sender',
+            'receiver',
+            'is_notice',
+            'is_like',
+            'created_at'
+        )

@@ -24,7 +24,11 @@ from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, De
 from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
 from chat.models import Room, Message
 from basics.serializers import ChoiceSerializer
+from chat.serializers import RoomSerializer
 
+# use channel
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
@@ -659,11 +663,23 @@ def like_person(request, id):
         # create room
         new_room = Room.objects.create(last_message = "いいね")
         new_room.users.set([cur_user.id, target_user.id])
+
+        # send room
+        channel_layer = get_channel_layer()
+        for user_id in [target_user.id, cur_user.id]:
+            async_to_sync(channel_layer.group_send)(
+                "chat_{}".format(user_id),
+                { "type": "room.send", "content": RoomSerializer(new_room).data }
+            )
         
         # create message
         Message.objects.create(room = new_room, sender = cur_user, receiver = target_user, is_like = True)
 
-        # websocket notification
+        # send message
+        for user_id in [target_user.id, cur_user.id]:
+            async_to_sync(channel_layer.group_send)(
+                "chat_{}".format(user_id),
+                { "type": "message.send", "content": RoomSerializer(new_room).data }
+            )
+
         return Response(new_room.id, status = status.HTTP_400_BAD_REQUEST)
-
-
