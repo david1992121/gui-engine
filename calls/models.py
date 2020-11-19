@@ -1,0 +1,26 @@
+from django.db import models
+from accounts.models import Member
+from basics.models import Location, CostPlan, Choice
+
+# Create your models here.
+class Order(models.Model):
+    status = models.CharField('状態', null = True, blank = True, max_length = 50)
+    reservation = models.CharField('予約名', null = True, blank = True, max_length = 100)
+    place = models.CharField('予約場所', null=True, blank=True, max_length=100)
+    user = models.ForeignKey(Member, related_name='orders', on_delete = models.SET_NULL, null = True, blank = True, verbose_name='オーダー')
+    joined = models.ManyToManyField(Member, verbose_name="応募者")
+    parent_location = models.ForeignKey(Location, on_delete = models.PROTECT, null = True, blank = True)
+    meet_time = models.CharField("合流時間", default = "")
+    meet_time_iso = models.CharField("ISO時間", default = "")
+    time_other = models.BooleanField("他時間", default = False)
+    location = models.ForeignKey(Location, on_delete = models.PROTECT, null = True, blank = True)
+    location_other = models.CharField('他の場所', null=True, blank =True)
+    person = models.IntegerField('合流人数', default=1)
+    period = models.IntegerField('合流時間', default=1)
+    cast_class = models.ForeignKey(CostPlan, on_delete = models.SET_NULL, null = True, blank = True)
+    situations = models.ManyToManyField(Choice, verbose_name='気持ち')
+    desired = models.ManyToManyField(Member, verbose_name="ご希望のキャスト")
+    is_private = models.BooleanField('プライベート', default=False)
+
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
