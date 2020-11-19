@@ -116,7 +116,6 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
 
 class MediaImageSerializer(serializers.ModelSerializer):
     uri = Base64ImageField()
-
     class Meta:
         fields = ('uri', 'id')
         model = Media

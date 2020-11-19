@@ -17,7 +17,7 @@ class Order(models.Model):
     location_other = models.CharField('他の場所', null=True, blank =True, max_length=100)
     person = models.IntegerField('合流人数', default=1)
     period = models.IntegerField('合流時間', default=1)
-    cast_class = models.ForeignKey(CostPlan, on_delete = models.SET_NULL, null = True, blank = True)
+    cost_plan = models.ForeignKey(CostPlan, on_delete = models.SET_NULL, null = True, blank = True)
     situations = models.ManyToManyField(Choice, verbose_name='気持ち', related_name = "with_choice")
     desired = models.ManyToManyField(Member, related_name = "invited", verbose_name="ご希望のキャスト")
     is_private = models.BooleanField('プライベート', default=False)

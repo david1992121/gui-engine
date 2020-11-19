@@ -2,8 +2,6 @@
 Serializers for Member
 """
 
-from datetime import datetime
-
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -14,10 +12,6 @@ from rest_framework.response import Response
 from accounts.models import Media, Tweet, Member, TransferApplication
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
 from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
-
-# use channel
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 def file_validator(file):
     max_file_size = 1024 * 1024 * 100  # 100MB
@@ -181,17 +175,6 @@ class TweetSerializer(serializers.ModelSerializer):
         new_tweet.user = Member.objects.get(pk=user_id)
         new_tweet.save()
         new_tweet.images.set(media_ids)
-
-        # send message via channels
-        channel_layer = get_channel_layer()
-        all_users = list(Member.objects.filter(is_active = True).values_list('id', flat = True))
-        print(all_users)
-        for user_id in all_users:
-            async_to_sync(channel_layer.group_send)(
-                "chat_{}".format(user_id),
-                { "type": "tweet.send", "content": TweetSerializer(new_tweet).data }
-            )
-
         return new_tweet
 
     def update(self, instance, validated_data):
