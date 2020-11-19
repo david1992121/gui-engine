@@ -86,6 +86,7 @@ Pillow = "==8.0.1"
 PyJWT = "==1.7.1"
 pyOpenSSL = "==19.1.0"
 PyYAML = "==5.3.1"
+whitenoise = "==5.2.0"
 
 [requires]
 python_version = "3.7"
