@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'chat',
     'basics',
     'accounts',
-    'drf_yasg',
+    'calls',
 ]
 
 MIDDLEWARE = [
