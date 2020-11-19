@@ -6,7 +6,7 @@ class Room(models.Model):
     is_group = models.BooleanField('グループ', default = False)
     users = models.ManyToManyField(Member, related_name="rooms", verbose_name="メンバー")
     last_message = models.TextField('最後のメッセージ', null = True, blank = True)
-    room_type = models.CharField('タイプ', null = True, blank=True, max_length=30)
+    room_type = models.CharField('タイプ', default = "", max_length=30)
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null = True, blank= True)
     title = models.CharField('タイトル', null = True, blank= True, max_length=130)
     joins = models.ManyToManyField(Member, verbose_name="合流者", related_name = "joinings")
@@ -23,6 +23,18 @@ class Message(models.Model):
     sender = models.ForeignKey(Member, related_name = "sended", on_delete = models.SET_NULL, null = True)
     receiver = models.ForeignKey(Member, related_name = "received", on_delete = models.SET_NULL, null = True)
     is_notice = models.BooleanField('通知', default = False)
+    is_like = models.BooleanField('イイネ', default = False)
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+class Notice(models.Model):
+
+    content = models.CharField('内容', max_length=100, default = "")
+    user = models.ForeignKey(Member, related_name = "rececived_notices", on_delete = models.CASCADE, verbose_name="通知先")
+    from_user = models.ForeignKey(Member, related_name = "sent_notices", on_delete = models.CASCADE, verbose_name="通知元")
+    notice_type = models.CharField('タイプ', default = "foot", max_length=100)
+
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+

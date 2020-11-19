@@ -1,4 +1,5 @@
 import json
+from django.dispatch.dispatcher import receiver
 import jwt
 from dateutil.relativedelta import relativedelta
 import requests
@@ -20,7 +21,8 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, B
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
-from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo
+from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
+from chat.models import Room, Message
 from basics.serializers import ChoiceSerializer
 
 
@@ -643,3 +645,25 @@ def proceed_transfer(request, id):
     cur_transfer.status = 1
     cur_transfer.save()
     return Response({"success": True}, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def like_person(request, id):
+    cur_user = request.user
+    target_user = Member.objects.get(pk = id)
+    if Friendship.objects.filter(follower = cur_user, favorite = target_user).count() > 0:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    else:
+        Friendship.objects.create(follower = cur_user, favorite = target_user)
+
+        # create room
+        new_room = Room.objects.create(last_message = "いいね")
+        new_room.users.set([cur_user.id, target_user.id])
+        
+        # create message
+        Message.objects.create(room = new_room, sender = cur_user, receiver = target_user, is_like = True)
+
+        # websocket notification
+        return Response(new_room.id, status = status.HTTP_400_BAD_REQUEST)
+
+

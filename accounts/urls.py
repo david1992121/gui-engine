@@ -70,4 +70,8 @@ urlpatterns = [
     # transfer view
     path('transfers', TransferView.as_view(), name = "transfer_view"),
     path('transfers/proceed/<int:id>', proceed_transfer, name = "proceed_transfer"),
+
+    # favorite
+    path('favorites/<int:id>', like_person, name = "like_person"),
+    
 ]
