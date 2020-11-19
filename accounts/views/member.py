@@ -393,7 +393,7 @@ class MemberDetailView(APIView):
 
     def get(self, request, pk):
         member = self.get_object(pk)
-        serializer = GeneralInfoSerializer(member)
+        serializer = MemberSerializer(member)
         return Response(serializer.data)
 
 
