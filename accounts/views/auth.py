@@ -5,6 +5,7 @@ APIs for Accounts
 import json
 from threading import Thread
 from base64 import urlsafe_b64decode, urlsafe_b64encode
+from dateutil.parser import parse
 import jwt
 import requests
 
@@ -142,6 +143,7 @@ class EmailRegisterView(APIView):
             email = input_data.get('email').strip()
             password = input_data.get('password')
             nickname = input_data.get('nickname')
+            birthday = input_data.get('birthday', "")
 
             # additional info
             inviter_code = input_data.get('inviter_code', "")
@@ -161,6 +163,8 @@ class EmailRegisterView(APIView):
                 user.username = "user_{}".format(user.id)
                 user.nickname = nickname
                 user.inviter_code = getInviterCode()
+                if birthday != "":
+                    user.birthday = parse(birthday)
                 user.is_registered = True
                 user.set_password(password)
 

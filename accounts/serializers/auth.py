@@ -17,9 +17,9 @@ class EmailRegisterSerializer(serializers.Serializer):
     """Serializer for Email Register"""
     email = serializers.EmailField()
     password = serializers.CharField(min_length=6, max_length=30)
-    inviter_code = serializers.CharField(required = False)
+    inviter_code = serializers.CharField(required=False, allow_blank=True)
     nickname = serializers.CharField()
-    birthday = serializers.CharField(required = False)
+    birthday = serializers.CharField(required=False, allow_blank=True)
 
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
