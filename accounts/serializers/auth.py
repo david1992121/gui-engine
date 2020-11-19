@@ -9,7 +9,7 @@ from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
-from accounts.models import Member, Media, Detail, TransferInfo
+from accounts.models import Member, Media, Detail, TransferInfo, Friendship
 from basics.serializers import SettingSerializer, ChoiceSerializer
 
 
@@ -151,6 +151,7 @@ class MemberSerializer(serializers.ModelSerializer):
     cast_status = ChoiceSerializer(read_only=True, many=True)
     introducer = IntroducerSerializer(read_only = True)
     transfer_infos = TransferInfoSerializer(many = True)
+    favorites = serializers.SerializerMethodField()
     class Meta:
         fields = (
             'id',
@@ -166,11 +167,14 @@ class MemberSerializer(serializers.ModelSerializer):
             'video_point_half',
             'is_registered',
             'setting',
-            'detail',            
+            'detail',
             'cast_status',
             'transfer_infos',
             'username',
-            'inviter_code'
+            'inviter_code',
+            'favorites'
         )
         model = Member
 
+    def get_favorites(self, obj):
+        return list(obj.favorites.values_list('favorite_id', flat = True))

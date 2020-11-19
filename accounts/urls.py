@@ -46,7 +46,7 @@ urlpatterns = [
     path('member/password', change_password, name = "password_change"),
     path('member/profile', ProfileView.as_view(), name = "update_profile"),
     path('member/choice', edit_choice, name = "edit_choice"),
-
+    
     # detail profile
     path('details', DetailView.as_view(), name = "detail_view"),
     path('details/<int:pk>', DetailView.as_view(), name = "detail_detail_view"),
