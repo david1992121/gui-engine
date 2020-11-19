@@ -169,6 +169,7 @@ class Member(SoftDeletionModel):
     inviter_code = models.CharField('紹介者コード', unique=True, null=True, blank=True, max_length=7)
     introducer = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, related_name='intros', verbose_name='紹介者')
+    is_public = models.BooleanField('プロフィール公開', default = True)
 
     ##### guest info #####
     point_used = models.IntegerField(

@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from accounts.models import Media, Tweet, Member, TransferApplication
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
-from .auth import MediaImageSerializer, MemberSerializer
+from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
 
 # use channel
 from channels.layers import get_channel_layer
@@ -99,6 +99,8 @@ class UserSerializer(serializers.ModelSerializer):
     introducer = MainInfoSerializer()
     cast_class = ClassesSerializer()
     guest_level = LevelsSerializer()
+    detail = DetailSerializer()
+    transfer_infos = TransferInfoSerializer(many = True)
     class Meta:
         fields = (
             'id',
@@ -119,6 +121,11 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'is_registered',
             'is_active',
+            'role',
+            'is_public',
+            'detail',
+            'birthday',
+            'transfer_infos'
         )
         model = Member
 

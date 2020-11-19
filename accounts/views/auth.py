@@ -205,6 +205,8 @@ def verify_token(email, email_token):
     try:
         users = Member.objects.filter(
             email=urlsafe_b64decode(email).decode("utf-8"))
+        print(urlsafe_b64decode(email))
+        print(users)
         for user in users:
             print("user found")
             valid = default_token_generator.check_token(user, email_token)
@@ -212,7 +214,7 @@ def verify_token(email, email_token):
                 user.is_verified = True
                 user.save()
                 return valid
-    except:
+    except :
         pass
     return False
 
