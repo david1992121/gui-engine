@@ -115,7 +115,7 @@ class UserSerializer(serializers.ModelSerializer):
             'location', 'email', 'memo', 'guest_started_at', 'cast_started_at', 'last_login', 
             'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
             'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
-            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars'
+            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id'
         )
         model = Member
         extra_kwargs = {
@@ -194,6 +194,12 @@ class UserSerializer(serializers.ModelSerializer):
                     instance.is_present = False
                 else:
                     instance.is_present = True
+
+        # sns check
+        if instance.social_id != None:
+            instance.social_type = 1
+        else:
+            instance.social_type = 0
 
         cur_detail = Detail.objects.get(pk = cur_detail_id)
         cur_detail.about = detail['about']
