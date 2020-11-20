@@ -1,32 +1,87 @@
 """
 Serializers for Chat
-
 """
-from basics.serializers import GiftSerializer
-from accounts.serializers.auth import MediaImageSerializer
-from calls.models import Order
-from accounts.serializers.member import MainInfoSerializer
-from calls.serializers import OrderSerializer
 from rest_framework import serializers
-from .models import Room, Message
+from accounts.serializers.auth import MediaImageSerializer
+from accounts.serializers.member import MainInfoSerializer
+from basics.serializers import GiftSerializer
+from calls.serializers import OrderSerializer
+from chat.models import Room, Message, Notice
 
-class RoomSerializer(serializers.ModelSerializer):
-    users = MainInfoSerializer(read_only = True, many = True)
-    joins = MainInfoSerializer(read_only = True, many = True)
-    order = OrderSerializer(read_only = True)    
+
+class NoticeSerializer(serializers.ModelSerializer):
+    """
+    Notice Serializer
+    """
+    user_id = serializers.IntegerField()
+    from_user_id = serializers.IntegerField()
+    user = MainInfoSerializer(read_only=True)
+    from_user = MainInfoSerializer(read_only=True)
 
     class Meta:
-        fields = ('is_group', 'last_message', 'users', 'room_type', 'order', 'title', 'joins',)
+        model = Notice
+        fields = (
+            'id',
+            'content',
+            'user_id',
+            'from_user_id',
+            'user',
+            'from_user',
+            'notice_type',
+            'created_at'
+        )
+        extra_keywords = {
+            'user_id': {
+                'write_only': True,
+                'required': True
+            },
+            'from_user_id': {
+                'write_only': True,
+                'required': True
+            }
+        }
+
+
+class RoomSerializer(serializers.ModelSerializer):
+    """
+    Room Serializer
+    """
+    users = MainInfoSerializer(read_only=True, many=True)
+    joins = MainInfoSerializer(read_only=True, many=True)
+    order = OrderSerializer(read_only=True)
+
+    class Meta:
         model = Room
+        fields = (
+            'is_group',
+            'last_message',
+            'users',
+            'room_type',
+            'order',
+            'title',
+            'joins'
+        )
+
 
 class MessageSerializer(serializers.ModelSerializer):
-    medias = MediaImageSerializer(many = True)
+    """
+    Message Serializer
+    """
+    medias = MediaImageSerializer(many=True)
     gift = GiftSerializer()
     sender = MainInfoSerializer()
     receiver = MainInfoSerializer()
 
     class Meta:
-        fields = ('content', 'medias', 'gift', 'is_read', 'sender',
-            'receiver', 'is_notice', 'is_like', 'created_at'
-        )
         model = Message
+        fields = (
+            'content',
+            'medias',
+            'gift',
+            'is_read',
+            'sender',
+            'receiver',
+            'is_notice',
+            'is_like',
+            'created_at'
+        )
