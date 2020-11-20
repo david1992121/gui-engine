@@ -54,6 +54,7 @@ class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = (
+            'id',
             'is_group',
             'last_message',
             'users',
@@ -61,7 +62,8 @@ class RoomSerializer(serializers.ModelSerializer):
             'order',
             'title',
             'joins',
-            'unread'
+            'unread',
+            'updated_at'
         )
 
 
