@@ -49,6 +49,7 @@ class RoomSerializer(serializers.ModelSerializer):
     users = MainInfoSerializer(read_only=True, many=True)
     joins = MainInfoSerializer(read_only=True, many=True)
     order = OrderSerializer(read_only=True)
+    unread = serializers.IntegerField(read_only = True)    
 
     class Meta:
         model = Room
@@ -59,7 +60,8 @@ class RoomSerializer(serializers.ModelSerializer):
             'room_type',
             'order',
             'title',
-            'joins'
+            'joins',
+            'unread'
         )
 
 

@@ -2,13 +2,15 @@
 APIs for Chat
 """
 from django.core.paginator import Paginator, EmptyPage
+from django.db.models import Q, Count
+
 # from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Notice
+from .models import Notice, Room
 from .serializers import NoticeSerializer, RoomSerializer
 
 
@@ -73,15 +75,27 @@ def rooms_list(request):
         keyword = request.GET.get('keyword', '')
         page = request.GET.get('page', 1)
         offset = request.GET.get('offset', 0)
-        rooms = request.user.rooms.all()
-        result = []
-        for room in rooms:
-            result_item = {
-                'room': RoomSerializer(room).data,
-                'unread': room.messages.filter(receiver=request.user, is_read=False).count()
-            }
-            result.append(result_item)
+        page_size = 10
+        start_index = offset + page * page_size
+
+        # initial queryset
+        query_set = request.user.rooms
+
+        # mode is group or all
+        if mode == "group":
+            query_set = query_set.filter(is_group = True)
+        
+        # get rooms
+        rooms = Room.objects.filter(id__in = list(query_set.values_list('id', flat = True)))
+
+        # nickname search       
+        if keyword != "":
+            rooms = rooms.filter(users__nickname__icontains = keyword)
+
+        # order by created at and pagination
+        rooms = rooms.order_by('-updated_at').all()[start_index:start_index + page_size]
+        rooms = rooms.annotate(unread = Count('messages', filter = Q(messages__receiver = request.user) & Q(messages__is_read = False)))
         return Response(
-            data=result,
-            status=status.HTTP_200_OK
+            RoomSerializer(rooms, many = True).data,
+            status.HTTP_200_OK
         )
