@@ -16,6 +16,8 @@ urlpatterns = [
     path('users', UserView.as_view(), name = "user_view"),
     path('users/<int:pk>', UserDetailView.as_view(), name = "user_detail_view"),
 
+    path('thumbnails/delete', remove_thumbnail, name = "user_remove_thumbnail"),
+
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
     path('members/<int:pk>', MemberDetailView.as_view(), name = "member_view"),
@@ -73,5 +75,5 @@ urlpatterns = [
 
     # favorite
     path('favorites/<int:id>', like_person, name = "like_person"),
-    
+
 ]
