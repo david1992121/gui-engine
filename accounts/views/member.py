@@ -414,6 +414,7 @@ class MemberDetailView(APIView):
 @permission_classes([IsAuthenticated])
 def get_fresh_casts(request):
     from dateutil.relativedelta import relativedelta
+    from datetime import datetime
 
     today = datetime.now()
     three_months_ago = today - relativedelta(months=3)
@@ -656,7 +657,8 @@ def like_person(request, id):
     cur_user = request.user
     target_user = Member.objects.get(pk = id)
     if Friendship.objects.filter(follower = cur_user, favorite = target_user).count() > 0:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        room = Friendship.objects.get(follower = cur_user, favorite = target_user)
+        return Response(room.id, status = status.HTTP_200_OK)
     else:
         Friendship.objects.create(follower = cur_user, favorite = target_user)
 
@@ -682,4 +684,4 @@ def like_person(request, id):
                 { "type": "message.send", "content": RoomSerializer(new_room).data }
             )
 
-        return Response(new_room.id, status = status.HTTP_400_BAD_REQUEST)
+        return Response(new_room.id, status = status.HTTP_200_OK)
