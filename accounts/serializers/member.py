@@ -421,3 +421,23 @@ class TransferSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
         model = TransferApplication
+
+class MediaListSerializer(serializers.Serializer):
+    media = serializers.ListField(
+        child = serializers.FileField( max_length = 100000,
+            allow_empty_file=False, use_url=False, validators=[file_validator] )
+    )
+    user_id = serializers.IntegerField(required = True)
+
+    def create(self, validated_data):
+        media_source = validated_data.pop('media')
+        user_id = validated_data.pop('user_id')
+
+        return_array = []    
+        for img in media_source:
+            media_image = Media.objects.create(uri = img)
+            cur_user = Member.objects.get(pk = user_id)
+            cur_user.avatars.add(media_image)
+            return_array.append(media_image)
+
+        return return_array

@@ -70,7 +70,7 @@ class Detail(models.Model):
         '出身地', default="", null=True, blank=True, max_length=100)
     qualification = models.IntegerField(
         '学歴', choices=QUALIFICATION_CHOICES, default=0)
-    annual = models.IntegerField('学歴', choices=ANNUAL_CHOICES, default=0)
+    annual = models.IntegerField('年収', choices=ANNUAL_CHOICES, default=0)
     job = models.CharField('お仕事', default="", null=True,
                            blank=True, max_length=100)
     favorite = models.CharField(

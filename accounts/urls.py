@@ -16,6 +16,7 @@ urlpatterns = [
     path('users', UserView.as_view(), name = "user_view"),
     path('users/<int:pk>', UserDetailView.as_view(), name = "user_detail_view"),
 
+    path('thumbnails', add_thumbnails, name = "user_add_thumbnail"),
     path('thumbnails/delete', remove_thumbnail, name = "user_remove_thumbnail"),
 
     # member management

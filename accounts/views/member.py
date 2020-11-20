@@ -696,7 +696,7 @@ def like_person(request, id):
 @permission_classes([IsSuperuserPermission])
 def remove_thumbnail(request):
     user_id = request.GET.get("user_id", 0)
-    thumbnail_id = request.GET.get("avatar_id", 0)
+    thumbnail_id = request.GET.get("thumbnail_id", 0)
     if user_id == 0 or thumbnail_id == 0:
         return Response(status = status.HTTP_400_BAD_REQUEST)
     else:
@@ -704,3 +704,13 @@ def remove_thumbnail(request):
         cur_user.avatars.remove(Media.objects.get(pk=thumbnail_id))
         Media.objects.get(pk=thumbnail_id).delete()
         return Response({ "success": True }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsSuperuserPermission])
+def add_thumbnails(request):
+    serializer = MediaListSerializer(data = request.data)
+    if serializer.is_valid():
+        return_array = serializer.save()
+        return Response(MediaImageSerializer(return_array, many = True).data)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
