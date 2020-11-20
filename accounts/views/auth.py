@@ -209,10 +209,7 @@ def verify_token(email, email_token):
     try:
         users = Member.objects.filter(
             email=urlsafe_b64decode(email).decode("utf-8"))
-        print(urlsafe_b64decode(email))
-        print(users)
         for user in users:
-            print("user found")
             valid = default_token_generator.check_token(user, email_token)
             if valid:
                 user.is_verified = True
@@ -287,7 +284,6 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         settings.CLIENT_URL, reset_password_token.key)
     html_template = render_to_string(
         "emails/password_forgotten.html", {'link': target_link})
-    print(reset_password_token.user.email)
 
     mail_subject = "パスワードリセット"
     message = "パスワードトークンを確認してください"
