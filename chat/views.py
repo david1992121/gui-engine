@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Notice
-from .serializers import NoticeSerializer
+from .serializers import NoticeSerializer, RoomSerializer
 
 
 # def index(request):
@@ -26,7 +26,7 @@ from .serializers import NoticeSerializer
 @permission_classes([IsAuthenticated])
 def notices_list(request):
     """
-    Create a new notice
+    List all notices by user, or create a new notice.
     """
 
     if request.method == 'GET':
@@ -59,3 +59,29 @@ def notices_list(request):
             return Response(
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def rooms_list(request):
+    """
+    List all rooms by user.
+    """
+
+    if request.method == 'GET':
+        mode = request.GET.get('mode', 'all')
+        keyword = request.GET.get('keyword', '')
+        page = request.GET.get('page', 1)
+        offset = request.GET.get('offset', 0)
+        rooms = request.user.rooms.all()
+        result = []
+        for room in rooms:
+            result_item = {
+                'room': RoomSerializer(room).data,
+                'unread': room.messages.filter(receiver=request.user, is_read=False).count()
+            }
+            result.append(result_item)
+        return Response(
+            data=result,
+            status=status.HTTP_200_OK
+        )
