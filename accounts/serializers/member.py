@@ -2,14 +2,16 @@
 Serializers for Member
 """
 
+from datetime import datetime
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from dateutil.parser import parse
 
 from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from accounts.models import Media, Tweet, Member, TransferApplication
+from accounts.models import Media, Tweet, Member, TransferApplication, Detail
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
 from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
 
@@ -90,38 +92,37 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     average_review = serializers.SerializerMethodField()
     five_reviews = serializers.SerializerMethodField()
-    introducer = MainInfoSerializer()
-    cast_class = ClassesSerializer()
-    guest_level = LevelsSerializer()
+    introducer = MainInfoSerializer(read_only = True)
+    cast_class = ClassesSerializer(read_only = True)
+    guest_level = LevelsSerializer(read_only = True)
+    location = LocationSerializer(read_only = True)
     detail = DetailSerializer()
-    transfer_infos = TransferInfoSerializer(many = True)
+    transfer_infos = TransferInfoSerializer(many = True, read_only = True, required = False)
+    avatars = MediaImageSerializer(read_only=True, many=True)
+    
+    detail_id = serializers.IntegerField(write_only = True, required = False)
+    location_id = serializers.IntegerField(write_only = True, required = False)
+    cast_class_id = serializers.IntegerField(write_only = True, required = False)
+    introducer_id = serializers.IntegerField(write_only = True, required = False)
+    guest_level_id = serializers.IntegerField(write_only = True, required = False)
+    password = serializers.CharField(write_only = True, required = False, allow_blank = True)
+    email = serializers.EmailField(required = True)
+
     class Meta:
         fields = (
-            'id',
-            'nickname',
-            'cast_class',
-            'guest_level',
-            'back_ratio',
-            'expire_times',
-            'call_times',
-            'expire_amount',
-            'average_review',
-            'five_reviews',
-            'introducer',
-            'memo',
-            'guest_started_at',
-            'cast_started_at',
-            'last_login',
-            'username',
-            'is_registered',
-            'is_active',
-            'role',
-            'is_public',
-            'detail',
-            'birthday',
-            'transfer_infos'
+            'id', 'nickname', 'cast_class', 'guest_level', 'back_ratio', 'expire_times',
+            'call_times', 'expire_amount', 'average_review', 'five_reviews', 'introducer',
+            'location', 'email', 'memo', 'guest_started_at', 'cast_started_at', 'last_login', 
+            'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
+            'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
+            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars'
         )
         model = Member
+        extra_kwargs = {
+            'username': { 'allow_blank': True },
+            'memo': { 'allow_blank': True },
+            'inviter_code': { 'read_only': True }
+        }
 
     def get_average_review(self, obj):
         from django.db.models import Avg
@@ -133,6 +134,84 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_five_reviews(self, obj):
         return obj.review_sources.filter(stars = 5).count()
+
+    def create(self, validated_data):
+        detail = validated_data.pop('detail')
+        password = ""
+        username = ""
+        if 'password' in validated_data.keys():
+            password = validated_data.pop('password')
+
+        if 'username' in validated_data.keys():
+            username = validated_data.pop('username')
+
+        if password == "":
+            raise serializers.ValidationError({ "password" : "password is needed" }) 
+        
+        new_detail = Detail.objects.create(**detail)
+        
+        new_user = Member.objects.create(**validated_data)
+        if password != "":
+            new_user.set_password(password)
+
+        if username != "":
+            new_user.username = username
+        else:
+            new_user.username = "user_{}".format(new_user.id)
+
+        if new_user.role == 1 and new_user.guest_started_at == None:
+            new_user.guest_started_at = timezone.now()
+
+        if new_user.role == 0 and new_user.cast_started_at == None:
+            new_user.cast_started_at = timezone.now()
+
+        new_user.detail = new_detail
+        new_user.inviter_code = getInviterCode()
+        new_user.save()
+        return new_user
+
+    def update(self, instance, validated_data):
+        detail = validated_data.pop('detail')
+        cur_detail_id = validated_data.pop('detail_id')
+
+        password = ""
+        if 'password' in validated_data.keys():
+            password = validated_data.pop('password')
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password != "":
+            instance.set_password(password)
+
+        # present check
+        if instance.role == 0:
+            if instance.presented_at == None:
+                instance.is_present = False
+            else:
+                if instance.presented_at < timezone.now():
+                    instance.presented_at = None
+                    instance.is_present = False
+                else:
+                    instance.is_present = True
+
+        cur_detail = Detail.objects.get(pk = cur_detail_id)
+        cur_detail.about = detail['about']
+        cur_detail.save()
+
+        instance.detail = cur_detail
+        instance.save()
+        return instance
+
+def getInviterCode():
+    import random
+    random_id = ""
+    while True:
+        random_id = ''.join([str(random.randint(0, 999)).zfill(3) for _ in range(2)])
+        if Member.objects.filter(inviter_code = random_id).count() > 0:
+            continue
+        break
+    return random_id
 
 class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(

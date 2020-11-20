@@ -186,7 +186,7 @@ class Member(SoftDeletionModel):
                                            MaxValueValidator(100000),  MinValueValidator(1000)])
     is_applied = models.BooleanField('キャスト応募', default=False)
     is_present = models.BooleanField('出勤', default=False)
-    presented_at = models.DateTimeField('出勤日時', null=True)
+    presented_at = models.DateTimeField('待機修了時間', null=True)
     cast_status = models.ManyToManyField(Choice, verbose_name='ステータス')
     cast_class = models.ForeignKey(
         CastClass, on_delete=models.SET_NULL, null=True, blank=True)

@@ -1,7 +1,7 @@
 import json
 from django.dispatch.dispatcher import receiver
 import jwt
-from dateutil.relativedelta import relativedelta
+from datetime import timedelta
 import requests
 
 from django.core.paginator import Paginator
@@ -303,7 +303,7 @@ class MemberView(APIView):
                 role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
 
-class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
@@ -385,13 +385,19 @@ class UserView(mixins.ListModelMixin, mixins.DestroyModelMixin, generics.Generic
 
         return Response({"total": total, "results": UserSerializer(members, many=True).data}, status=status.HTTP_200_OK)
 
-class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
     
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
@@ -413,10 +419,10 @@ class MemberDetailView(APIView):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_fresh_casts(request):
-    from dateutil.relativedelta import relativedelta
+    from datetime import timedelta
 
-    today = datetime.now()
-    three_months_ago = today - relativedelta(months=3)
+    today = timezone.now()
+    three_months_ago = today - timedelta(days=90)
 
     casts = Member.objects.filter(role=0, cast_started_at__gt=three_months_ago)
     return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
@@ -447,8 +453,8 @@ def search_casts(request):
         # is new
         is_new = input_data.get('is_new', False)
         if is_new:
-            today = datetime.now()
-            three_months_ago = today - relativedelta(months=3)
+            today = timezone.now()
+            three_months_ago = today - timedelta(days=90)
             queryset = queryset.filter(cast_started_at__gt=three_months_ago)
 
         # point min and max
@@ -489,7 +495,7 @@ def search_guests(request):
         start_index = (page - 1) * size
 
         # age min and max
-        year_now = datetime.now().year
+        year_now = timezone.now().year
         age_min = input_data.get('age_min', 20)
         age_max = input_data.get('age_max', 50)
         year_min = year_now - age_max
@@ -683,3 +689,16 @@ def like_person(request, id):
             )
 
         return Response(new_room.id, status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def remove_thumbnail(request):
+    user_id = request.GET.get("user_id", 0)
+    thumbnail_id = request.GET.get("avatar_id", 0)
+    if user_id == 0 or thumbnail_id == 0:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    else:
+        cur_user = Member.objects.get(pk = user_id)
+        cur_user.avatars.remove(Media.objects.get(pk=thumbnail_id))
+        Media.objects.get(pk=thumbnail_id).delete()
+        return Response({ "success": True }, status=status.HTTP_200_OK)
