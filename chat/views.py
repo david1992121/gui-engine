@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Notice, Room
+from .models import Notice, Room, Message
 from .serializers import NoticeSerializer, RoomSerializer
 
 
@@ -59,13 +59,14 @@ def notices_list(request):
             )
         else:
             return Response(
+                data=serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def rooms_list(request):
+def room_list(request):
     """
     List all rooms by user.
     """
@@ -73,29 +74,69 @@ def rooms_list(request):
     if request.method == 'GET':
         mode = request.GET.get('mode', 'all')
         keyword = request.GET.get('keyword', '')
-        page = request.GET.get('page', 1)
-        offset = request.GET.get('offset', 0)
+        page = int(request.GET.get('page', '1'))
+        offset = int(request.GET.get('offset', '0'))
         page_size = 10
-        start_index = offset + page * page_size
+        start_index = offset + (page - 1) * page_size
 
         # initial queryset
         query_set = request.user.rooms
 
         # mode is group or all
         if mode == "group":
-            query_set = query_set.filter(is_group = True)
-        
-        # get rooms
-        rooms = Room.objects.filter(id__in = list(query_set.values_list('id', flat = True)))
+            query_set = query_set.filter(is_group=True)
 
-        # nickname search       
+        # get rooms
+        rooms = Room.objects.filter(id__in=list(
+            query_set.values_list('id', flat=True)))
+
+        # nickname search
         if keyword != "":
-            rooms = rooms.filter(users__nickname__icontains = keyword)
+            rooms = rooms.filter(users__nickname__icontains=keyword)
 
         # order by created at and pagination
-        rooms = rooms.order_by('-updated_at').all()[start_index:start_index + page_size]
-        rooms = rooms.annotate(unread = Count('messages', filter = Q(messages__receiver = request.user) & Q(messages__is_read = False)))
+        rooms = rooms.order_by(
+            '-updated_at').all()[start_index:start_index + page_size]
+        rooms = rooms.annotate(unread=Count('messages', filter=Q(
+            messages__receiver=request.user) & Q(messages__is_read=False)))
         return Response(
-            RoomSerializer(rooms, many = True).data,
-            status.HTTP_200_OK
+            data=RoomSerializer(rooms, many=True).data,
+            status=status.HTTP_200_OK
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def room_detail(request, pk):
+    """
+    Retrieve a room.
+    """
+
+    try:
+        room = Room.objects.get(pk=pk)
+    except Room.DoesNotExist:
+        return Response(
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'GET':
+        serializer = RoomSerializer(room)
+        return Response(
+            data=serializer.data,
+            status=HTTP_200_OK
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def unread_count(request):
+    """
+    Get the number of unread messages for the user.
+    """
+
+    if request.method == 'GET':
+        return Response(
+            data=Message.objects.filter(
+                receiver=request.user, is_read=False).count(),
+            status=status.HTTP_200_OK
         )
