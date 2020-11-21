@@ -6,7 +6,6 @@ from accounts.models import Member, Media
 from basics.models import Gift
 from calls.models import Order
 
-
 class Room(models.Model):
     """
     Room Model
@@ -42,11 +41,6 @@ class Room(models.Model):
         blank=True,
         max_length=130
     )
-    joins = models.ManyToManyField(
-        Member,
-        verbose_name='合流者',
-        related_name='joinings'
-    )
     created_at = models.DateTimeField(
         '作成日時',
         auto_now_add=True
@@ -56,7 +50,16 @@ class Room(models.Model):
         auto_now=True
     )
 
-
+class Join(models.Model):
+    """
+    Room Model
+    """
+    user = models.ForeignKey(Member, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="ユーザー")
+    room = models.ForeignKey(Room, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="チャットルーム")
+    started_at = models.DateTimeField("開始時間")
+    is_extended = models.BooleanField("延長", default = False)
+    is_fivepast = models.BooleanField("5分延長", default = False)
+    ended_at = models.DateTimeField("修了時間")
 class Message(models.Model):
     """
     Message Model

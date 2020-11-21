@@ -6,7 +6,7 @@ from accounts.serializers.auth import MediaImageSerializer
 from accounts.serializers.member import MainInfoSerializer
 from basics.serializers import GiftSerializer
 from calls.serializers import OrderSerializer
-from chat.models import Room, Message, Notice
+from chat.models import Join, Room, Message, Notice
 
 
 class NoticeSerializer(serializers.ModelSerializer):
@@ -41,15 +41,24 @@ class NoticeSerializer(serializers.ModelSerializer):
             }
         }
 
+class JoinSerializer(serializers.ModelSerializer):
+    """
+    Join Serializer
+    """
+    user = MainInfoSerializer(read_only = True)
+    
+    class Meta:
+        fields = ('started_at', 'is_extended', 'is_fivepast', 'ended_at', 'user')
+        model = Join
 
 class RoomSerializer(serializers.ModelSerializer):
     """
     Room Serializer
     """
     users = MainInfoSerializer(read_only=True, many=True)
-    joins = MainInfoSerializer(read_only=True, many=True)
+    joins = JoinSerializer(read_only=True, many=True)
     order = OrderSerializer(read_only=True)
-    unread = serializers.IntegerField(read_only = True)    
+    unread = serializers.IntegerField(read_only = True)  
 
     class Meta:
         model = Room

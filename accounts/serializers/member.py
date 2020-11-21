@@ -11,8 +11,8 @@ from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from accounts.models import Media, Tweet, Member, TransferApplication, Detail
-from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer
+from accounts.models import Media, Tweet, Member, TransferApplication, Detail, Review
+from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer, ChoiceSerializer
 from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
 
 def file_validator(file):
@@ -99,6 +99,7 @@ class UserSerializer(serializers.ModelSerializer):
     detail = DetailSerializer()
     transfer_infos = TransferInfoSerializer(many = True, read_only = True, required = False)
     avatars = MediaImageSerializer(read_only=True, many=True)
+    cast_status = ChoiceSerializer(read_only=True, many=True)
     
     detail_id = serializers.IntegerField(write_only = True, required = False)
     location_id = serializers.IntegerField(write_only = True, required = False)
@@ -115,7 +116,8 @@ class UserSerializer(serializers.ModelSerializer):
             'location', 'email', 'memo', 'guest_started_at', 'cast_started_at', 'last_login', 
             'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
             'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
-            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id'
+            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id',
+            'cast_status'
         )
         model = Member
         extra_kwargs = {
@@ -406,6 +408,7 @@ class ChoiceIdSerializer(serializers.Serializer):
     choice = serializers.ListField(
         child=serializers.IntegerField()
     )
+    user_id = serializers.IntegerField(write_only = True, required = False)
 
 class AdminPagination(PageNumberPagination):
     page_size = 10
@@ -441,3 +444,12 @@ class MediaListSerializer(serializers.Serializer):
             return_array.append(media_image)
 
         return return_array
+
+class ReviewSerializer(serializers.ModelSerializer):
+    source = MainInfoSerializer()
+    target = MainInfoSerializer()
+    
+    class Meta:
+        fields = ('source', 'target', 'stars', 'content', 'created_at')
+        model = Review
+  

@@ -13,6 +13,7 @@ from django.http import Http404
 from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
+from rest_framework import pagination
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
@@ -714,3 +715,39 @@ def add_thumbnails(request):
         return Response(MediaImageSerializer(return_array, many = True).data)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsSuperuserPermission])
+def set_choices(request):
+    choice_serializer = ChoiceIdSerializer(data=request.data)
+    if choice_serializer.is_valid():
+        input_data = choice_serializer.validated_data
+        user_id = input_data.get("user_id", 0)
+        if user_id > 0:
+            user = Member.objects.get(pk = user_id)
+            user.cast_status.clear()
+            user.cast_status.set(input_data.get('choice'))
+            user.save()
+            return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class ReviewView(mixins.ListModelMixin, generics.GenericAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Review.objects.all()
+
+    def get_queryset(self):
+        user_id = int(self.request.GET.get("user_id", "0"))
+        if user_id > 0:
+            return Review.objects.filter(target_id = user_id).order_by('-created_at')
+        else:
+            return Review.objects.all().order_by('-created_at')
+
+    def get(self, request, *args, **kwargs):
+        total = self.get_queryset().count()
+        paginator = Paginator(self.get_queryset().order_by('-created_at'), 10)
+        page = int(request.GET.get("page", "1"))
+        reviews = paginator.page(page)
+
+        return Response({"total": total, "results": ReviewSerializer(reviews, many=True).data}, status=status.HTTP_200_OK)
+

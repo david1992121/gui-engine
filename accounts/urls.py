@@ -16,8 +16,15 @@ urlpatterns = [
     path('users', UserView.as_view(), name = "user_view"),
     path('users/<int:pk>', UserDetailView.as_view(), name = "user_detail_view"),
 
+    # user thumbnails
     path('thumbnails', add_thumbnails, name = "user_add_thumbnail"),
     path('thumbnails/delete', remove_thumbnail, name = "user_remove_thumbnail"),
+
+    # user choices
+    path('choices', set_choices, name = "user_set_choice"),
+
+    # user reiviews
+    path('reviews', ReviewView.as_view(), name = "user_review_view"),
 
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
