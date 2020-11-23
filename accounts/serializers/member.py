@@ -107,7 +107,6 @@ class UserSerializer(serializers.ModelSerializer):
     introducer_id = serializers.IntegerField(write_only = True, required = False)
     guest_level_id = serializers.IntegerField(write_only = True, required = False)
     password = serializers.CharField(write_only = True, required = False, allow_blank = True)
-    email = serializers.EmailField(required = True)
 
     class Meta:
         fields = (
@@ -117,7 +116,7 @@ class UserSerializer(serializers.ModelSerializer):
             'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
             'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
             'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id',
-            'cast_status'
+            'cast_status', 'axes_exist', 'group_times', 'private_times', 'is_introducer'
         )
         model = Member
         extra_kwargs = {
@@ -149,6 +148,9 @@ class UserSerializer(serializers.ModelSerializer):
 
         if password == "":
             raise serializers.ValidationError({ "password" : "password is needed" }) 
+        else:
+            if len(password) < 8:
+                raise serializers.ValidationError({ "password" : "password length is at least 8" }) 
         
         new_detail = Detail.objects.create(**detail)
         
@@ -179,6 +181,10 @@ class UserSerializer(serializers.ModelSerializer):
         password = ""
         if 'password' in validated_data.keys():
             password = validated_data.pop('password')
+
+        if password != "":
+            if len(password) < 8:
+                raise serializers.ValidationError({ "password" : "password length is at least 8" }) 
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -446,10 +452,12 @@ class MediaListSerializer(serializers.Serializer):
         return return_array
 
 class ReviewSerializer(serializers.ModelSerializer):
-    source = MainInfoSerializer()
-    target = MainInfoSerializer()
+    source = MainInfoSerializer(read_only = True)
+    target = MainInfoSerializer(read_only = True)
+    source_id = serializers.IntegerField(write_only = True)
+    target_id = serializers.IntegerField(write_only = True)
     
     class Meta:
-        fields = ('source', 'target', 'stars', 'content', 'created_at')
+        fields = ('source', 'target', 'stars', 'content', 'created_at', 'source_id', 'target_id')
         model = Review
   

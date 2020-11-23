@@ -3,16 +3,21 @@ APIs for Chat
 """
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q, Count
+from django.views import generic
 
 # from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Notice, Room, Message
+from accounts.models import Member
 from .serializers import NoticeSerializer, RoomSerializer
 
+from rest_framework import generics
+from rest_framework import mixins
+from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 
 # def index(request):
 #     return render(request, 'chat/index.html', {})
@@ -123,7 +128,7 @@ def room_detail(request, pk):
         serializer = RoomSerializer(room)
         return Response(
             data=serializer.data,
-            status=HTTP_200_OK
+            status=status.HTTP_200_OK
         )
 
 
@@ -140,3 +145,23 @@ def unread_count(request):
                 receiver=request.user, is_read=False).count(),
             status=status.HTTP_200_OK
         )
+
+class ChatroomView(mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = RoomSerializer
+    queryset = Room.objects.all()
+
+    def get_queryset(self):
+        user_id = int(self.request.GET.get("user_id", "0"))
+        if user_id > 0:
+            return Member.objects.get(pk = user_id).rooms.order_by('-updated_at')
+        else:
+            return Room.objects.all().order_by('-updated_at')
+
+    def get(self, request, *args, **kwargs):
+        total = self.get_queryset().count()
+        paginator = Paginator(self.get_queryset().order_by('-updated_at'), 10)
+        page = int(request.GET.get("page", "1"))
+        reviews = paginator.page(page)
+
+        return Response({ "total": total, "results": RoomSerializer(reviews, many=True).data }, status = status.HTTP_200_OK)

@@ -1,9 +1,8 @@
-from calls.models import Order
-from basics.models import Location
+from calls.models import Invoice, Order
 from rest_framework import serializers
 from basics.serializers import LocationSerializer, CostplanSerializer
 from accounts.serializers.member import MainInfoSerializer
-
+from accounts.models import Member
 class OrderSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer()
     joined = MainInfoSerializer(many = True)
@@ -19,3 +18,19 @@ class OrderSerializer(serializers.ModelSerializer):
             'created_at',
         )
         model = Order
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    order = OrderSerializer(read_only = True)
+    user = MainInfoSerializer(read_only = True)
+    user_id = serializers.IntegerField(write_only = True)
+
+    class Meta:
+        fields = ('id', 'invoice_type', 'amount', 'reason', 'order', 'user', 'updated_at', 'user_id')
+        model = Invoice
+
+    def create(self, validated_data):
+        user = Member.objects.get(pk = validated_data['user_id'])
+        user.point = user.point + validated_data['amount']
+        user.save()
+        return super(InvoiceSerializer, self).create(validated_data)
+        

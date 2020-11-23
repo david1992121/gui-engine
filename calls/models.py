@@ -24,3 +24,14 @@ class Order(models.Model):
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+class Invoice(models.Model):
+
+    invoice_type = models.CharField('目的', null = True, blank = True, max_length=100)
+    amount = models.IntegerField('ポイント', default = 0)
+    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True)
+    order = models.ForeignKey(Order, on_delete = models.SET_NULL, null = True)
+    reason = models.CharField('理由', default = "", max_length=190)
+
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)

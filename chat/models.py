@@ -3,52 +3,23 @@ Models for Chat
 """
 from django.db import models
 from accounts.models import Member, Media
-from basics.models import Gift
+from basics.models import Gift, Location
 from calls.models import Order
 
 class Room(models.Model):
     """
     Room Model
     """
-    is_group = models.BooleanField(
-        'グループ',
-        default=False
-    )
-    users = models.ManyToManyField(
-        Member,
-        related_name='rooms',
-        verbose_name='メンバー'
-    )
-    last_message = models.TextField(
-        '最後のメッセージ',
-        null=True,
-        blank=True
-    )
-    room_type = models.CharField(
-        'タイプ',
-        default='',
-        max_length=30
-    )
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-    title = models.CharField(
-        'タイトル',
-        null=True,
-        blank=True,
-        max_length=130
-    )
-    created_at = models.DateTimeField(
-        '作成日時',
-        auto_now_add=True
-    )
-    updated_at = models.DateTimeField(
-        '更新日時',
-        auto_now=True
-    )
+    is_group = models.BooleanField('グループ',  default=False)
+    users = models.ManyToManyField(Member, related_name='rooms', verbose_name='メンバー')
+    last_message = models.TextField('最後のメッセージ', null=True, blank=True)
+    last_sender = models.ForeignKey(Member, related_name='last_rooms', on_delete = models.SET_NULL, 
+        null = True, verbose_name= '最後投稿者')
+    room_type = models.CharField('タイプ', default='', max_length=30)
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
+    title = models.CharField('タイトル', null=True, blank=True, max_length=130)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
 
 class Join(models.Model):
     """
@@ -94,5 +65,15 @@ class Notice(models.Model):
         Member, related_name="sent_notices", on_delete=models.CASCADE, verbose_name="通知元")
     notice_type = models.CharField('タイプ', default="foot", max_length=100)
 
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+class AdminNotice(models.Model):
+    """
+    AdminNotice Model
+    """
+    title = models.CharField('タイトル', default = "", max_length=190)
+    content = models.TextField('コンテンツ', null=True, blank=True)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, verbose_name='支店')
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)

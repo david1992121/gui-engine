@@ -170,7 +170,7 @@ class Member(SoftDeletionModel):
     introducer = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, related_name='intros', verbose_name='紹介者')
     is_public = models.BooleanField('プロフィール公開', default = True)
-
+    
     ##### guest info #####
     point_used = models.IntegerField(
         '利用ポイント', default=0, validators=[MinValueValidator(0)])
@@ -178,6 +178,9 @@ class Member(SoftDeletionModel):
         GuestLevel, on_delete=models.SET_NULL, null=True, blank=True)
     call_times = models.IntegerField('合流利用回数', default=0)
     guest_started_at = models.DateTimeField('ゲスト登録日時', null=True, blank=True)
+    group_times = models.IntegerField('グループ回数', default = 0)
+    private_times = models.IntegerField('プライベート回数', default = 0)
+    is_introducer = models.BooleanField('紹介者', default = False)
 
     ##### cast info #####
     point_half = models.IntegerField('30分あたりのポイント', default=3000, validators=[

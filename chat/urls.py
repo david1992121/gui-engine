@@ -11,5 +11,8 @@ urlpatterns = [
     path('notices', views.notices_list),
     path('rooms', views.room_list),
     path('rooms/<int:pk>', views.room_detail),
-    path('unread', views.unread_count)
+    path('unread', views.unread_count),
+
+    # user chatrooms for admin
+    path('chatrooms', views.ChatroomView.as_view(), name = "user_chat_rooms"),
 ]

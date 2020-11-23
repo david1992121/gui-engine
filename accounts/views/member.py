@@ -7,15 +7,12 @@ import requests
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import Q
-from django.db.models.query import QuerySet
 from django.http import Http404
 
 from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
-from rest_framework import pagination
 from rest_framework.decorators import permission_classes, api_view
-from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, BasePermission
@@ -44,6 +41,11 @@ class IsCast(BasePermission):
     def has_permission(self, request, view):
         return request.user.role == 0
 
+class IsAdminPermission(BasePermission):
+    message = "Only Admin is allowed"
+
+    def has_permission(self, request, view):
+        return request.user.role < 0
 
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]
@@ -108,7 +110,7 @@ def toggle_tweet(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsAdminPermission])
 def count_tweet(request):
     return Response(Tweet.objects.count(), status=status.HTTP_200_OK)
 
@@ -241,10 +243,11 @@ class DetailView(APIView):
         serializer = DetailSerializer(
             detail_obj, data=request.data, partial=True)
         if serializer.is_valid():
+            print(serializer.validated_data)
             detail_obj = serializer.save()
-            user = request.user
-            user.detail = detail_obj
-            user.save()
+            # user = request.user
+            # user.detail = detail_obj
+            # user.save()
             return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -289,7 +292,7 @@ class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateMo
 
 
 class MemberView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminPermission]
 
     def get(self, request):
         is_all = int(request.GET.get("is_all", "0"))
@@ -305,7 +308,7 @@ class MemberView(APIView):
         return Response(MemberSerializer(members, many=True).data)
 
 class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminPermission]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
 
@@ -313,10 +316,14 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
         page = request.GET.get('page', 1)
         cur_request = request.query_params.get("query", "")
         user_type = request.GET.get('user_type', 'guest')
+        is_introducer = request.GET.get('is_introducer', 'false')
 
         # user type
         if user_type == 'guest':
-            query_set = Member.objects.filter(role=1)
+            if is_introducer == 'true':
+                query_set = Member.objects.filter(is_introducer = True)
+            else:
+                query_set = Member.objects.filter(role=1)
         elif user_type == 'cast':
             query_set = Member.objects.filter(Q(role=0) | Q(role=10))
         else:
@@ -329,17 +336,54 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
             except:
                 return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
 
-            # location
-            location_val = query_obj.get("location", 0)
-            if location_val > 0:
-                query_set = query_set.filter(location_id=location_val)
+            if user_type == "cast":
+                # location
+                location_val = query_obj.get("location", 0)
+                if location_val > 0:
+                    query_set = query_set.filter(location_id=location_val)
 
-            # cast level
-            cast_class = query_obj.get("cast_class", 0)
-            if cast_class > 0:
-                query_set = query_set.filter(cast_class_id=cast_class)
+                # cast level
+                cast_class = query_obj.get("cast_class", 0)
+                if cast_class > 0:
+                    query_set = query_set.filter(cast_class_id=cast_class)
 
-            # location
+                # phone_number
+                phone_number = query_obj.get("phone_number", "")
+                if phone_number != "":
+                    query_set = query_set.filter(
+                        phone_number__icontains=phone_number)
+
+                # is_applied
+                is_applied = query_obj.get("is_applied", -1)
+                if is_applied > -1:
+                    if is_applied == 0:
+                        query_set = query_set.filter(role=0)
+                    else:
+                        query_set = query_set.filter(role=10)
+
+                # register status
+                reg_status = query_obj.get("reg_status", -1)
+                if reg_status > -1:
+                    if reg_status == 0:
+                        query_set = query_set.filter(is_registered=False)
+                    else:
+                        query_set = query_set.filter(is_registered=True)
+
+            if user_type == "guest":
+
+                # guest level
+                guest_level = query_obj.get("guest_level", 0)
+                if guest_level > 0:
+                    query_set = query_set.filter(guest_level_id=guest_level)
+
+                # card register status
+                card_register_status = query_obj.get("card_register", -1)
+                if card_register_status == 1:
+                    query_set = query_set.filter(axes_exist = True)
+                if card_register_status == 0:
+                    query_set = query_set.filter(axes_exist = False)
+
+            # user_id
             user_id = query_obj.get("user_id", 0)
             if user_id > 0:
                 query_set = query_set.filter(pk=user_id)
@@ -348,32 +392,10 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
             nickname = query_obj.get("nickname", "")
             if nickname != "":
                 query_set = query_set.filter(nickname__icontains=nickname)
-
-            # phone_number
-            phone_number = query_obj.get("phone_number", "")
-            if phone_number != "":
-                query_set = query_set.filter(
-                    phone_number__icontains=phone_number)
-
+           
             # username
             username = query_obj.get("username", "")
             query_set = query_set.filter(username__icontains=username)
-
-            # is_applied
-            is_applied = query_obj.get("is_applied", -1)
-            if is_applied > -1:
-                if is_applied == 0:
-                    query_set = query_set.filter(role=0)
-                else:
-                    query_set = query_set.filter(role=10)
-
-            # register status
-            reg_status = query_obj.get("reg_status", -1)
-            if reg_status > -1:
-                if reg_status == 0:
-                    query_set = query_set.filter(is_registered=False)
-                else:
-                    query_set = query_set.filter(is_registered=True)
 
             # introducer id
             introducer_id = query_obj.get("introducer_id", 0)
@@ -402,7 +424,6 @@ class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins
     
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
-
 
 class MemberDetailView(APIView):
     def get_object(self, pk):
@@ -731,7 +752,7 @@ def set_choices(request):
             return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
-class ReviewView(mixins.ListModelMixin, generics.GenericAPIView):
+class ReviewView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
     queryset = Review.objects.all()
@@ -751,3 +772,14 @@ class ReviewView(mixins.ListModelMixin, generics.GenericAPIView):
 
         return Response({"total": total, "results": ReviewSerializer(reviews, many=True).data}, status=status.HTTP_200_OK)
 
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        return self.create(request, *args, **kwargs)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def toggle_active(request, id):
+    cur_user = Member.objects.get(pk = id)
+    cur_user.is_active = not cur_user.is_active
+    cur_user.save()
+    return Response(status = status.HTTP_200_OK)
