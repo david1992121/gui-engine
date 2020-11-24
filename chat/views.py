@@ -1,6 +1,7 @@
 """
 APIs for Chat
 """
+import json
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q, Count
 from django.views import generic
@@ -11,9 +12,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Notice, Room, Message
+from .models import Notice, Room, Message, AdminNotice
 from accounts.models import Member
-from .serializers import NoticeSerializer, RoomSerializer
+from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer
 
 from rest_framework import generics
 from rest_framework import mixins
@@ -165,3 +166,47 @@ class ChatroomView(mixins.ListModelMixin, generics.GenericAPIView):
         reviews = paginator.page(page)
 
         return Response({ "total": total, "results": RoomSerializer(reviews, many=True).data }, status = status.HTTP_200_OK)
+
+class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = AdminNoticeSerializer
+    queryset = AdminNotice.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        page = request.GET.get('page', 1)
+        cur_request = request.query_params.get("query", "")
+
+        # user type
+        query_set = AdminNotice.objects
+
+        # query
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            # location
+            location_val = query_obj.get("location_id", 0)
+            if location_val > 0:
+                query_set = query_set.filter(location_id=location_val)
+
+            # title
+            title = query_obj.get("title", "")
+            if title != "":
+                query_set = query_set.filter(title__icontains = title)
+
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('-updated_at'), 10)
+        notices = paginator.page(page)
+
+        return Response({"total": total, "results": AdminNoticeSerializer(notices, many=True).data}, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)

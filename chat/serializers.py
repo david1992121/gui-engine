@@ -4,10 +4,9 @@ Serializers for Chat
 from rest_framework import serializers
 from accounts.serializers.auth import MediaImageSerializer
 from accounts.serializers.member import MainInfoSerializer
-from basics.serializers import GiftSerializer
+from basics.serializers import GiftSerializer, LocationSerializer
 from calls.serializers import OrderSerializer
-from chat.models import Join, Room, Message, Notice
-
+from .models import AdminNotice, Join, Room, Message, Notice
 
 class NoticeSerializer(serializers.ModelSerializer):
     """
@@ -21,14 +20,8 @@ class NoticeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notice
         fields = (
-            'id',
-            'content',
-            'user_id',
-            'from_user_id',
-            'user',
-            'from_user',
-            'notice_type',
-            'created_at'
+            'id', 'content', 'user_id', 'from_user_id', 'user', 'from_user',
+            'notice_type', 'created_at'
         )
         extra_keywords = {
             'user_id': {
@@ -100,3 +93,11 @@ class MessageSerializer(serializers.ModelSerializer):
             'is_like',
             'created_at'
         )
+
+class AdminNoticeSerializer(serializers.ModelSerializer):
+    location = LocationSerializer(read_only = True)
+    location_id = serializers.IntegerField(write_only = True, required = False)
+    class Meta:
+        fields = ('id', 'title', 'content', 'location', 'location_id', 'created_at', 'updated_at')
+        model = AdminNotice
+        

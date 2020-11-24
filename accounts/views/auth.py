@@ -100,8 +100,11 @@ class LineLoginView(APIView):
                         user_obj.introducer = Member.objects.get(inviter_code=inviter_code)
                     user_obj.is_registered = True
 
-                if role == 0 and user_obj.role == 1:
-                    user_obj.role = 10
+                    if role == 1:
+                        user_obj.guest_started_at = timezone.now()
+                else:
+                    if role == 0 and user_obj.role == 1:
+                        return Response(status = status.HTTP_403_FORBIDDEN)
 
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
