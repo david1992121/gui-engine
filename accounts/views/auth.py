@@ -119,6 +119,8 @@ class LineLoginView(APIView):
 
             except jwt.exceptions.InvalidSignatureError:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except jwt.exceptions.DecodeError:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
