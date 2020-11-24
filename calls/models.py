@@ -28,8 +28,10 @@ class Order(models.Model):
 class Invoice(models.Model):
 
     invoice_type = models.CharField('目的', null = True, blank = True, max_length=100)
-    amount = models.IntegerField('ポイント', default = 0)
-    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True)
+    give_amount = models.IntegerField('ポイント', default = 0)
+    take_amount = models.IntegerField('ポイント', default = 0)
+    giver = models.ForeignKey(Member, on_delete = models.SET_NULL, related_name = "gave", null=True, verbose_name="使用")
+    taker = models.ForeignKey(Member, on_delete=models.SET_NULL, related_name = "took", null=True, verbose_name="取得")
     order = models.ForeignKey(Order, on_delete = models.SET_NULL, null = True)
     reason = models.CharField('理由', default = "", max_length=190)
 

@@ -1,9 +1,12 @@
+from django.db.models import Sum
+from accounts.views.member import IsSuperuserPermission
 from datetime import timezone
 from dateutil.parser import parse
 import json
 
 from django.core.paginator import Paginator
 
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
@@ -48,10 +51,10 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
             point_receiver_id = query_obj.get("point_receiver_id", 0)
 
             if point_user_id > 0:
-                query_set = query_set.filter(user_id = point_user_id, amount__lt =  0)
+                query_set = query_set.filter(giver_id = point_user_id)
             else:
                 if point_receiver_id > 0:
-                    query_set = query_set.filter(user_id = point_receiver_id, amount__gte = 0)
+                    query_set = query_set.filter(taker_id = point_receiver_id)
 
                         # transfer from
             date_from = query_obj.get("from", "")
@@ -75,3 +78,9 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def get_invoice_total(request):
+    buy_point = Invoice.objects.filter(invoice_type = 'BUY').aggregate(Sum('amount'))['amount_sum']
+    use_point = Invoice.objects.filter(invoice_type = 'CALL')

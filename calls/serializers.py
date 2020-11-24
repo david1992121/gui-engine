@@ -21,16 +21,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class InvoiceSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only = True)
-    user = MainInfoSerializer(read_only = True)
-    user_id = serializers.IntegerField(write_only = True)
+    giver = MainInfoSerializer(read_only = True)
+    taker = MainInfoSerializer(read_only = True)
+    giver_id = serializers.IntegerField(write_only = True, required = False)
+    taker_id = serializers.IntegerField(write_only = True, required = False)
 
     class Meta:
-        fields = ('id', 'invoice_type', 'amount', 'reason', 'order', 'user', 'updated_at', 'user_id')
+        fields = (
+            'id', 'invoice_type', 'give_amount', 'reason', 'order', 'giver', 'taker', 
+            'take_amount', 'updated_at', 'giver_id', 'taker_id')
         model = Invoice
 
     def create(self, validated_data):
-        user = Member.objects.get(pk = validated_data['user_id'])
-        user.point = user.point + validated_data['amount']
-        user.save()
+        taker = Member.objects.get(pk = validated_data['taker_id'])
+        taker.point = taker.point + validated_data['take_amount']
+        taker.save()
         return super(InvoiceSerializer, self).create(validated_data)
         
