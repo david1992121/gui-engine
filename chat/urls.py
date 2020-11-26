@@ -10,8 +10,8 @@ urlpatterns = [
     # path('<str:room_name>/', views.room, name='room'),
     path('notices', notices_list, name="notice_list"),
     path('rooms', room_list, name="room_list"),
-    path('rooms/<int:pk>', room_detail, name="room_detail"),
-    path('rooms/<int:pk>/messages', message_list, name="message_list"),
+    path('rooms/<int:room_id>', room_detail, name="room_detail"),
+    path('rooms/<int:room_id>/messages', message_list, name="message_list"),
     path('unread', unread_count, name="unread_count"),
 
     # user chatrooms for admin
