@@ -40,9 +40,9 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
         instance.avatars.add(media_image)
         instance.is_registered = True
         if instance.role == 1:
-            instance.guest_started_at = timezone.now()
+            instance.started_at = timezone.now()
         elif instance.role == 0:
-            instance.cast_started_at = timezone.now()
+            instance.started_at = timezone.now()
         instance.save()
 
         return instance
@@ -112,7 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'nickname', 'cast_class', 'guest_level', 'back_ratio', 'expire_times',
             'call_times', 'expire_amount', 'average_review', 'five_reviews', 'introducer',
-            'location', 'email', 'memo', 'guest_started_at', 'cast_started_at', 'last_login', 
+            'location', 'email', 'memo', 'started_at', 'last_login', 
             'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
             'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
             'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id',
@@ -163,11 +163,11 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             new_user.username = "user_{}".format(new_user.id)
 
-        if new_user.role == 1 and new_user.guest_started_at == None:
-            new_user.guest_started_at = timezone.now()
+        if new_user.role == 1 and new_user.started_at == None:
+            new_user.started_at = timezone.now()
 
-        if new_user.role == 0 and new_user.cast_started_at == None:
-            new_user.cast_started_at = timezone.now()
+        if new_user.role == 0 and new_user.started_at == None:
+            new_user.started_at = timezone.now()
 
         new_user.detail = new_detail
         new_user.inviter_code = getInviterCode()

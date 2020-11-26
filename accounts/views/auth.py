@@ -101,7 +101,7 @@ class LineLoginView(APIView):
                     user_obj.is_registered = True
 
                     if role == 1:
-                        user_obj.guest_started_at = timezone.now()
+                        user_obj.started_at = timezone.now()
                 else:
                     if role == 0 and user_obj.role == 1:
                         return Response(status = status.HTTP_403_FORBIDDEN)
@@ -171,7 +171,7 @@ class EmailRegisterView(APIView):
                 if birthday != "":
                     user.birthday = parse(birthday)
                 user.is_registered = True
-                user.guest_started_at = timezone.now()
+                user.started_at = timezone.now()
                 user.set_password(password)
 
                 # additional info

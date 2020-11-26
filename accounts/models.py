@@ -177,10 +177,11 @@ class Member(SoftDeletionModel):
     guest_level = models.ForeignKey(
         GuestLevel, on_delete=models.SET_NULL, null=True, blank=True)
     call_times = models.IntegerField('合流利用回数', default=0)
-    guest_started_at = models.DateTimeField('ゲスト登録日時', null=True, blank=True)
+    # guest_started_at = models.DateTimeField('ゲスト登録日時', null=True, blank=True)
     group_times = models.IntegerField('グループ回数', default = 0)
     private_times = models.IntegerField('プライベート回数', default = 0)
     is_introducer = models.BooleanField('紹介者', default = False)
+    started_at = models.DateTimeField("登録日時", null = True, blank=True)
 
     ##### cast info #####
     point_half = models.IntegerField('30分あたりのポイント', default=3000, validators=[
@@ -193,7 +194,7 @@ class Member(SoftDeletionModel):
     cast_status = models.ManyToManyField(Choice, verbose_name='ステータス')
     cast_class = models.ForeignKey(
         CastClass, on_delete=models.SET_NULL, null=True, blank=True)
-    cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
+    # cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
     back_ratio = models.IntegerField('バック率', null = True, blank = True)
     expire_amount = models.IntegerField('延長時間', default = 0)
     expire_times = models.IntegerField('延長回数', default = 0)

@@ -447,7 +447,7 @@ def get_fresh_casts(request):
     today = timezone.now()
     three_months_ago = today - timedelta(days=90)
 
-    casts = Member.objects.filter(role=0, cast_started_at__gt=three_months_ago)
+    casts = Member.objects.filter(role=0, started_at__gt=three_months_ago)
     return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
@@ -478,7 +478,7 @@ def search_casts(request):
         if is_new:
             today = timezone.now()
             three_months_ago = today - timedelta(days=90)
-            queryset = queryset.filter(cast_started_at__gt=three_months_ago)
+            queryset = queryset.filter(started_at__gt=three_months_ago)
 
         # point min and max
         point_min = input_data.get('point_min', 0)
@@ -496,7 +496,7 @@ def search_casts(request):
 
         return Response(
             GeneralInfoSerializer(
-                queryset.order_by("-cast_started_at")
+                queryset.order_by("-started_at")
                 .all()[(start_index):(start_index + size)],
                 many=True
             ).data,
@@ -546,7 +546,7 @@ def search_guests(request):
 
         return Response(
             GeneralInfoSerializer(
-                queryset.order_by("-guest_started_at")
+                queryset.order_by("-started_at")
                 .all()[(start_index):(start_index + size)],
                 many=True
             ).data,
