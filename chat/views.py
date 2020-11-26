@@ -1,6 +1,8 @@
 """
 APIs for Chat
 """
+from django.db.models import query
+from accounts.serializers.member import UserSerializer
 import json
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q, Count
@@ -14,7 +16,7 @@ from rest_framework.response import Response
 
 from .models import Notice, Room, Message, AdminNotice
 from accounts.models import Member
-from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer
+from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
 
 from rest_framework import generics
 from rest_framework import mixins
@@ -239,3 +241,81 @@ class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.
 
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def get_user_count(request):
+    cur_request = request.query_params.get("query", "")
+    query_set = Member.objects.filter(is_active = True).filter(Q(role = 0) | Q(role = 1))
+
+    if cur_request != "":
+        try:
+            query_obj = json.loads(cur_request)
+        except:
+            return Response([], status = status.HTTP_200_OK)
+
+        if query_obj.get('location_id', 0) > 0:
+            query_set = query_set.filter(location_id = query_obj.get('location_id', 0))
+
+        user_type = query_obj.get('user_type', 0)
+        if user_type == 1:
+            query_set = query_set.filter(role = 0)
+        elif user_type == 2:
+            query_set = query_set.filter(role = 1)
+        elif user_type == 3:
+            query_set = query_set.filter(is_introducer = False)
+
+        if len(query_obj.get('cast_class', [])) > 0:
+            query_set = query_set.filter(cast_class_id__in = query_obj.get('cast_class', []))
+
+    return Response(list(query_set.values_list('id', flat = True)), status = status.HTTP_200_OK)
+
+class MessageUserView(generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = UserSerializer
+    
+    def get(self, request):
+        import json
+        from dateutil.parser import parse
+
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+
+        cur_request = request.query_params.get("query", "")
+        query_set = Member.objects.filter(is_active = True).filter(Q(role = 0) | Q(role = 1))
+
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            if query_obj.get('location_id', 0) > 0:
+                query_set = query_set.filter(location_id = query_obj.get('location_id', 0))
+
+            user_type = query_obj.get('user_type', 0)
+            if user_type == 1:
+                query_set = query_set.filter(role = 0)
+            elif user_type == 2:
+                query_set = query_set.filter(role = 1)
+            elif user_type == 3:
+                query_set = query_set.filter(is_introducer = False)
+
+            if len(query_obj.get('cast_class', [])) > 0:
+                query_set = query_set.filter(cast_class_id__in = query_obj.get('cast_class', []))
+
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('-created_at'), size)
+        users = paginator.page(page)
+
+        return Response({"total": total, "results": UserSerializer(users, many=True).data}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_images(request):
+    serializer = FileListSerializer(data = request.data)
+    if serializer.is_valid():
+        return_array = serializer.save()
+        return Response(return_array, status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

@@ -6,7 +6,15 @@ from accounts.serializers.auth import MediaImageSerializer
 from accounts.serializers.member import MainInfoSerializer
 from basics.serializers import GiftSerializer, LocationSerializer
 from calls.serializers import OrderSerializer
+from accounts.models import Media, Member
 from .models import AdminNotice, Join, Room, Message, Notice
+
+def file_validator(file):
+    max_file_size = 1024 * 1024 * 100  # 100MB
+
+    if file.size > max_file_size:
+        raise serializers.ValidationError(_('Max file size is {} and your file size is {}'.
+                                            format(max_file_size, file.size)))
 
 class NoticeSerializer(serializers.ModelSerializer):
     """
@@ -101,3 +109,18 @@ class AdminNoticeSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'content', 'location', 'location_id', 'created_at', 'updated_at')
         model = AdminNotice
         
+class FileListSerializer(serializers.Serializer):
+    media = serializers.ListField(
+        child = serializers.FileField( max_length = 100000,
+            allow_empty_file=False, use_url=False, validators=[file_validator] )
+    )
+
+    def create(self, validated_data):
+        media_source = validated_data.pop('media')
+
+        return_array = []    
+        for img in media_source:
+            media_image = Media.objects.create(uri = img)
+            return_array.append(media_image.id)
+
+        return return_array

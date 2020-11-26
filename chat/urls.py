@@ -19,5 +19,12 @@ urlpatterns = [
 
     # notices for admin
     path('notices_admin', AdminNoticeView.as_view(), name="admin_notices"),
-    path('notices_admin/<int:pk>', AdminNoticeView.as_view(), name="admin_detail_notices")
+    path('notices_admin/<int:pk>', AdminNoticeView.as_view(), name="admin_detail_notices"),
+
+    # messages for user
+    path('messages/upload', upload_images, name = "message_upload"),
+
+    # messages
+    path('messages/users', MessageUserView.as_view(), name = "message_user"),
+    path('messages/users/count', get_user_count, name = "message_user_count"),
 ]
