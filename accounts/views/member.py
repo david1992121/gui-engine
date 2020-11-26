@@ -704,6 +704,7 @@ def like_person(request, id):
         
         # create message
         Message.objects.create(room = new_room, sender = cur_user, receiver = target_user, is_like = True)
+        Message.objects.create(room = new_room, sender = cur_user, receiver = cur_user, is_like = True)
 
         # send message
         for user_id in [target_user.id, cur_user.id]:

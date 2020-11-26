@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 from .models import Notice, Room, Message, AdminNotice
 from accounts.models import Member
-from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer
+from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer
 
 from rest_framework import generics
 from rest_framework import mixins
@@ -135,6 +135,33 @@ def room_detail(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def message_list(request, pk):
+    """
+    List all messages by room and user.
+    """
+
+    try:
+        room = Room.objects.get(pk=pk)
+    except Room.DoesNotExist:
+        return Response(
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'GET':
+        page = int(request.GET.get('page', '1'))
+        offset = int(request.GET.get('offset', '0'))
+        page_size = 10
+        start_index = offset + (page - 1) * page_size
+        messages = room.messages.filter(receiver=request.user).order_by(
+            '-created_at').all()[start_index:start_index + page_size]
+        return Response(
+            data=MessageSerializer(messages, many=True).data,
+            status=status.HTTP_200_OK
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def unread_count(request):
     """
     Get the number of unread messages for the user.
@@ -147,6 +174,7 @@ def unread_count(request):
             status=status.HTTP_200_OK
         )
 
+
 class ChatroomView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = RoomSerializer
@@ -155,7 +183,7 @@ class ChatroomView(mixins.ListModelMixin, generics.GenericAPIView):
     def get_queryset(self):
         user_id = int(self.request.GET.get("user_id", "0"))
         if user_id > 0:
-            return Member.objects.get(pk = user_id).rooms.order_by('-updated_at')
+            return Member.objects.get(pk=user_id).rooms.order_by('-updated_at')
         else:
             return Room.objects.all().order_by('-updated_at')
 
@@ -165,7 +193,8 @@ class ChatroomView(mixins.ListModelMixin, generics.GenericAPIView):
         page = int(request.GET.get("page", "1"))
         reviews = paginator.page(page)
 
-        return Response({ "total": total, "results": RoomSerializer(reviews, many=True).data }, status = status.HTTP_200_OK)
+        return Response({"total": total, "results": RoomSerializer(reviews, many=True).data}, status=status.HTTP_200_OK)
+
 
 class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
@@ -194,7 +223,7 @@ class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.
             # title
             title = query_obj.get("title", "")
             if title != "":
-                query_set = query_set.filter(title__icontains = title)
+                query_set = query_set.filter(title__icontains=title)
 
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-updated_at'), 10)
