@@ -3,6 +3,8 @@ from rest_framework import serializers
 from basics.serializers import LocationSerializer, CostplanSerializer
 from accounts.serializers.member import MainInfoSerializer
 from accounts.models import Member
+from django.db.models import Sum, Q
+from dateutil.parser import parse
 class OrderSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer()
     joined = MainInfoSerializer(many = True)
@@ -37,4 +39,82 @@ class InvoiceSerializer(serializers.ModelSerializer):
         taker.point = taker.point + validated_data['take_amount']
         taker.save()
         return super(InvoiceSerializer, self).create(validated_data)
+
+class RankUserSerializer(serializers.ModelSerializer):
+    overall_points = serializers.SerializerMethodField()
+    call_points = serializers.SerializerMethodField()
+    private_times = serializers.SerializerMethodField()
+    private_points = serializers.SerializerMethodField()
+    public_times = serializers.SerializerMethodField()
+    public_points = serializers.SerializerMethodField()
+    gift_points = serializers.SerializerMethodField()
+    gift_times = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = (
+            'id', 'nickname', 'overall_points', 'call_times', 'call_points', 'overall_points',
+            'private_times', 'private_points', 'public_points', 'public_times', 'gift_points',
+            'gift_times'
+        )
+        model = Member
+
+    def get_gave_took(self, obj):
+        date_from = self.context.get('from', "")        
+        date_to = self.context.get('to', "")
+        if obj.role == 1:
+            query_set = obj.gave
+        else:
+            query_set = obj.took
+        if date_from != "":
+            query_set = query_set.filter(created_at__date__gte = date_from)
+        if date_to != "":
+            query_set = query_set.filter(created_at__date__lte = date_to)
+        return query_set
+
+    def get_overall_points(self, obj):
+        if obj.role == 1:
+            return self.get_gave_took(obj).aggregate(Sum('give_amount'))['give_amount__sum']
+        else:
+            return self.get_gave_took(obj).aggregate(Sum('take_amount'))['take_amount__sum']
+
+    def get_call_points(self, obj):
+        if obj.role == 1:
+            return self.get_gave_took(obj).filter(invoice_type = 'CALL').aggregate(Sum('give_amount'))['give_amount__sum']
+        else:
+            return self.get_gave_took(obj).filter(invoice_type = 'CALL').aggregate(Sum('take_amount'))['take_amount__sum']
         
+    def get_private_times(self, obj):
+        if obj.role == 0:
+            return self.get_gave_took(obj).filter(invoice_type = "CALL", order__is_private = True).count()
+        else:
+            return 0
+
+    def get_public_times(self, obj):
+        if obj.role == 0:
+            return self.get_gave_took(obj).filter(invoice_type = "CALL", order__is_private = False).count()
+        else:
+            return 0
+
+    def get_private_points(self, obj):
+        if obj.role == 0:
+            return self.get_gave_took(obj).filter(invoice_type = "CALL", order__is_private = True).aggregate(Sum('take_amount'))['take_amount__sum']
+        else: 
+            return 0
+    
+    def get_public_points(self, obj):
+        if obj.role == 0:
+            return self.get_gave_took(obj).filter(invoice_type = "CALL", order__is_private = False).aggregate(Sum('take_amount'))['take_amount__sum']
+        else: 
+            return 0
+
+    def get_gift_points(self, obj):
+        if obj.role == 1:
+            return self.get_gave_took(obj).filter(invoice_type = "GIFT").aggregate(Sum('give_amount'))['give_amount__sum']
+        else:
+            return self.get_gave_took(obj).filter(invoice_type = "GIFT").aggregate(Sum('take_amount'))['take_amount__sum']
+
+    def get_gift_times(self, obj):
+        if obj.role == 1:
+            return self.get_gave_took(obj).filter(invoice_type = "GIFT").count()
+        else:
+            return self.get_gave_took(obj).filter(invoice_type = "GIFT").count()

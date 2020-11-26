@@ -171,6 +171,7 @@ class EmailRegisterView(APIView):
                 if birthday != "":
                     user.birthday = parse(birthday)
                 user.is_registered = True
+                user.guest_started_at = timezone.now()
                 user.set_password(password)
 
                 # additional info

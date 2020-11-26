@@ -173,7 +173,7 @@ class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.
     queryset = AdminNotice.objects.all()
 
     def get(self, request, *args, **kwargs):
-        page = request.GET.get('page', 1)
+        page = int(request.GET.get('page', "1"))
         cur_request = request.query_params.get("query", "")
 
         # user type

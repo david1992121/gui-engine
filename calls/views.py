@@ -1,6 +1,6 @@
-from django.db.models import Sum
-from accounts.views.member import IsSuperuserPermission
-from datetime import timezone
+from django.db.models import Sum, Q
+from accounts.views.member import IsAdminPermission, IsSuperuserPermission
+from datetime import time, timezone
 from dateutil.parser import parse
 import json
 
@@ -23,7 +23,7 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
     serializer_class = InvoiceSerializer
 
     def get(self, request, *args, **kwargs):
-        page = request.GET.get('page', 1)
+        page = int(request.GET.get('page', "1"))
         cur_request = request.query_params.get("query", "")
 
         # user type
@@ -59,7 +59,7 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
                         # transfer from
             date_from = query_obj.get("from", "")
             if date_from != "":
-                from_date = timezone(date_from)
+                from_date = parse(date_from)
                 query_set = query_set.filter(
                     created_at__date__gte=from_date.strftime("%Y-%m-%d"))
 
@@ -82,5 +82,79 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
 def get_invoice_total(request):
-    buy_point = Invoice.objects.filter(invoice_type = 'BUY').aggregate(Sum('amount'))['amount_sum']
-    use_point = Invoice.objects.filter(invoice_type = 'CALL')
+    buy_point = Invoice.objects.filter(
+        Q(invoice_type = 'BUY') | Q(invoice_type = 'CHARGE') | Q(invoice_type = 'AURO CHARGE')
+    ).aggregate(Sum('take_amount'))['take_amount__sum']
+    normal_invoices = Invoice.objects.exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO_CHARGE')
+    use_point = normal_invoices.aggregate(Sum('give_amount'))['give_amount__sum']
+    pay_point = normal_invoices.aggregate(Sum('take_amount'))['take_amount__sum']
+    profit_point = use_point - pay_point
+
+    return Response({
+        "buy": buy_point, "use": use_point, "pay": pay_point, "profit": profit_point
+    }, status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def get_rank_users(request):
+    user_type = request.GET.get('type', 'guest')
+    page = int(request.GET.get('page', "1"))
+    cur_query = request.query_params.get("query", "")
+    size = int(request.GET.get('size', "100"))
+
+    # user type
+    query_set = Member.objects
+    if user_type == "guest":
+        query_set = query_set.filter(role = 1, is_active = True)
+    else:
+        query_set = query_set.filter(role = 0, is_active = True)
+
+    # query
+    date_from = ""
+    date_to = ""
+    if cur_query != "":
+        try:
+            query_obj = json.loads(cur_query)
+        except:
+            return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+        # location
+        location_val = query_obj.get("location_id", 0)
+        if location_val > 0:
+            query_set = query_set.filter(location_id = location_val)
+
+        date_from = query_obj.get("from", "")
+        date_to = query_obj.get("to", "")
+        
+    time_filter = Q()
+
+    if user_type == "guest":
+        if date_from != "":
+            time_filter &= Q(gave__created_at__date__gte = parse(date_from).strftime("%Y-%m-%d"))
+        if date_to != "":
+            time_filter &= Q(gave__created_at__date__lte = parse(date_to).strftime("%Y-%m-%d"))
+        
+        query_set = query_set.annotate(
+            overall_points = Sum('gave__give_amount', filter=time_filter)
+        ).order_by('-overall_points', '-call_times')
+    else:        
+        if date_from != "":
+            time_filter &= Q(took__created_at__date__gte = parse(date_from).strftime("%Y-%m-%d"))
+        if date_to != "":
+            time_filter &= Q(took__created_at__date__lte = parse(date_to).strftime("%Y-%m-%d"))
+        
+        query_set = query_set.annotate(
+            overall_points = Sum('took__take_amount', filter=time_filter)
+        ).order_by('-overall_points', '-call_times')
+    
+    total = query_set.count()
+    paginator = Paginator(query_set, size)
+    rank_users = paginator.page(page)
+
+    points_values = list(query_set.values_list('overall_points', flat = True).distinct())
+
+    return Response({"total": total, "results": RankUserSerializer(
+        rank_users, many=True, context = { 
+            'from': parse(date_from).strftime("%Y-%m-%d") if date_from != "" else "", 
+            'to': parse(date_to).strftime("%Y-%m-%d") if date_to != "" else "" }
+    ).data, "values": points_values }, status=status.HTTP_200_OK)

@@ -313,7 +313,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
     queryset = Member.objects.all()
 
     def get(self, request, *args, **kwargs):
-        page = request.GET.get('page', 1)
+        page = int(request.GET.get('page', "1"))
         cur_request = request.query_params.get("query", "")
         user_type = request.GET.get('user_type', 'guest')
         is_introducer = request.GET.get('is_introducer', 'false')
@@ -598,7 +598,7 @@ class TransferView(generics.GenericAPIView):
         import json
         from dateutil.parser import parse
 
-        page = request.GET.get('page', 1)
+        page = int(request.GET.get('page', "1"))
         cur_request = request.query_params.get("query", "")
         query_set = TransferApplication.objects
 
