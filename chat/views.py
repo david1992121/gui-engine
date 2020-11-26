@@ -115,13 +115,13 @@ def room_list(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def room_detail(request, pk):
+def room_detail(request, room_id):
     """
     Retrieve a room.
     """
 
     try:
-        room = Room.objects.get(pk=pk)
+        room = Room.objects.get(pk=room_id)
     except Room.DoesNotExist:
         return Response(
             status=status.HTTP_404_NOT_FOUND
@@ -137,13 +137,13 @@ def room_detail(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def message_list(request, pk):
+def message_list(request, room_id):
     """
     List all messages by room and user.
     """
 
     try:
-        room = Room.objects.get(pk=pk)
+        room = Room.objects.get(pk=room_id)
     except Room.DoesNotExist:
         return Response(
             status=status.HTTP_404_NOT_FOUND
