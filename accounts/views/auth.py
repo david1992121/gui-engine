@@ -102,6 +102,8 @@ class LineLoginView(APIView):
 
                     if role == 1:
                         user_obj.started_at = timezone.now()
+                    else:
+                        user_obj.role = 10
                 else:
                     if user_obj.deleted_at != None:
                         return Response(status = status.HTTP_406_NOT_ACCEPTABLE)

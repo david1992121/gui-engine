@@ -46,17 +46,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'channel': self.channel_name
         }))
 
-    # Send tweet
+    # Send Room
     async def room_send(self, event):
-        content = event['content']
-
-        # Send message to WebSocket
         await self.send(text_data=json.dumps({
             "type": "ROOM",
-            "data": content
+            "event": event['event'],
+            "data": event['content']
         }))
 
-        # Send tweet
+    # Send Message
     async def message_send(self, event):
         content = event['content']
 

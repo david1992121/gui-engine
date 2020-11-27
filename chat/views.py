@@ -3,24 +3,22 @@ APIs for Chat
 """
 from re import L
 from django.db.models import query
-from accounts.serializers.member import UserSerializer
 import json
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q, Count, F
 from django.views import generic
 
 # from django.shortcuts import render
-from rest_framework import status
+from rest_framework import generics, mixins, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Notice, Room, Message, AdminNotice
-from accounts.models import Member
 from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
 
-from rest_framework import generics
-from rest_framework import mixins
+from accounts.models import Member
+from accounts.serializers.member import UserSerializer
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 
 # use channel
@@ -140,11 +138,11 @@ def room_detail(request, room_id):
         )
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST', 'PUT'])
 @permission_classes([IsAuthenticated])
 def message_list(request, room_id):
     """
-    List all messages by room and user.
+    List all messages, or create messages by room and user.
     """
 
     try:
@@ -163,6 +161,61 @@ def message_list(request, room_id):
             '-created_at').all()[start_index:start_index + page_size]
         return Response(
             data=MessageSerializer(messages, many=True).data,
+            status=status.HTTP_200_OK
+        )
+
+    if request.method == 'POST':
+        serializer = MessageSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            input_data = serializer.validated_data
+            media_ids = input_data.get('media_ids', [])
+            gift_id = input_data.get('gift_id', 0)
+            channel_layer = get_channel_layer()
+
+            for user in room.users.all():
+                if not room.is_group and user.role > -1:
+                    message = Message.objects.create(
+                        content=input_data.get('content'),
+                        sender=request.user,
+                        receiver=user,
+                        room=room,
+                        is_read=user.id == request.user.id
+                    )
+                    message.medias.set(media_ids)
+                    if gift_id > 0:
+                        message.gift_id = gift_id
+                        message.save()
+                    if user.id != request.user.id:
+                        async_to_sync(channel_layer.group_send)(
+                            "chat_{}".format(user.id),
+                            {
+                                "type": "message.send",
+                                "content": MessageSerializer(message).data
+                            }
+                        )
+
+            room.last_sender = request.user
+            if len(media_ids) > 0:
+                room.last_message = "『画像』"
+            elif gift_id > 0:
+                room.last_message = "『ギフト』"
+            else:
+                room.last_message = input_data.get('content')
+            room.save()
+
+            return Response(
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    if request.method == 'PUT':
+        room.messages.filter(
+            receiver=request.user).update(is_read=True)
+        return Response(
             status=status.HTTP_200_OK
         )
 
@@ -247,38 +300,43 @@ class AdminNoticeView(mixins.UpdateModelMixin, mixins.DestroyModelMixin, mixins.
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
 def get_user_count(request):
     cur_request = request.query_params.get("query", "")
-    query_set = Member.objects.filter(is_active = True).filter(Q(role = 0) | Q(role = 1))
+    query_set = Member.objects.filter(
+        is_active=True).filter(Q(role=0) | Q(role=1))
 
     if cur_request != "":
         try:
             query_obj = json.loads(cur_request)
         except:
-            return Response([], status = status.HTTP_200_OK)
+            return Response([], status=status.HTTP_200_OK)
 
         if query_obj.get('location_id', 0) > 0:
-            query_set = query_set.filter(location_id = query_obj.get('location_id', 0))
+            query_set = query_set.filter(
+                location_id=query_obj.get('location_id', 0))
 
         user_type = query_obj.get('user_type', 0)
         if user_type == 1:
-            query_set = query_set.filter(role = 0)
+            query_set = query_set.filter(role=0)
         elif user_type == 2:
-            query_set = query_set.filter(role = 1)
+            query_set = query_set.filter(role=1)
         elif user_type == 3:
-            query_set = query_set.filter(is_introducer = True)
+            query_set = query_set.filter(is_introducer=True)
 
         if len(query_obj.get('cast_class', [])) > 0:
-            query_set = query_set.filter(cast_class_id__in = query_obj.get('cast_class', []))
+            query_set = query_set.filter(
+                cast_class_id__in=query_obj.get('cast_class', []))
 
-    return Response(list(query_set.values_list('id', flat = True)), status = status.HTTP_200_OK)
+    return Response(list(query_set.values_list('id', flat=True)), status=status.HTTP_200_OK)
+
 
 class MessageUserView(generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = UserSerializer
-    
+
     def get(self, request):
         import json
 
@@ -286,7 +344,8 @@ class MessageUserView(generics.GenericAPIView):
         size = int(request.GET.get('size', "10"))
 
         cur_request = request.query_params.get("query", "")
-        query_set = Member.objects.filter(is_active = True).filter(Q(role = 0) | Q(role = 1))
+        query_set = Member.objects.filter(
+            is_active=True).filter(Q(role=0) | Q(role=1))
 
         if cur_request != "":
             try:
@@ -295,18 +354,20 @@ class MessageUserView(generics.GenericAPIView):
                 return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
 
             if query_obj.get('location_id', 0) > 0:
-                query_set = query_set.filter(location_id = query_obj.get('location_id', 0))
+                query_set = query_set.filter(
+                    location_id=query_obj.get('location_id', 0))
 
             user_type = query_obj.get('user_type', 0)
             if user_type == 1:
-                query_set = query_set.filter(role = 0)
+                query_set = query_set.filter(role=0)
             elif user_type == 2:
-                query_set = query_set.filter(role = 1)
+                query_set = query_set.filter(role=1)
             elif user_type == 3:
-                query_set = query_set.filter(is_introducer = True)
+                query_set = query_set.filter(is_introducer=True)
 
             if len(query_obj.get('cast_class', [])) > 0:
-                query_set = query_set.filter(cast_class_id__in = query_obj.get('cast_class', []))
+                query_set = query_set.filter(
+                    cast_class_id__in=query_obj.get('cast_class', []))
 
         # sort order
         sort_field = request.GET.get("sortField", "")
@@ -329,13 +390,14 @@ class MessageUserView(generics.GenericAPIView):
 
         return Response({"total": total, "results": UserSerializer(users, many=True).data}, status=status.HTTP_200_OK)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_images(request):
-    serializer = FileListSerializer(data = request.data)
+    serializer = FileListSerializer(data=request.data)
     if serializer.is_valid():
         return_array = serializer.save()
-        return Response(return_array, status = status.HTTP_200_OK)
+        return Response(return_array, status=status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
