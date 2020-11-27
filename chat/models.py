@@ -49,6 +49,7 @@ class Message(models.Model):
         Member, related_name="received", on_delete=models.SET_NULL, null=True)
     is_notice = models.BooleanField('通知', default=False)
     is_like = models.BooleanField('イイネ', default=False)
+    follower = models.ForeignKey('self', on_delete=models.CASCADE, null = True, verbose_name="新メッセージ")
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
