@@ -102,6 +102,8 @@ class LineLoginView(APIView):
 
                     if role == 1:
                         user_obj.started_at = timezone.now()
+                    else:
+                        user_obj.role = 10
                 else:
                     if role == 0 and user_obj.role == 1:
                         return Response(status = status.HTTP_403_FORBIDDEN)
