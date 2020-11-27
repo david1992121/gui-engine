@@ -25,6 +25,8 @@ urlpatterns = [
     path('messages/upload', upload_images, name = "message_upload"),
 
     # messages
+    path('messages', MessageView.as_view(), name = "message_view"),
     path('messages/users', MessageUserView.as_view(), name = "message_user"),
     path('messages/users/count', get_user_count, name = "message_user_count"),
+    path('messages/admin/send', send_bulk_messages, name = "send_message"),
 ]

@@ -87,7 +87,7 @@ class LineLoginView(APIView):
                 line_email = decoded_payload['email']
                 role = int(decoded_payload['nonce'])
 
-                user_obj, is_created = Member.objects.get_or_create(
+                user_obj, is_created = Member.all_objects.get_or_create(
                     email=line_email
                 )
 
@@ -103,6 +103,8 @@ class LineLoginView(APIView):
                     if role == 1:
                         user_obj.started_at = timezone.now()
                 else:
+                    if user_obj.deleted_at != None:
+                        return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
                     if role == 0 and user_obj.role == 1:
                         return Response(status = status.HTTP_403_FORBIDDEN)
 
@@ -156,15 +158,17 @@ class EmailRegisterView(APIView):
                 if Member.objects.filter(inviter_code = inviter_code).count() == 0:
                     return Response(status = status.HTTP_400_BAD_REQUEST)
 
-            if Member.objects.filter(email=email).count() > 0:
-                return Response({
-                    "success": False,
-                    "reason": "Email already exists"
-                }, status.HTTP_200_OK)
-            else:
-                
+            user, is_created = Member.all_objects.filter(email=email)
+            if not is_created:
+                if user.deleted_at == None:
+                    return Response({
+                        "success": False,
+                        "reason": "Email already exists"
+                    }, status.HTTP_200_OK)
+                else:
+                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            else:                
                 # create user
-                user = Member.objects.create(email = email)
                 user.username = "user_{}".format(user.id)
                 user.nickname = nickname
                 user.inviter_code = getInviterCode()

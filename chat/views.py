@@ -1,11 +1,12 @@
 """
 APIs for Chat
 """
+from re import L
 from django.db.models import query
 from accounts.serializers.member import UserSerializer
 import json
 from django.core.paginator import Paginator, EmptyPage
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F
 from django.views import generic
 
 # from django.shortcuts import render
@@ -16,11 +17,15 @@ from rest_framework.response import Response
 
 from .models import Notice, Room, Message, AdminNotice
 from accounts.models import Member
-from .serializers import NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
+from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
 
 from rest_framework import generics
 from rest_framework import mixins
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
+
+# use channel
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 # def index(request):
 #     return render(request, 'chat/index.html', {})
@@ -276,7 +281,6 @@ class MessageUserView(generics.GenericAPIView):
     
     def get(self, request):
         import json
-        from dateutil.parser import parse
 
         page = int(request.GET.get('page', "1"))
         size = int(request.GET.get('size', "10"))
@@ -334,3 +338,92 @@ def upload_images(request):
         return Response(return_array, status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_bulk_messages(request):
+    message_serializer = AdminMessageSerializer(data = request.data)
+    if message_serializer.is_valid():
+        input_data = message_serializer.validated_data
+        receiver_ids = input_data.pop('receiver_ids')
+        content = input_data.pop('content')
+        media_ids = input_data.pop('media_ids')
+
+        if len(receiver_ids) == 0:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+        sender = Member.objects.get(username = "admin")
+        channel_layer = get_channel_layer()
+
+        for user_id in receiver_ids:
+            receiver = Member.objects.get(pk = user_id)
+
+            if Room.objects.filter(users__id = user_id, room_type = "admin").count() == 0:
+                room = Room.objects.create(room_type = "admin", last_message = content)
+                room.users.set([sender, receiver])
+
+                # room send via socket
+                async_to_sync(channel_layer.group_send)(
+                    "chat_{}".format(user_id),
+                    { "type": "room.send", "content": RoomSerializer(room).data }
+                )
+            else:
+                room = Room.objects.filter(users__id = user_id, room_type = "admin").first()
+
+            cur_message = Message.objects.create(
+                content = content,
+                sender = sender, receiver = receiver, room = room)
+            cur_message.medias.set(media_ids)            
+            
+            # message send via socket
+            async_to_sync(channel_layer.group_send)(
+                "chat_{}".format(user_id),
+                { "type": "room.send", "content": MessageSerializer(cur_message).data }
+            )
+
+        return Response({ "success": True }, status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class MessageView(generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = MessageSerializer
+
+    def get(self, request):
+        import json
+
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+
+        cur_request = request.query_params.get("query", "")
+        query_set = Message.objects.filter(receiver_id = F('sender_id'))
+
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            content = query_obj.get('content', "")
+            nickname = query_obj.get('nickname', "")
+
+            if content != "":
+                query_set = query_set.filter(content__icontains = content)
+
+            if nickname != "":
+                query_set = query_set.filter(sender__nickname__icontains = nickname)
+            
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        if sort_field != "null" and sort_field != "":            
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+
+        total = query_set.count()
+        paginator = Paginator(query_set, size)
+        messages = paginator.page(page)
+
+        return Response({"total": total, "results": MessageSerializer(messages, many=True).data}, status=status.HTTP_200_OK)

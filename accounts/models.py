@@ -212,7 +212,7 @@ class Member(SoftDeletionModel):
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
-    REQUIRED_FIELDS = ['email']
+    REQUIRED_FIELDS = ['email', 'nickname']
 
     def save(self, *args, **kwargs):
         isNewOne = self.pk == None

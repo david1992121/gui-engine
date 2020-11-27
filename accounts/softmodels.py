@@ -35,7 +35,6 @@ class SoftDeletionManager(BaseUserManager):
         user.save(using=self._db)
         if username != "":
             user.username = username
-            user.nickname = username         
         else:
             user.username = "user_{}".format(user.id)
         user.save()

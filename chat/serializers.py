@@ -2,11 +2,19 @@
 Serializers for Chat
 """
 from rest_framework import serializers
+
+# accounts app
 from accounts.serializers.auth import MediaImageSerializer
 from accounts.serializers.member import MainInfoSerializer
-from basics.serializers import GiftSerializer, LocationSerializer
-from calls.serializers import OrderSerializer
 from accounts.models import Media, Member
+
+# basics app
+from basics.serializers import GiftSerializer, LocationSerializer
+
+# calls app
+from calls.serializers import OrderSerializer
+
+# app
 from .models import AdminNotice, Join, Room, Message, Notice
 
 def file_validator(file):
@@ -87,10 +95,12 @@ class MessageSerializer(serializers.ModelSerializer):
     gift = GiftSerializer()
     sender = MainInfoSerializer()
     receiver = MainInfoSerializer()
+    room = RoomSerializer(read_only = True)
 
     class Meta:
         model = Message
         fields = (
+            'id',
             'content',
             'medias',
             'gift',
@@ -99,6 +109,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'receiver',
             'is_notice',
             'is_like',
+            'room',
             'created_at'
         )
 
@@ -124,3 +135,12 @@ class FileListSerializer(serializers.Serializer):
             return_array.append(media_image.id)
 
         return return_array
+
+class AdminMessageSerializer(serializers.Serializer):
+    content = serializers.CharField()
+    media_ids = serializers.ListField(
+        child = serializers.IntegerField()
+    )
+    receiver_ids = serializers.ListField(
+        child = serializers.IntegerField()
+    )
