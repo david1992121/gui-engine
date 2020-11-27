@@ -212,7 +212,7 @@ def message_list(request, room_id):
             if len(media_ids) > 0:
                 room.last_message = "『画像』"
             elif gift_id > 0:
-                room.last_message = "『ギフト』"
+                room.last_message = "『ステッカー』"
             else:
                 room.last_message = input_data.get('content')
             room.save()
