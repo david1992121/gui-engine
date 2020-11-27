@@ -303,7 +303,7 @@ def get_user_count(request):
         elif user_type == 2:
             query_set = query_set.filter(role=1)
         elif user_type == 3:
-            query_set = query_set.filter(is_introducer=False)
+            query_set = query_set.filter(is_introducer = True)
 
         if len(query_obj.get('cast_class', [])) > 0:
             query_set = query_set.filter(
@@ -343,14 +343,29 @@ class MessageUserView(generics.GenericAPIView):
             elif user_type == 2:
                 query_set = query_set.filter(role=1)
             elif user_type == 3:
-                query_set = query_set.filter(is_introducer=False)
+                query_set = query_set.filter(is_introducer = True)
 
             if len(query_obj.get('cast_class', [])) > 0:
                 query_set = query_set.filter(
                     cast_class_id__in=query_obj.get('cast_class', []))
 
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        if sort_field != "null" and sort_field != "":
+            if sort_field == "usertype":
+                if sort_order == "ascend":
+                    query_set = query_set.order_by("-is_introducer", "-role")
+                else:
+                    query_set = query_set.order_by("role", "is_introducer")
+            else:
+                if sort_order == "ascend":
+                    query_set = query_set.order_by(sort_field)
+                else:
+                    query_set = query_set.order_by("-{}".format(sort_field))
+
         total = query_set.count()
-        paginator = Paginator(query_set.order_by('-created_at'), size)
+        paginator = Paginator(query_set, size)
         users = paginator.page(page)
 
         return Response({"total": total, "results": UserSerializer(users, many=True).data}, status=status.HTTP_200_OK)
