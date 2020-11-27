@@ -9,12 +9,14 @@ from calls.serializers import OrderSerializer
 from accounts.models import Media, Member
 from .models import AdminNotice, Join, Room, Message, Notice
 
+
 def file_validator(file):
     max_file_size = 1024 * 1024 * 100  # 100MB
 
     if file.size > max_file_size:
         raise serializers.ValidationError(_('Max file size is {} and your file size is {}'.
                                             format(max_file_size, file.size)))
+
 
 class NoticeSerializer(serializers.ModelSerializer):
     """
@@ -42,15 +44,18 @@ class NoticeSerializer(serializers.ModelSerializer):
             }
         }
 
+
 class JoinSerializer(serializers.ModelSerializer):
     """
     Join Serializer
     """
-    user = MainInfoSerializer(read_only = True)
-    
+    user = MainInfoSerializer(read_only=True)
+
     class Meta:
-        fields = ('started_at', 'is_extended', 'is_fivepast', 'ended_at', 'user')
+        fields = ('started_at', 'is_extended',
+                  'is_fivepast', 'ended_at', 'user')
         model = Join
+
 
 class RoomSerializer(serializers.ModelSerializer):
     """
@@ -59,8 +64,8 @@ class RoomSerializer(serializers.ModelSerializer):
     users = MainInfoSerializer(read_only=True, many=True)
     joins = JoinSerializer(read_only=True, many=True)
     order = OrderSerializer(read_only=True)
-    unread = serializers.IntegerField(read_only = True)
-    last_sender = MainInfoSerializer(read_only = True)
+    unread = serializers.IntegerField(read_only=True)
+    last_sender = MainInfoSerializer(read_only=True)
 
     class Meta:
         model = Room
@@ -83,16 +88,24 @@ class MessageSerializer(serializers.ModelSerializer):
     """
     Message Serializer
     """
-    medias = MediaImageSerializer(many=True)
-    gift = GiftSerializer()
-    sender = MainInfoSerializer()
-    receiver = MainInfoSerializer()
+    media_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True
+    )
+    medias = MediaImageSerializer(required=False, many=True)
+    gift_id = serializers.IntegerField(required=False, write_only=True)
+    gift = GiftSerializer(required=False)
+    sender = MainInfoSerializer(required=False)
+    receiver = MainInfoSerializer(required=False)
 
     class Meta:
         model = Message
         fields = (
             'content',
+            'media_ids',
             'medias',
+            'gift_id',
             'gift',
             'is_read',
             'sender',
@@ -102,25 +115,29 @@ class MessageSerializer(serializers.ModelSerializer):
             'created_at'
         )
 
+
 class AdminNoticeSerializer(serializers.ModelSerializer):
-    location = LocationSerializer(read_only = True)
-    location_id = serializers.IntegerField(write_only = True, required = False)
+    location = LocationSerializer(read_only=True)
+    location_id = serializers.IntegerField(write_only=True, required=False)
+
     class Meta:
-        fields = ('id', 'title', 'content', 'location', 'location_id', 'created_at', 'updated_at')
+        fields = ('id', 'title', 'content', 'location',
+                  'location_id', 'created_at', 'updated_at')
         model = AdminNotice
-        
+
+
 class FileListSerializer(serializers.Serializer):
     media = serializers.ListField(
-        child = serializers.FileField( max_length = 100000,
-            allow_empty_file=False, use_url=False, validators=[file_validator] )
+        child=serializers.FileField(max_length=100000,
+                                    allow_empty_file=False, use_url=False, validators=[file_validator])
     )
 
     def create(self, validated_data):
         media_source = validated_data.pop('media')
 
-        return_array = []    
+        return_array = []
         for img in media_source:
-            media_image = Media.objects.create(uri = img)
+            media_image = Media.objects.create(uri=img)
             return_array.append(media_image.id)
 
         return return_array
