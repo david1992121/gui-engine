@@ -135,7 +135,7 @@ def room_detail(request, room_id):
         )
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET', 'POST', 'PUT'])
 @permission_classes([IsAuthenticated])
 def message_list(request, room_id):
     """
@@ -163,11 +163,13 @@ def message_list(request, room_id):
 
     if request.method == 'POST':
         serializer = MessageSerializer(data=request.data)
+        
         if serializer.is_valid():
             input_data = serializer.validated_data
             media_ids = input_data.get('media_ids', [])
             gift_id = input_data.get('gift_id', 0)
             channel_layer = get_channel_layer()
+
             for user in room.users.all():
                 if not room.is_group and user.role > -1:
                     message = Message.objects.create(
@@ -189,14 +191,30 @@ def message_list(request, room_id):
                                 "content": MessageSerializer(message).data
                             }
                         )
+
+            room.last_sender = request.user
+            if len(media_ids) > 0:
+                room.last_message = "『画像』"
+            elif gift_id > 0:
+                room.last_message = "『ギフト』"
+            else:
+                room.last_message = input_data.get('content')
+            room.save()
+
             return Response(
                 status=status.HTTP_200_OK
             )
         else:
-            print(serializer.errors)
             return Response(
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    if request.method == 'PUT':
+        room.messages.filter(
+            receiver=request.user).update(is_read=True)
+        return Response(
+            status=status.HTTP_200_OK
+        )
 
 
 @api_view(['GET'])
@@ -303,7 +321,7 @@ def get_user_count(request):
         elif user_type == 2:
             query_set = query_set.filter(role=1)
         elif user_type == 3:
-            query_set = query_set.filter(is_introducer = True)
+            query_set = query_set.filter(is_introducer=True)
 
         if len(query_obj.get('cast_class', [])) > 0:
             query_set = query_set.filter(
@@ -343,7 +361,7 @@ class MessageUserView(generics.GenericAPIView):
             elif user_type == 2:
                 query_set = query_set.filter(role=1)
             elif user_type == 3:
-                query_set = query_set.filter(is_introducer = True)
+                query_set = query_set.filter(is_introducer=True)
 
             if len(query_obj.get('cast_class', [])) > 0:
                 query_set = query_set.filter(

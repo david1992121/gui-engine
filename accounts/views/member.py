@@ -691,7 +691,7 @@ def like_person(request, id):
         Friendship.objects.create(follower = cur_user, favorite = target_user)
 
         # create room
-        new_room = Room.objects.create(last_message = "いいね")
+        new_room = Room.objects.create(last_message = "♥ いいね")
         new_room.users.set([cur_user.id, target_user.id])
 
         # send room

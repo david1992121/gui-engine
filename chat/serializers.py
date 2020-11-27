@@ -96,6 +96,7 @@ class MessageSerializer(serializers.ModelSerializer):
     medias = MediaImageSerializer(required=False, many=True)
     gift_id = serializers.IntegerField(required=False, write_only=True)
     gift = GiftSerializer(required=False)
+    room = RoomSerializer(required=False)
     sender = MainInfoSerializer(required=False)
     receiver = MainInfoSerializer(required=False)
 
@@ -108,6 +109,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'gift_id',
             'gift',
             'is_read',
+            'room',
             'sender',
             'receiver',
             'is_notice',
