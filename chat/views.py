@@ -173,33 +173,46 @@ def message_list(request, room_id):
             gift_id = input_data.get('gift_id', 0)
             channel_layer = get_channel_layer()
 
+            if not room.is_group and request.user.role > -1:
+                self_message = Message.objects.create(
+                    content=input_data.get('content'),
+                    sender=request.user,
+                    receiver=request.user,
+                    room=room,
+                    is_read=True
+                )
+                self_message.medias.set(media_ids)
+                if gift_id > 0:
+                    self_message.gift_id = gift_id
+                    self_message.save()
+
             for user in room.users.all():
-                if not room.is_group and user.role > -1:
+                if user.id != request.user.id and (not room.is_group or (room.is_group and user.role > -1)):
                     message = Message.objects.create(
                         content=input_data.get('content'),
                         sender=request.user,
                         receiver=user,
                         room=room,
-                        is_read=user.id == request.user.id
+                        is_read=False,
+                        follower=self_message
                     )
                     message.medias.set(media_ids)
                     if gift_id > 0:
                         message.gift_id = gift_id
                         message.save()
-                    if user.id != request.user.id:
-                        async_to_sync(channel_layer.group_send)(
-                            "chat_{}".format(user.id),
-                            {
-                                "type": "message.send",
-                                "content": MessageSerializer(message).data
-                            }
-                        )
+                    async_to_sync(channel_layer.group_send)(
+                        "chat_{}".format(user.id),
+                        {
+                            "type": "message.send",
+                            "content": MessageSerializer(message).data
+                        }
+                    )
 
             room.last_sender = request.user
             if len(media_ids) > 0:
                 room.last_message = "『画像』"
             elif gift_id > 0:
-                room.last_message = "『ギフト』"
+                room.last_message = "『ステッカー』"
             else:
                 room.last_message = input_data.get('content')
             room.save()
@@ -399,6 +412,7 @@ def upload_images(request):
         return_array = serializer.save()
         return Response(return_array, status=status.HTTP_200_OK)
     else:
+        print(serializer.errors)
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])

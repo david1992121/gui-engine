@@ -234,7 +234,7 @@ class GiftView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
     def get(self, request, *args, **kwargs):
         is_shown = request.GET.get('is_shown', "")
         if is_shown != "":
-            queryset = Gift.objects.filter(is_shown = True)
+            queryset = Gift.objects.filter(is_shown=True, image__isnull=False)
             return Response(GiftSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
         else:
             return self.list(request, *args, **kwargs)
