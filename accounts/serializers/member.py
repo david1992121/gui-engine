@@ -54,6 +54,7 @@ class MainInfoSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
             'id',
+            'is_superuser',
             'nickname',
             'username',
             'birthday',

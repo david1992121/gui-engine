@@ -297,11 +297,21 @@ class MemberView(APIView):
     def get(self, request):
         is_all = int(request.GET.get("is_all", "0"))
         is_cast = int(request.GET.get("is_cast", "0"))
+        is_admin = int(request.GET.get("is_admin", "0"))
+        is_super = int(request.GET.get("is_super", "0"))
+        is_guest = int(request.GET.get("is_guest", "0"))
+
         if is_all > 0:
             members = Member.objects.filter(
                 Q(is_registered=True, is_active=True, role__gte=0) | Q(role__lt=0))
+        elif is_super > 0:
+            members = Member.objects.filter(is_superuser = True)
+        elif is_admin > 0:
+            members = Member.objects.filter(role__lt = 0)
         elif is_cast > 0:
             members = Member.objects.filter(is_registered=True, role=0)
+        elif is_guest > 0:
+            members = Member.objects.filter(role = 1, is_active = True)
         else:
             members = Member.objects.filter(
                 role__gte=0, is_registered=True, is_active=True)
@@ -689,21 +699,28 @@ def like_person(request, id):
         return Response(room.id, status = status.HTTP_200_OK)
     else:
         Friendship.objects.create(follower = cur_user, favorite = target_user)
-
-        # create room
-        new_room = Room.objects.create(last_message = "♥ いいね")
-        new_room.users.set([cur_user.id, target_user.id])
-
-        # send room
         channel_layer = get_channel_layer()
-        for user_id in [target_user.id, cur_user.id]:
-            async_to_sync(channel_layer.group_send)(
-                "chat_{}".format(user_id),
-                { "type": "room.send", "content": RoomSerializer(new_room).data, "event": "create" }
-            )
+
+        # search room first
+        old_room_exist = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).count()
+        if old_room_exist == 0:
+
+            # create room
+            new_room = Room.objects.create(last_message = "♥ いいね", room_type = "private")        
+            new_room.users.set([cur_user.id, target_user.id])
+
+            # send room
+            for user_id in [target_user.id, cur_user.id]:
+                async_to_sync(channel_layer.group_send)(
+                    "chat_{}".format(user_id),
+                    { "type": "room.send", "content": RoomSerializer(new_room).data, "event": "create" }
+                )
+        else:
+            new_room = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).get()
         
         # send message
         for user_id in [target_user.id, cur_user.id]:
+
             # create message
             cur_message = Message.objects.create(room=new_room, sender=cur_user,
                 receiver=Member.objects.get(pk=user_id), is_like=True, is_read=cur_user.id==user_id)

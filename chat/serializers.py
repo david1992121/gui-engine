@@ -88,6 +88,7 @@ class RoomSerializer(serializers.ModelSerializer):
             'title',
             'joins',
             'unread',
+            'created_at',
             'updated_at'
         )
 
@@ -104,7 +105,9 @@ class MessageSerializer(serializers.ModelSerializer):
     gift_id = serializers.IntegerField(required=False, write_only=True)
     gift = GiftSerializer(read_only = True)
     room = RoomSerializer(read_only = True)
+    room_id = serializers.IntegerField(write_only = True, required = False)
     sender = MainInfoSerializer(read_only = True)
+    sender_id = serializers.IntegerField(write_only = True, required = False)
     receiver = MainInfoSerializer(read_only = True)
 
     class Meta:
@@ -123,8 +126,11 @@ class MessageSerializer(serializers.ModelSerializer):
             'is_notice',
             'is_like',
             'room',
+            'room_id',
+            'sender_id',
             'created_at'
         )
+    
 class AdminNoticeSerializer(serializers.ModelSerializer):
     location = LocationSerializer(read_only=True)
     location_id = serializers.IntegerField(write_only=True, required=False)

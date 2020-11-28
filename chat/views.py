@@ -421,7 +421,7 @@ def send_bulk_messages(request):
             receiver = Member.objects.get(pk = user_id)
 
             if Room.objects.filter(users__id = user_id, room_type = "admin").count() == 0:
-                room = Room.objects.create(room_type = "admin", last_message = content)
+                room = Room.objects.create(room_type = "admin", last_message = content, title = "Gui管理者")
                 room.users.set([sender, receiver])
 
                 # room send via socket
@@ -432,9 +432,15 @@ def send_bulk_messages(request):
             else:
                 room = Room.objects.filter(users__id = user_id, room_type = "admin").first()
 
+            # create self message
+            self_message = Message.objects.create(
+                content = content, sender = sender, receiver = sender, is_read = True, room = room
+            )
             cur_message = Message.objects.create(
-                content = content,
-                sender = sender, receiver = receiver, room = room)
+                content = content, sender = sender, 
+                receiver = receiver, room = room,
+                follower = self_message
+            )
             cur_message.medias.set(media_ids)            
             
             # message send via socket
@@ -483,9 +489,145 @@ class MessageView(generics.GenericAPIView):
                 query_set = query_set.order_by(sort_field)
             else:
                 query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
 
         total = query_set.count()
         paginator = Paginator(query_set, size)
         messages = paginator.page(page)
 
         return Response({"total": total, "results": MessageSerializer(messages, many=True).data}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = MessageSerializer(data = request.data)
+        if serializer.is_valid():
+            input_data = serializer.validated_data
+            room_id = input_data.get('room_id', 0)
+            sender_id = input_data.get('sender_id', 0)
+            content = input_data.get('content', "")
+            is_read = input_data.get("is_read", False)
+            print(is_read)
+            if room_id > 0 and sender_id > 0:
+                try:
+                    room = Room.objects.get(pk = room_id)
+                    sender = Member.objects.get(pk = sender_id)
+                    channel_layer = get_channel_layer()
+                    self_message = Message.objects.create(content = content, room = room, sender = sender, receiver = sender, is_read = True)
+
+                    for room_member in room.users.all():
+                        if not room_member.is_superuser:
+                            # message create
+                            cur_message = Message.objects.create(content = content, 
+                                room = room, sender = sender, receiver = room_member, follower = self_message, is_read = is_read)
+
+                            # send via websocket
+                            async_to_sync(channel_layer.group_send)(
+                                "chat_{}".format(room_member.id),
+                                { "type": "room.message", "content": MessageSerializer(cur_message).data }
+                            )
+                    return Response(MessageSerializer(self_message).data, status = status.HTTP_200_OK)
+                except Room.DoesNotExist:
+                    pass
+
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsSuperuserPermission])
+def delete_message(request, id):
+    try:
+        message = Message.objects.get(pk = id)        
+        message.delete()
+        return Response(status = status.HTTP_200_OK)
+    except Message.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def get_unread_admin_messages(request):
+    page = int(request.GET.get('page', "1"))
+    size = int(request.GET.get('size', "10"))
+
+    query_set = Message.objects
+    superuser_ids = list(Member.objects.filter(is_superuser = True).values_list('id', flat = True))
+    query_set = query_set.filter(
+        receiver_id__in = superuser_ids, is_read = False
+    ).order_by('-created_at')
+
+    total = query_set.count()
+    paginator = Paginator(query_set, size)
+    messages = paginator.page(page)
+
+    return Response({"total": total, "results": MessageSerializer(messages, many=True).data}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def get_all_rooms(request):
+    rooms = Room.objects.filter(room_type = "admin")
+    return Response(RoomSerializer(rooms, many = True).data, status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def change_message_state(request, id):
+    Message.objects.filter(pk = id).update(is_read = True)
+    return Response({ "success": True }, status = status.HTTP_200_OK)
+
+class RoomView(generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = RoomSerializer
+
+    def get(self, request):
+        import json
+
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+
+        cur_request = request.query_params.get("query", "")
+        query_set = Room.objects
+
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            roomname = query_obj.get('roomname', "")
+            nickname = query_obj.get('nickname', "")
+            roomtype = query_obj.get('roomtype', "")
+
+            if roomname != "":
+                query_set = query_set.filter(title__icontains = roomname)
+                
+            if nickname != "":
+                query_set = query_set.filter(users__nickname__icontains = nickname)
+
+            if roomtype != "":
+                query_set = query_set.filter(room_type = roomtype)
+            
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        if sort_field != "null" and sort_field != "":
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+
+        total = query_set.count()
+        paginator = Paginator(query_set, size)
+        rooms = paginator.page(page)
+
+        return Response({"total": total, "results": RoomSerializer(rooms, many=True).data}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsSuperuserPermission])
+def add_member(request):
+    room_id = int(request.data.get('room_id', '0'))
+    user_id = int(request.data.get('user_id', '0'))
+    if room_id > 0 and user_id > 0:
+        room = Room.objects.get(pk = room_id)
+        room.users.add(Member.objects.get(pk = user_id))
+        return Response(RoomSerializer(room).data, status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

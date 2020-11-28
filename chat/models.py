@@ -10,6 +10,11 @@ class Room(models.Model):
     """
     Room Model
     """
+
+    ROOM_CHOICES = (
+        (0, 'default'),        
+    )
+
     is_group = models.BooleanField('グループ',  default=False)
     users = models.ManyToManyField(Member, related_name='rooms', verbose_name='メンバー')
     last_message = models.TextField('最後のメッセージ', null=True, blank=True)
@@ -18,6 +23,7 @@ class Room(models.Model):
     room_type = models.CharField('タイプ', default='', max_length=30)
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField('タイトル', null=True, blank=True, max_length=130)
+    status = models.IntegerField('ステータス', choices=ROOM_CHOICES, default = 0)
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 

@@ -29,4 +29,14 @@ urlpatterns = [
     path('messages/users', MessageUserView.as_view(), name = "message_user"),
     path('messages/users/count', get_user_count, name = "message_user_count"),
     path('messages/admin/send', send_bulk_messages, name = "send_message"),
+    path('messages/admin/unread', get_unread_admin_messages, name = "admin_unread_message"),
+    path('messages/delete/<int:id>', delete_message, name = "delete_message"),
+    path('messages/change/<int:id>', change_message_state, name = "change_message_state"),
+    
+    # admin all rooms
+    path('all_rooms', get_all_rooms, name = "all_rooms_view"),
+
+    # admin rooms
+    path('admin/rooms', RoomView.as_view(), name = "admin_rooms"),
+    path('admin/rooms/add', add_member, name = "add_member"),
 ]
