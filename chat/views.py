@@ -13,6 +13,7 @@ from rest_framework import generics, mixins, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Notice, Room, Message, AdminNotice
 from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
@@ -520,7 +521,6 @@ class MessageView(generics.GenericAPIView):
             sender_id = input_data.get('sender_id', 0)
             content = input_data.get('content', "")
             is_read = input_data.get("is_read", False)
-            print(is_read)
             if room_id > 0 and sender_id > 0:
                 try:
                     room = Room.objects.get(pk = room_id)
@@ -585,7 +585,7 @@ def change_message_state(request, id):
     Message.objects.filter(pk = id).update(is_read = True)
     return Response({ "success": True }, status = status.HTTP_200_OK)
 
-class RoomView(generics.GenericAPIView):
+class RoomView(mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = RoomSerializer
 
@@ -633,15 +633,43 @@ class RoomView(generics.GenericAPIView):
         rooms = paginator.page(page)
 
         return Response({"total": total, "results": RoomSerializer(rooms, many=True).data}, status=status.HTTP_200_OK)
+    
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+class RoomDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    permission_classes = [IsSuperuserPermission]
+    serializer_class = RoomSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
 
 @api_view(['POST'])
 @permission_classes([IsSuperuserPermission])
-def add_member(request):
-    room_id = int(request.data.get('room_id', '0'))
+def add_member(request, pk):
     user_id = int(request.data.get('user_id', '0'))
-    if room_id > 0 and user_id > 0:
-        room = Room.objects.get(pk = room_id)
+    if pk > 0 and user_id > 0:
+        room = Room.objects.get(pk = pk)
         room.users.add(Member.objects.get(pk = user_id))
         return Response(RoomSerializer(room).data, status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class RoomMessageView(APIView):
+    permission_classes = [IsSuperuserPermission]
+    
+    def get(self, request, pk):
+        room = Room.objects.get(pk = pk)
+
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+
+        query_set = room.messages.filter(receiver_id = F('sender_id')).order_by('-created_at')
+        total = query_set.count()
+        paginator = Paginator(query_set, size)
+        messages = paginator.page(page)
+
+        return Response({ "total": total, "results": MessageSerializer(messages, many=True).data }, status=status.HTTP_200_OK)
+
+    def post(self, request, pk):
+        message = MessageSerializer()

@@ -158,3 +158,67 @@ def get_rank_users(request):
             'from': parse(date_from).strftime("%Y-%m-%d") if date_from != "" else "", 
             'to': parse(date_to).strftime("%Y-%m-%d") if date_to != "" else "" }
     ).data, "values": points_values }, status=status.HTTP_200_OK)
+
+class OrderView(generics.GenericAPIView):
+    permission_classes = [IsSuperuserPermission]
+    serializer_class = OrderSerializer
+
+    def get(self, request):
+        import json
+
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+
+        cur_request = request.query_params.get("query", "")
+        query_set = Order.objects
+
+        if cur_request != "":
+            try:
+                query_obj = json.loads(cur_request)
+            except:
+                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+            location_id = query_obj.get('location_id', 0)
+            area_id = query_obj.get('area_id', 0)
+            status_val = query_obj.get('status', 0)
+            cost_plan_id = query_obj.get('cost_plan_id', 0)
+            guest_id = query_obj.get('guest_id', 0)
+
+            if location_id > 0:
+                query_set = query_set.filter(parent_location_id = location_id)
+                
+            if area_id > 0:
+                query_set = query_set.filter(location_id = area_id)
+
+            if status_val > 0:
+                query_set = query_set.filter(status = status_val)
+            
+            if location_id > 0:
+                query_set = query_set.filter(cost_plan_id = cost_plan_id)
+            
+            if guest_id > 0:                
+                query_set = query_set.filter(user_id = guest_id)
+
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        if sort_field != "null" and sort_field != "":
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+
+        total = query_set.count()
+        paginator = Paginator(query_set, size)
+        orders = paginator.page(page)
+
+        return Response({"total": total, "results": OrderSerializer(orders, many=True).data}, status=status.HTTP_200_OK)
+
+class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    permission_classes = [IsSuperuserPermission]
+    serializer_class = [ OrderSerializer ]
+
+    def get(self, request, *args, **kwargs):
+        self.retrieve(request, *args, **kwargs)

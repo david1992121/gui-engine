@@ -1,7 +1,11 @@
 """
 Serializers for Chat
 """
+from django.db.models import Count
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import ListField
+from rest_framework.serializers import ListSerializer
 
 # accounts app
 from accounts.serializers.auth import MediaImageSerializer
@@ -10,9 +14,6 @@ from accounts.models import Media, Member
 
 # basics app
 from basics.serializers import GiftSerializer, LocationSerializer
-
-# calls app
-from calls.serializers import OrderSerializer
 
 # app
 from .models import AdminNotice, Join, Room, Message, Notice
@@ -71,9 +72,12 @@ class RoomSerializer(serializers.ModelSerializer):
     """
     users = MainInfoSerializer(read_only=True, many=True)
     joins = JoinSerializer(read_only=True, many=True)
-    order = OrderSerializer(read_only=True)
     unread = serializers.IntegerField(read_only=True)
     last_sender = MainInfoSerializer(read_only=True)
+    user_ids = ListField(
+        child = serializers.IntegerField(), write_only = True
+    )
+    last_sender_id = serializers.IntegerField(write_only = True)
 
     class Meta:
         model = Room
@@ -84,13 +88,46 @@ class RoomSerializer(serializers.ModelSerializer):
             'users',
             'last_sender',
             'room_type',
-            'order',
             'title',
             'joins',
             'unread',
             'created_at',
-            'updated_at'
+            'updated_at',
+            'user_ids',
+            'last_sender_id'
         )
+
+    def create(self, validated_data):
+        user_ids = validated_data.pop('user_ids')
+        last_sender_id = validated_data.pop('last_sender_id')
+
+        # check if room already exists
+        queryset = Room.objects.annotate(count = Count('users'))
+        room_type = validated_data['room_type']
+
+        if room_type == "private" or room_type == "random":
+            queryset = queryset.filter(count = len(user_ids))
+            for user_id in user_ids:
+                queryset = queryset.filter(users__pk = user_id)
+            queryset = queryset.filter(title = validated_data['title'], room_type = room_type)
+        
+        elif room_type == "system" or room_type == "admin":
+            queryset = queryset.filter(count = 2).filter(users__pk = user_ids[0]).filter(
+                users__pk = Member.objects.get(is_superuser = True, username = room_type
+            ).id).filter(room_type = room_type)
+        if queryset.count() > 0:
+            raise serializers.ValidationError({'room': 'Room already exists'})        
+
+        room = Room.objects.create(**validated_data)
+        room.users.set(user_ids)
+        room.last_sender = Member.objects.get(pk = last_sender_id)
+
+        if room.room_type == "admin":
+            room.users.add(Member.objects.get(is_superuser = True, username = "admin"))
+        elif room.room_type == "system":
+            room.users.add(Member.objects.get(is_superuser = True, username = "system"))
+        
+        return room
 
 class MessageSerializer(serializers.ModelSerializer):
     """

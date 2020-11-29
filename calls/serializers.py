@@ -1,23 +1,28 @@
 from calls.models import Invoice, Order
 from rest_framework import serializers
-from basics.serializers import LocationSerializer, CostplanSerializer
+from basics.serializers import ChoiceSerializer, LocationSerializer, CostplanSerializer
+from chat.serializers import RoomSerializer
 from accounts.serializers.member import MainInfoSerializer
 from accounts.models import Member
 from django.db.models import Sum, Q
 from dateutil.parser import parse
 class OrderSerializer(serializers.ModelSerializer):
-    user = MainInfoSerializer()
-    joined = MainInfoSerializer(many = True)
+    user = MainInfoSerializer(read_only = True)
+    joined = MainInfoSerializer(many = True, read_only = True)
     parent_location = LocationSerializer()
-    location = LocationSerializer()
-    cost_plan = CostplanSerializer()
+    location = LocationSerializer(read_only = True)
+    cost_plan = CostplanSerializer(read_only = True)
+    situations = ChoiceSerializer(read_only = True, many = True)
+    desired = MainInfoSerializer(read_only = True, many = True)
+    room = RoomSerializer(read_only = True)
 
     class Meta:
         fields = (
             'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
             'meet_time', 'meet_time_iso', 'time_other', 'location', 'location_other',
             'person', 'period', 'cost_plan', 'situations', 'desired', 'is_private',
-            'created_at',
+            'created_at', 'updated_at', 'room', 'collect_started_at', 'collect_ended_at',
+            'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark'
         )
         model = Order
 

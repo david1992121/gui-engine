@@ -4,7 +4,6 @@ Models for Chat
 from django.db import models
 from accounts.models import Member, Media
 from basics.models import Gift, Location
-from calls.models import Order
 
 class Room(models.Model):
     """
@@ -21,7 +20,6 @@ class Room(models.Model):
     last_sender = models.ForeignKey(Member, related_name='last_rooms', on_delete = models.SET_NULL, 
         null = True, verbose_name= '最後投稿者')
     room_type = models.CharField('タイプ', default='', max_length=30)
-    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField('タイトル', null=True, blank=True, max_length=130)
     status = models.IntegerField('ステータス', choices=ROOM_CHOICES, default = 0)
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
