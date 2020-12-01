@@ -264,7 +264,7 @@ class CostPlanView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Update
     def get(self, request, *args, **kwargs):
         location_id = int(request.GET.get('location', "0"))
         if location_id > 0:
-            queryset = CostPlan.objects.filter(location_id = location_id, is_shown = True)
+            queryset = CostPlan.objects.filter(location_id = location_id)
             return Response(CostplanSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
         else:
             return self.list(request, *args, **kwargs)
