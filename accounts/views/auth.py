@@ -118,8 +118,8 @@ class LineLoginView(APIView):
 
                     admin_message = "GR運営局へのお問い合わせは、下の「メッセージを送る」からお願いいたします。"
 
-                    system_user = Member.objects.filter(is_superuser = True, username = "system")
-                    admin_user = Member.objects.filter(is_superuser = True, username = "admin")
+                    system_user = Member.objects.get(is_superuser = True, username = "system")
+                    admin_user = Member.objects.get(is_superuser = True, username = "admin")
 
                     # set system message
                     system_room, is_created = Room.objects.get_or_create(room_type = "system", title = "システムメッセージ", users__id = user_obj.id)
