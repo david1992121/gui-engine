@@ -802,3 +802,30 @@ def toggle_active(request, id):
     cur_user.is_active = not cur_user.is_active
     cur_user.save()
     return Response(status = status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def member_apply(request, member_id):
+    """
+    Apply to cast.
+    """
+
+    if member_id != request.user.id:
+        return Response(
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        member = Member.objects.get(pk=member_id)
+    except Member.DoesNotExist:
+        return Response(
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == 'PUT':
+        member.is_applied = True
+        member.save()
+        return Response(
+            status=status.HTTP_200_OK
+        )
