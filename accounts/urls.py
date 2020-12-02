@@ -31,6 +31,7 @@ urlpatterns = [
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
     path('members/<int:pk>', MemberDetailView.as_view(), name = "member_view"),
+    path('members/<int:member_id>/apply', member_apply, name="member_apply"),
     
     # authorization
     path('email/register', EmailRegisterView.as_view(), name="email_view"),
