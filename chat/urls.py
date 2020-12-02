@@ -30,6 +30,7 @@ urlpatterns = [
     path('messages/users/count', get_user_count, name = "message_user_count"),
     path('messages/admin/send', send_bulk_messages, name = "send_message"),
     path('messages/admin/unread', get_unread_admin_messages, name = "admin_unread_message"),
+    path('messages/admin/unread/count', get_unread_admin_messages_count, name = "admin_unread_message_count"),
     path('messages/delete/<int:id>', delete_message, name = "delete_message"),
     path('messages/change/<int:id>', change_message_state, name = "change_message_state"),
     

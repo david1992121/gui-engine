@@ -575,6 +575,19 @@ def get_unread_admin_messages(request):
 
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
+def get_unread_admin_messages_count(request):
+    query_set = Message.objects
+    superuser_ids = list(Member.objects.filter(is_superuser = True).values_list('id', flat = True))
+    query_set = query_set.filter(
+        receiver_id__in = superuser_ids, is_read = False
+    ).order_by('-created_at')
+
+    total = query_set.count()
+
+    return Response({ "total": total }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
 def get_all_rooms(request):
     rooms = Room.objects.filter(room_type = "admin")
     return Response(RoomSerializer(rooms, many = True).data, status = status.HTTP_200_OK)

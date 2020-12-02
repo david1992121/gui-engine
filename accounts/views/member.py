@@ -347,6 +347,12 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                 return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
 
             if user_type == "cast":
+                # ids array
+                ids_array = query_obj.get('ids_array', [])
+
+                if len(ids_array) > 0:
+                    query_set = query_set.filter(id__in = ids_array)
+
                 # location
                 location_val = query_obj.get("location", 0)
                 if location_val > 0:
@@ -369,7 +375,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                     if is_applied == 0:
                         query_set = query_set.filter(role=0)
                     else:
-                        query_set = query_set.filter(role=10)
+                        query_set = query_set.filter(role=10, is_applied = True)
 
                 # register status
                 reg_status = query_obj.get("reg_status", -1)
@@ -668,6 +674,36 @@ class TransferView(generics.GenericAPIView):
 
         return Response({"total": total, "results": TransferSerializer(transfers, many=True).data}, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def count_transfer(request):
+    status_array = []
+
+    # present casts
+    query_set = TransferApplication.objects.filter(status = 0)
+    orders_count = query_set.count()
+    ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+    status_array.append({
+        "title": "Transfer not processed",
+        "count": orders_count,
+        "ids_array": ids_array,
+        "value": 0
+    })
+
+    # present casts
+    query_set = TransferApplication.objects.filter(apply_type = 1)
+    orders_count = query_set.count()
+    ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+    status_array.append({
+        "title": "Immediate transfer application",
+        "count": orders_count,
+        "ids_array": ids_array,
+        "value": 0
+    })
+
+    return Response(status_array)
 
 class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = (IsCast | IsSuperuserPermission, )
@@ -802,3 +838,50 @@ def toggle_active(request, id):
     cur_user.is_active = not cur_user.is_active
     cur_user.save()
     return Response(status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def get_user_statistics(request):
+    status_array = []
+    status_title = [
+            'Present Casts', 'Interview Request',
+            'Temperary Registered Cast'
+        ]
+
+    # present casts
+    query_set = Member.objects.filter(is_present = True)
+    orders_count = query_set.count()
+    ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+    status_array.append({
+        "title": "Present Casts",
+        "count": orders_count,
+        "ids_array": ids_array,
+        "value": 0
+    })
+
+    # interview request
+    query_set = Member.objects.filter(is_applied = True, role = 10)
+    orders_count = query_set.count()
+    ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+    status_array.append({
+        "title": "Interview Request",
+        "count": orders_count,
+        "ids_array": ids_array,
+        "value": 0
+    })
+
+    # interview request
+    query_set = Member.objects.filter(is_registered = False, role = 0)
+    orders_count = query_set.count()
+    ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+    status_array.append({
+        "title": "Temperary Registered Cast",
+        "count": orders_count,
+        "ids_array": ids_array,
+        "value": 0
+    })
+
+    return Response(status_array)

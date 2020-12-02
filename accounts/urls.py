@@ -81,9 +81,13 @@ urlpatterns = [
 
     # transfer view
     path('transfers', TransferView.as_view(), name = "transfer_view"),
+    path('transfers/count', count_transfer, name = "count_transfer"),
     path('transfers/proceed/<int:id>', proceed_transfer, name = "proceed_transfer"),
 
     # favorite
     path('favorites/<int:id>', like_person, name = "like_person"),
+
+    # count users
+    path('count', get_user_statistics, name = "user_statistics")
 
 ]

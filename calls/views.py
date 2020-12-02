@@ -1,4 +1,5 @@
 from django.db.models import Sum, Q, Count, F
+from django.db.models import query
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 from dateutil.parser import parse
 from datetime import timedelta
@@ -184,6 +185,10 @@ class OrderView(generics.GenericAPIView):
             status_val = query_obj.get('status', -1)
             cost_plan_id = query_obj.get('cost_plan_id', 0)
             guest_id = query_obj.get('guest_id', 0)
+            ids_array = query_obj.get('ids_array', [])
+
+            if len(ids_array) > 0:
+                query_set = query_set.filter(id__in = ids_array)
 
             if location_id > 0:
                 query_set = query_set.filter(parent_location_id = location_id)
@@ -241,7 +246,8 @@ def get_order_counts(request):
             status_array.append({
                 "title": status_title[index],
                 "count": orders_count,
-                "value": status_number
+                "value": status_number,
+                "ids_array": []
             })
     else:
         status_title = [
@@ -257,7 +263,8 @@ def get_order_counts(request):
         status_array.append({
             "title": "Collecting Cast + Not Enough",
             "count": orders_count,
-            "value": ids_array
+            "ids_array": ids_array,
+            "value": 0
         })
 
         # cast confirm + start time exceeds
@@ -268,7 +275,8 @@ def get_order_counts(request):
         status_array.append({
             "title": "Cast Confirm + Start Time Exceeds",
             "count": orders_count,
-            "value": ids_array
+            "ids_array": ids_array,
+            "value": 0
         })
 
         # extended time exceeds
@@ -280,10 +288,21 @@ def get_order_counts(request):
         status_array.append({
             "title": "Extened time exceeds 8 hours",
             "count": orders_count,
-            "value": ids_array
+            "ids_array": ids_array,
+            "value": 0
         })
 
+        # payment failed
+        query_set = Order.objects.filter(status = 9)
+        orders_count = query_set.count()
+        ids_array = list(query_set.values_list('id', flat = True).distinct())
         
+        status_array.append({
+            "title": "Payment failed",
+            "count": orders_count,
+            "ids_array": ids_array,
+            "value": 0
+        })
                 
 
     return Response(status_array)
