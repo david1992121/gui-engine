@@ -123,7 +123,7 @@ class LineLoginView(APIView):
 
                     # set system message
                     system_room, is_created = Room.objects.get_or_create(room_type = "system", title = "システムメッセージ", users__id = user_obj.id)
-                    system_room.users.set([system_user, user_obj])
+                    system_room.users.set([system_user.id, user_obj.id])
                     system_room.last_message = system_message
                     system_room.save()
 
@@ -131,7 +131,7 @@ class LineLoginView(APIView):
                     Message.objects.create(content = system_message, room = system_room, sender = system_user, receiver = user_obj, is_read = False)
 
                     admin_room, is_created = Room.objects.get_or_create(room_type = "admin", title = "Gui運営局", users__id = user_obj.id)
-                    admin_room.users.set([admin_user, user_obj])
+                    admin_room.users.set([admin_user.id, user_obj.id])
                     admin_room.last_message = admin_message
                     admin_room.save()
 
