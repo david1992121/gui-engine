@@ -113,7 +113,7 @@ class LineLoginView(APIView):
                         <a href='/main/identification'>身分証明書のアップロードはこちらから</a> \n \
                         全ての機能を解放する場合は面接が必要となります。下記のリンクから面接のご希望をお知らせください。\n \
                         面接の日程は追ってご連絡差し上げます。\n \
-                        <a href='/main/application' class='message-button'>面接の希望はこちらから</a> \n \
+                        <a class='gui-message-btn' href='/main/application'>面接の希望はこちらから</a> \n \
                     "
 
                     admin_message = "GR運営局へのお問い合わせは、下の「メッセージを送る」からお願いいたします。"
