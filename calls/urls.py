@@ -16,5 +16,6 @@ urlpatterns = [
 
     # admin order
     path('orders', OrderView.as_view(), name = "admin_order"),
-    path('orders/<int:pk>', OrderDetailView.as_view(), name = "admin_detail_order")
+    path('orders/<int:pk>', OrderDetailView.as_view(), name = "admin_detail_order"),
+    path('orders/counts', get_order_counts, name = "admin_order_counts")
 ]

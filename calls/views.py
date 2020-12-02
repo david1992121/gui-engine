@@ -1,7 +1,8 @@
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count, F
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
-from datetime import time, timezone
 from dateutil.parser import parse
+from datetime import timedelta
+from django.utils import timezone
 import json
 
 from django.core.paginator import Paginator
@@ -180,7 +181,7 @@ class OrderView(generics.GenericAPIView):
 
             location_id = query_obj.get('location_id', 0)
             area_id = query_obj.get('area_id', 0)
-            status_val = query_obj.get('status', 0)
+            status_val = query_obj.get('status', -1)
             cost_plan_id = query_obj.get('cost_plan_id', 0)
             guest_id = query_obj.get('guest_id', 0)
 
@@ -190,7 +191,7 @@ class OrderView(generics.GenericAPIView):
             if area_id > 0:
                 query_set = query_set.filter(location_id = area_id)
 
-            if status_val > 0:
+            if status_val > -1:
                 query_set = query_set.filter(status = status_val)
             
             if location_id > 0:
@@ -222,3 +223,67 @@ class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         self.retrieve(request, *args, **kwargs)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def get_order_counts(request):
+    is_normal = int(request.GET.get('is_normal', '1'))
+    status_array = []
+    if is_normal == 1:
+        status_title = [
+            'Collecting customers', 'Selecting Cast Name',
+            'Cast Confirmed', 'Meeting Finished', 'Finished(Not Paid Yet)',
+            'Pay Finished', 'Cancel with not enough casts'
+        ]
+        status_numbers = [0, 1, 3, 5, 6, 7, 8]
+        for index, status_number in enumerate(status_numbers):
+            orders_count = Order.objects.filter(status = status_number).count()
+            status_array.append({
+                "title": status_title[index],
+                "count": orders_count,
+                "value": status_number
+            })
+    else:
+        status_title = [
+            'Collecting Cast + Not Enough', 'Cast Confirm + Start Time Exceeds',
+            'Extended time exceeds 8 hours', 'Payment failed'
+        ]
+
+        # collecting cast not enough
+        query_set = Order.objects.annotate(joined_count = Count('joined')).filter(status = 0, joined_count__lt = F('person'))
+        orders_count = query_set.count()
+        ids_array = list(query_set.values_list('id', flat = True).distinct())
+
+        status_array.append({
+            "title": "Collecting Cast + Not Enough",
+            "count": orders_count,
+            "value": ids_array
+        })
+
+        # cast confirm + start time exceeds
+        query_set = Order.objects.filter(status = 3, meet_time_iso__gt = timezone.now())
+        orders_count = query_set.count()
+        ids_array = list(query_set.values_list('id', flat = True).distinct())
+        
+        status_array.append({
+            "title": "Cast Confirm + Start Time Exceeds",
+            "count": orders_count,
+            "value": ids_array
+        })
+
+        # extended time exceeds
+        ended_predict = timezone.now() - timedelta(days = 8)
+        query_set = Order.objects.filter(status = 4, ended_at__lt = ended_predict)
+        orders_count = query_set.count()
+        ids_array = list(query_set.values_list('id', flat = True).distinct())
+        
+        status_array.append({
+            "title": "Extened time exceeds 8 hours",
+            "count": orders_count,
+            "value": ids_array
+        })
+
+        
+                
+
+    return Response(status_array)

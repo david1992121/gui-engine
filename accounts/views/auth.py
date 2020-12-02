@@ -30,7 +30,7 @@ from django_rest_passwordreset.signals import reset_password_token_created
 
 from accounts.models import Member
 from accounts.serializers.auth import *
-
+from chat.models import Room, Message
 
 class EmailLoginView(JSONWebTokenAPIView):
     """APIs for Email Login"""
@@ -104,6 +104,40 @@ class LineLoginView(APIView):
                         user_obj.started_at = timezone.now()
                     else:
                         user_obj.role = 10
+
+                    # send message
+                    system_message = "初めまして！\n \
+                        Gui 運営局です。\n \
+                        このアプリのご利用には本人確認が必要です。\n \
+                        ユーザー検索機能を解放する場合は身分証明書のアップロード（運転免許証またはパスポート）が必要です。\n \
+                        <a href='/main/identification'>身分証明書のアップロードはこちらから</a> \n \
+                        全ての機能を解放する場合は面接が必要となります。下記のリンクから面接のご希望をお知らせください。\n \
+                        面接の日程は追ってご連絡差し上げます。\n \
+                        <a href='/main/application' class='message-button'>面接の希望はこちらから</a> \n \
+                    "
+
+                    admin_message = "GR運営局へのお問い合わせは、下の「メッセージを送る」からお願いいたします。"
+
+                    system_user = Member.objects.filter(is_superuser = True, username = "system")
+                    admin_user = Member.objects.filter(is_superuser = True, username = "admin")
+
+                    # set system message
+                    system_room, is_created = Room.objects.get_or_create(room_type = "system", title = "システムメッセージ", users__id = user_obj.id)
+                    system_room.users.set([system_user, user_obj])
+                    system_room.last_message = system_message
+                    system_room.save()
+
+                    Message.objects.create(content = system_message, room = system_room, sender = system_user, receiver = system_user, is_read = True)
+                    Message.objects.create(content = system_message, room = system_room, sender = system_user, receiver = user_obj, is_read = False)
+
+                    admin_room, is_created = Room.objects.get_or_create(room_type = "admin", title = "Gui運営局", users__id = user_obj.id)
+                    admin_room.users.set([admin_user, user_obj])
+                    admin_room.last_message = admin_message
+                    admin_room.save()
+
+                    Message.objects.create(content = admin_message, room = admin_room, sender = admin_user, receiver = admin_user, is_read = True)
+                    Message.objects.create(content = admin_message, room = admin_room, sender = admin_user, receiver = user_obj, is_read = False)
+                
                 else:
                     if user_obj.deleted_at != None:
                         return Response(status = status.HTTP_406_NOT_ACCEPTABLE)

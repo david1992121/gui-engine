@@ -436,7 +436,7 @@ def send_bulk_messages(request):
             receiver = Member.objects.get(pk = user_id)
 
             if Room.objects.filter(users__id = user_id, room_type = "admin").count() == 0:
-                room = Room.objects.create(room_type = "admin", last_message = content, title = "Gui管理者")
+                room = Room.objects.create(room_type = "admin", last_message = content, title = "Gui運営局")
                 room.users.set([sender, receiver])
 
                 # room send via socket
