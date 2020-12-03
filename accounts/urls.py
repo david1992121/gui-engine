@@ -17,6 +17,7 @@ urlpatterns = [
     path('users/<int:pk>', UserDetailView.as_view(), name = "user_detail_view"),
     
     path('users/toggle_active/<int:id>', toggle_active, name = "user_active_toggle"),
+    path('users/to_cast/<int:id>', to_cast, name = "user_to_cast"),
 
     # user thumbnails
     path('thumbnails', add_thumbnails, name = "user_add_thumbnail"),

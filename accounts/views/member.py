@@ -842,6 +842,14 @@ def toggle_active(request, id):
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
+def to_cast(request, id):
+    cur_user = Member.objects.get(pk = id)
+    cur_user.role = 0
+    cur_user.save()
+    return Response(status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
 def get_user_statistics(request):
     status_array = []
     status_title = [
