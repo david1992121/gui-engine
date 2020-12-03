@@ -134,7 +134,7 @@ class DetailSerializer(serializers.ModelSerializer):
 
 class IntroducerSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'nickname')
+        fields = ('id', 'nickname', 'inviter_code')
         model = Member
 
 class TransferInfoSerializer(serializers.ModelSerializer):
