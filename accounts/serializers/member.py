@@ -3,6 +3,8 @@ Serializers for Member
 """
 
 from datetime import datetime
+from django.core.exceptions import ValidationError
+from django.db.models.fields import EmailField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from dateutil.parser import parse
@@ -23,26 +25,36 @@ def file_validator(file):
                                             format(max_file_size, file.size)))
 
 
-class InitialInfoRegisterSerializer(serializers.Serializer):
-    media = serializers.FileField(max_length=1000000, allow_empty_file=False, use_url=False,
-                                  validators=[file_validator], write_only=True)
+class InitialInfoRegisterSerializer(serializers.Serializer):    
     nickname = serializers.CharField()
     birthday = serializers.CharField()
+    location_id = serializers.IntegerField()
+    email = serializers.EmailField()
+    phone_number = serializers.CharField()
+    password = serializers.CharField()
+    inviter_code = serializers.CharField(allow_blank = True)
 
     def update(self, instance, validated_data):
-        # save media
-        image = validated_data.pop('media')
-        media_image = Media.objects.create(uri=image)
-
         # save user
         instance.nickname = validated_data['nickname']
         instance.birthday = validated_data['birthday']
-        instance.avatars.add(media_image)
+
+        inviter_code = validated_data['inviter_code']
+        if inviter_code != "":
+            try:
+                inviter = Member.objects.get(inviter_code = inviter_code)
+                instance.introducer = inviter
+            except:
+                pass
+                
+        if validated_data['location_id'] <= 0:
+            raise ValidationError({ "location" : "Location id is greater or equal to 0"})
+        
+        instance.location_id = validated_data['location_id']
+        instance.set_password(validated_data['password'])
+        instance.phone_number = validated_data['phone_number']
         instance.is_registered = True
-        if instance.role == 1:
-            instance.started_at = timezone.now()
-        elif instance.role == 0:
-            instance.started_at = timezone.now()
+        instance.started_at = timezone.now()
         instance.save()
 
         return instance
