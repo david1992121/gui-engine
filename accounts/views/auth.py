@@ -98,7 +98,6 @@ class LineLoginView(APIView):
                     user_obj.inviter_code = new_code
                     if inviter_code != "":
                         user_obj.introducer = Member.objects.get(inviter_code=inviter_code)
-                    user_obj.is_registered = True
 
                     if role == 1:
                         user_obj.started_at = timezone.now()

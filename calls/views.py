@@ -2,7 +2,7 @@ from django.db.models import Sum, Q, Count, F
 from django.db.models import query
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 from dateutil.parser import parse
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.utils import timezone
 import json
 
@@ -13,9 +13,8 @@ from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
 
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, BasePermission
+from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
 
@@ -304,5 +303,61 @@ def get_order_counts(request):
             "value": 0
         })
                 
-
     return Response(status_array)
+
+def daterange(start_date, end_date):
+    for n in range(int((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def get_month_data(request):
+    end_date = timezone.now().date()
+    start_date = datetime.strptime(end_date.strftime("%Y-%m-01"), "%Y-%m-%d").date()
+    result_data = []
+    weekday_str = ["月", "火", "水", "木", "金", "土", "日"]
+    sum_data = {
+        "date_str": "合計",
+        "order_counts": 0,
+        "order_points": 0,
+        "gift_points": 0,
+        "gift_counts": 0,
+        "buy_points": 0
+    }
+
+    for single_date in daterange(start_date, end_date):
+        temp_data = {}
+
+        # get invoice data of current date
+        temp_data["date_str"] = "{0}({1})".format(single_date.strftime("%Y-%m-%d"), weekday_str[single_date.weekday()])
+        temp_data["order_counts"] = Order.objects.filter(created_at__date = single_date).count()
+        sum_data["order_counts"] += temp_data["order_counts"]
+
+        temp_data["order_points"] = Invoice.objects.filter(
+            created_at__date = single_date, invoice_type = "CALL"
+            ).aggregate(Sum('give_amount'))['give_amount__sum']
+        if temp_data["order_points"] != None:
+            sum_data["order_points"] += temp_data["order_points"]
+
+        temp_data['gift_counts'] = Invoice.objects.filter(created_at__date = single_date, invoice_type = "GIFT").count()
+        sum_data['gift_counts'] += temp_data['gift_counts']
+    
+        temp_data['gift_points'] = Invoice.objects.filter(
+            created_at__date = single_date, invoice_type = "GIFT"
+            ).aggregate(Sum('give_amount'))['give_amount__sum']
+        if temp_data['gift_points'] != None:
+            sum_data['gift_points'] += temp_data['gift_points']
+
+        temp_data['buy_points'] = Invoice.objects.filter(
+            created_at__date = single_date, invoice_type = "BUY"
+            ).aggregate(Sum('take_amount'))['take_amount__sum']
+        if temp_data['buy_points'] != None:
+            sum_data['buy_points'] += temp_data['buy_points']
+        
+
+        result_data.append(temp_data)
+
+    result_data.append(sum_data)
+    return Response(result_data)
+
+
