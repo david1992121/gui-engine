@@ -6,15 +6,23 @@ from accounts.serializers.member import MainInfoSerializer
 from accounts.models import Member
 from django.db.models import Sum, Q
 from dateutil.parser import parse
+from basics.models import Location, CostPlan
 class OrderSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer(read_only = True)
     joined = MainInfoSerializer(many = True, read_only = True)
-    parent_location = LocationSerializer()
+    parent_location = LocationSerializer(read_only = True)
     location = LocationSerializer(read_only = True)
     cost_plan = CostplanSerializer(read_only = True)
     situations = ChoiceSerializer(read_only = True, many = True)
     desired = MainInfoSerializer(read_only = True, many = True)
     room = RoomSerializer(read_only = True)
+
+    parent_location_id = serializers.IntegerField(write_only = True)
+    location_id = serializers.IntegerField(write_only = True)
+    cost_plan_id = serializers.IntegerField(write_only = True)
+    situation_ids = serializers.ListField(
+        child = serializers.IntegerField(), write_only = True
+    )
 
     class Meta:
         fields = (
@@ -22,9 +30,41 @@ class OrderSerializer(serializers.ModelSerializer):
             'meet_time', 'meet_time_iso', 'time_other', 'location', 'location_other',
             'person', 'period', 'cost_plan', 'situations', 'desired', 'is_private',
             'created_at', 'updated_at', 'room', 'collect_started_at', 'collect_ended_at',
-            'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark'
+            'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
+            'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids'
         )
         model = Order
+        extra_kwargs = {
+            'remark': { 'allow_blank': True },
+        }
+
+    def create(self, validated_data):
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+
+        location_id = validated_data.pop('location_id')
+        situation_ids = validated_data.pop('situation_ids')
+        
+        new_order = Order.objects.create(**validated_data)
+        if len(situation_ids) > 0:
+            new_order.situations.set(situation_ids)
+        if location_id > 0:
+            new_order.location = Location.objects.get(pk = location_id)
+        
+        cur_time = timezone.now()
+        new_order.collect_started_at = cur_time
+        new_order.collect_ended_at = cur_time + timedelta(minutes=15)
+        
+        # get cost plan
+        new_order.cost_value = new_order.cost_plan.cost
+        new_order.cost_extended = new_order.cost_plan.extend_cost
+
+        # ended predict
+        meet_time = datetime.strptime(new_order.meet_time_iso, "%Y-%m-%d %H:%M:%S")
+        new_order.ended_predict = meet_time + timedelta(hours=new_order.period)
+
+        new_order.save()
+        return new_order
 
 class InvoiceSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only = True)

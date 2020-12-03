@@ -1,6 +1,6 @@
 from django.db.models import Sum, Q, Count, F
 from django.db.models import query
-from accounts.views.member import IsAdminPermission, IsSuperuserPermission
+from accounts.views.member import IsAdminPermission, IsSuperuserPermission, IsGuest
 from dateutil.parser import parse
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -161,7 +161,7 @@ def get_rank_users(request):
     ).data, "values": points_values }, status=status.HTTP_200_OK)
 
 class OrderView(generics.GenericAPIView):
-    permission_classes = [IsSuperuserPermission]
+    permission_classes = ( IsGuest | IsSuperuserPermission, )
     serializer_class = OrderSerializer
 
     def get(self, request):
@@ -220,6 +220,15 @@ class OrderView(generics.GenericAPIView):
         orders = paginator.page(page)
 
         return Response({"total": total, "results": OrderSerializer(orders, many=True).data}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.get_serializer(data = request.data)
+        if serializer.is_valid():
+            new_order = serializer.save()
+            return Response(OrderSerializer(new_order).data, status = status.HTTP_200_OK)
+        else:
+            print(serializer.errors)
+            return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]

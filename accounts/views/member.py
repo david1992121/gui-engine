@@ -36,10 +36,16 @@ class IsSuperuserPermission(BasePermission):
 
 
 class IsCast(BasePermission):
-    message = "Only Cast is allowed"
+    message = "Only Active Cast is allowed"
 
     def has_permission(self, request, view):
-        return request.user.role == 0
+        return request.user.role == 0 and request.user.is_active
+
+class IsGuest(BasePermission):
+    message = "Only Active Guest is allowed"
+
+    def has_permission(self, request, view):
+        return request.user.role == 1 and request.user.is_active
 
 class IsAdminPermission(BasePermission):
     message = "Only Admin is allowed"
