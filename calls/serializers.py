@@ -1,12 +1,24 @@
-from calls.models import Invoice, Order
+from .models import Invoice, Order, Join
 from rest_framework import serializers
-from basics.serializers import ChoiceSerializer, LocationSerializer, CostplanSerializer
+from basics.serializers import ChoiceSerializer, LocationSerializer, CostplanSerializer, ClassesSerializer
 from chat.serializers import RoomSerializer
-from accounts.serializers.member import MainInfoSerializer
+from accounts.serializers.member import GeneralInfoSerializer, MainInfoSerializer
 from accounts.models import Member
-from django.db.models import Sum, Q
+from django.db.models import Sum
 from dateutil.parser import parse
-from basics.models import Location, CostPlan
+from basics.models import Location
+
+class JoinSerializer(serializers.ModelSerializer):
+    """
+    Join Serializer
+    """
+    user = GeneralInfoSerializer(read_only=True)
+
+    class Meta:
+        fields = ('started_at', 'is_extended',
+                  'is_fivepast', 'ended_at', 'user', 'status', 'selection')
+        model = Join
+
 class OrderSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer(read_only = True)
     joined = MainInfoSerializer(many = True, read_only = True)
@@ -23,15 +35,17 @@ class OrderSerializer(serializers.ModelSerializer):
     situation_ids = serializers.ListField(
         child = serializers.IntegerField(), write_only = True
     )
-
+    joins = JoinSerializer(many = True, read_only = True)
     class Meta:
         fields = (
-            'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
+            'id', 'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
             'meet_time', 'meet_time_iso', 'time_other', 'location', 'location_other',
             'person', 'period', 'cost_plan', 'situations', 'desired', 'is_private',
             'created_at', 'updated_at', 'room', 'collect_started_at', 'collect_ended_at',
             'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
-            'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids'
+            'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids',
+            'night_started_at', 'night_ended_at', 'night_fund', 'operator_message', 'joins',
+            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio'
         )
         model = Order
         extra_kwargs = {
@@ -44,6 +58,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         location_id = validated_data.pop('location_id')
         situation_ids = validated_data.pop('situation_ids')
+        meet_time_iso = validated_data.pop('meet_time_iso')
         
         new_order = Order.objects.create(**validated_data)
         if len(situation_ids) > 0:
@@ -60,8 +75,9 @@ class OrderSerializer(serializers.ModelSerializer):
         new_order.cost_extended = new_order.cost_plan.extend_cost
 
         # ended predict
-        meet_time = datetime.strptime(new_order.meet_time_iso, "%Y-%m-%d %H:%M:%S")
-        new_order.ended_predict = meet_time + timedelta(hours=new_order.period)
+        # meet_time = parse(meet_time_iso)
+        new_order.meet_time_iso = meet_time_iso
+        new_order.ended_predict = meet_time_iso + timedelta(hours=new_order.period)
 
         new_order.save()
         return new_order

@@ -16,7 +16,7 @@ from accounts.models import Media, Member
 from basics.serializers import GiftSerializer, LocationSerializer
 
 # app
-from .models import AdminNotice, Join, Room, Message, Notice
+from .models import AdminNotice, Room, Message, Notice
 
 
 def file_validator(file):
@@ -54,16 +54,16 @@ class NoticeSerializer(serializers.ModelSerializer):
         }
 
 
-class JoinSerializer(serializers.ModelSerializer):
-    """
-    Join Serializer
-    """
-    user = MainInfoSerializer(read_only=True)
+# class JoinSerializer(serializers.ModelSerializer):
+#     """
+#     Join Serializer
+#     """
+#     user = MainInfoSerializer(read_only=True)
 
-    class Meta:
-        fields = ('started_at', 'is_extended',
-                  'is_fivepast', 'ended_at', 'user')
-        model = Join
+#     class Meta:
+#         fields = ('started_at', 'is_extended',
+#                   'is_fivepast', 'ended_at', 'user')
+#         model = Join
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -71,7 +71,7 @@ class RoomSerializer(serializers.ModelSerializer):
     Room Serializer
     """
     users = MainInfoSerializer(read_only=True, many=True)
-    joins = JoinSerializer(read_only=True, many=True)
+    # joins = JoinSerializer(read_only=True, many=True)
     unread = serializers.IntegerField(read_only=True)
     last_sender = MainInfoSerializer(read_only=True)
     user_ids = ListField(
@@ -89,7 +89,7 @@ class RoomSerializer(serializers.ModelSerializer):
             'last_sender',
             'room_type',
             'title',
-            'joins',
+            # 'joins',
             'unread',
             'created_at',
             'updated_at',

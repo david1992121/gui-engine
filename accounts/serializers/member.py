@@ -95,7 +95,9 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'left_at',
             'avatars',
             'guest_level',
-            'cast_class'
+            'cast_class',
+            'back_ratio',
+            'call_times'
         )
         model = Member
 

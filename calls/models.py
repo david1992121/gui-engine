@@ -23,10 +23,10 @@ class Order(models.Model):
     reservation = models.CharField('予約名', null = True, blank = True, max_length = 100)
     place = models.CharField('予約場所', null=True, blank=True, max_length=100)
     user = models.ForeignKey(Member, related_name='orders', on_delete = models.SET_NULL, null = True, blank = True, verbose_name='オーダー')
-    joined = models.ManyToManyField(Member, related_name = "applied", verbose_name="応募者")
+    # joined = models.ManyToManyField(Member, related_name = "applied", verbose_name="応募者")
     parent_location = models.ForeignKey(Location, related_name = "with_parent", on_delete = models.PROTECT, null = True, blank = True)
     meet_time = models.CharField("合流時間", default = "", max_length = 50)
-    meet_time_iso = models.CharField("ISO時間", default = "", max_length = 50)
+    meet_time_iso = models.DateTimeField("ISO時間", null = True, blank = True)
     time_other = models.BooleanField("他時間", default = False)
     location = models.ForeignKey(Location, related_name = "with_child", on_delete = models.PROTECT, null = True, blank = True)
     location_other = models.CharField('他の場所', null=True, blank =True, max_length=100)
@@ -38,13 +38,30 @@ class Order(models.Model):
     is_private = models.BooleanField('プライベート', default=False)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, related_name = "orders", null=True, blank=True, verbose_name="チャットルーム")
 
+    # collect started at
     collect_started_at = models.DateTimeField('キャスト募集開始時刻', null=True, blank=True)
     collect_ended_at = models.DateTimeField('キャスト募集修了時刻', null=True, blank=True)
     ended_predict = models.DateTimeField('修了予定時刻', null = True)
     ended_at = models.DateTimeField('修了時刻', null = True)
+
+    # cost
     cost_value = models.IntegerField('料金', default = 0)
     cost_extended = models.IntegerField('延長料金', default = 0)
-    remark = models.TextField('備考', null = True)    
+    final_cost = models.IntegerField('確定料金', default = 0)
+
+    # message
+    remark = models.TextField('備考', null = True)
+    operator_message = models.TextField('オペレーターメッセージ', null = True)
+
+    # night started at
+    night_started_at = models.TimeField('深夜料利用開始', null = True, blank=True)
+    night_ended_at = models.TimeField('深夜料利用修了', null = True, blank=True)
+    night_fund = models.IntegerField('深夜料', default = 4000)
+    night_back_ratio = models.IntegerField('深夜料バック率', default = 0)
+    
+    # desire cast
+    desire_cost = models.IntegerField('指名料', default = 2000)
+    desire_back_ratio = models.IntegerField('指名料バック率', default = 0)
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
@@ -61,3 +78,30 @@ class Invoice(models.Model):
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+class Join(models.Model):
+    """
+    Join Model
+    """
+
+    SELECT_CHOICES = (
+        (0, 'キャスト募集'),
+        (1, '優先マッチング')        
+    )
+
+    STATUS_CHOICES = (
+        (0, 'ドラフト'),
+        (1, '確定'),
+        (4, '却下')        
+    )
+
+    user = models.ForeignKey(Member, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="ユーザー")
+    order = models.ForeignKey(Order, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="チャットルーム")
+    started_at = models.DateTimeField("開始時間", null = True)
+    ended_at = models.DateTimeField("修了時間", null = True)
+    status = models.IntegerField('状態', choices = STATUS_CHOICES, default = 0)
+    selection = models.IntegerField('選択', choices = SELECT_CHOICES, default = 0)
+
+    is_started = models.BooleanField("開始", default = False)
+    is_extended = models.BooleanField("延長", default = False)
+    is_fivepast = models.BooleanField("5分延長", default = False)

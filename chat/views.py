@@ -26,6 +26,8 @@ from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+from .utils import send_super_message, send_super_room
+
 # def index(request):
 #     return render(request, 'chat/index.html', {})
 
@@ -147,7 +149,7 @@ def message_list(request, room_id):
     """
 
     try:
-        room = Room.objects.get(pk=room_id)
+        room = Room.objects.get(pk=room_id, users__id = request.user.id)
     except Room.DoesNotExist:
         return Response(
             status=status.HTTP_404_NOT_FOUND
@@ -174,21 +176,22 @@ def message_list(request, room_id):
             gift_id = input_data.get('gift_id', 0)
             channel_layer = get_channel_layer()
 
-            if not room.is_group and request.user.role > -1:
-                self_message = Message.objects.create(
-                    content=input_data.get('content'),
-                    sender=request.user,
-                    receiver=request.user,
-                    room=room,
-                    is_read=True
-                )
-                self_message.medias.set(media_ids)
-                if gift_id > 0:
-                    self_message.gift_id = gift_id
-                    self_message.save()
+            # create self message
+            self_message = Message.objects.create(
+                content=input_data.get('content'),
+                sender=request.user,
+                receiver=request.user,
+                room=room,
+                is_read=True
+            )
+            self_message.medias.set(media_ids)
+            if gift_id > 0:
+                self_message.gift_id = gift_id
+                self_message.save()
 
+            # create others message
             for user in room.users.all():
-                if user.id != request.user.id and (not room.is_group or (room.is_group and user.role > -1)):
+                if user.id != request.user.id:
                     message = Message.objects.create(
                         content=input_data.get('content'),
                         sender=request.user,
@@ -417,7 +420,7 @@ def upload_images(request):
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperuserPermission])
 def send_bulk_messages(request):
     message_serializer = AdminMessageSerializer(data = request.data)
     if message_serializer.is_valid():
@@ -429,40 +432,10 @@ def send_bulk_messages(request):
         if len(receiver_ids) == 0:
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
-        sender = Member.objects.get(username = "admin")
-        channel_layer = get_channel_layer()
+        sender = request.user        
 
         for user_id in receiver_ids:
-            receiver = Member.objects.get(pk = user_id)
-
-            if Room.objects.filter(users__id = user_id, room_type = "admin").count() == 0:
-                room = Room.objects.create(room_type = "admin", last_message = content, title = "Gui運営局")
-                room.users.set([sender, receiver])
-
-                # room send via socket
-                async_to_sync(channel_layer.group_send)(
-                    "chat_{}".format(user_id),
-                    { "type": "room.send", "content": RoomSerializer(room).data }
-                )
-            else:
-                room = Room.objects.filter(users__id = user_id, room_type = "admin").first()
-
-            # create self message
-            self_message = Message.objects.create(
-                content = content, sender = sender, receiver = sender, is_read = True, room = room
-            )
-            cur_message = Message.objects.create(
-                content = content, sender = sender, 
-                receiver = receiver, room = room,
-                follower = self_message
-            )
-            cur_message.medias.set(media_ids)            
-            
-            # message send via socket
-            async_to_sync(channel_layer.group_send)(
-                "chat_{}".format(user_id),
-                { "type": "room.send", "content": MessageSerializer(cur_message).data }
-            )
+            send_super_message(sender.username, user_id, content, media_ids)            
 
         return Response({ "success": True }, status = status.HTTP_200_OK)
     else:
@@ -520,25 +493,13 @@ class MessageView(generics.GenericAPIView):
             room_id = input_data.get('room_id', 0)
             sender_id = input_data.get('sender_id', 0)
             content = input_data.get('content', "")
+            media_ids = input_data.pop('media_ids')
+
             is_read = input_data.get("is_read", False)
             if room_id > 0 and sender_id > 0:
                 try:
-                    room = Room.objects.get(pk = room_id)
-                    sender = Member.objects.get(pk = sender_id)
-                    channel_layer = get_channel_layer()
-                    self_message = Message.objects.create(content = content, room = room, sender = sender, receiver = sender, is_read = True)
-
-                    for room_member in room.users.all():
-                        if not room_member.is_superuser:
-                            # message create
-                            cur_message = Message.objects.create(content = content, 
-                                room = room, sender = sender, receiver = room_member, follower = self_message, is_read = is_read)
-
-                            # send via websocket
-                            async_to_sync(channel_layer.group_send)(
-                                "chat_{}".format(room_member.id),
-                                { "type": "room.message", "content": MessageSerializer(cur_message).data }
-                            )
+                    Room.objects.get(pk = room_id)
+                    self_message = send_super_room(room_id, sender_id, content, media_ids, is_read)                    
                     return Response(MessageSerializer(self_message).data, status = status.HTTP_200_OK)
                 except Room.DoesNotExist:
                     pass

@@ -25,17 +25,17 @@ class Room(models.Model):
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
-class Join(models.Model):
-    """
-    Room Model
-    """
-    user = models.ForeignKey(Member, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="ユーザー")
-    room = models.ForeignKey(Room, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="チャットルーム")
-    started_at = models.DateTimeField("開始時間")
-    is_started = models.BooleanField("開始", default = False)
-    is_extended = models.BooleanField("延長", default = False)
-    is_fivepast = models.BooleanField("5分延長", default = False)
-    ended_at = models.DateTimeField("修了時間")
+# class Join(models.Model):
+#     """
+#     Room Model
+#     """
+#     user = models.ForeignKey(Member, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="ユーザー")
+#     room = models.ForeignKey(Room, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="チャットルーム")
+#     started_at = models.DateTimeField("開始時間")
+#     is_started = models.BooleanField("開始", default = False)
+#     is_extended = models.BooleanField("延長", default = False)
+#     is_fivepast = models.BooleanField("5分延長", default = False)
+#     ended_at = models.DateTimeField("修了時間")
 class Message(models.Model):
     """
     Message Model

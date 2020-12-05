@@ -10,7 +10,7 @@ from rest_framework_jwt.serializers import JSONWebTokenSerializer
 
 from drf_extra_fields.fields import Base64ImageField
 from accounts.models import Member, Media, Detail, TransferInfo, Friendship
-from basics.serializers import SettingSerializer, ChoiceSerializer
+from basics.serializers import LocationSerializer, SettingSerializer, ChoiceSerializer
 
 
 class EmailRegisterSerializer(serializers.Serializer):
@@ -151,6 +151,7 @@ class MemberSerializer(serializers.ModelSerializer):
     introducer = IntroducerSerializer(read_only = True)
     transfer_infos = TransferInfoSerializer(many = True)
     favorites = serializers.SerializerMethodField()
+    location = LocationSerializer(read_only = True)
     class Meta:
         fields = (
             'id',
@@ -167,11 +168,13 @@ class MemberSerializer(serializers.ModelSerializer):
             'is_registered',
             'setting',
             'detail',
+            'location',
             'cast_status',
             'transfer_infos',
             'username',
             'inviter_code',
-            'favorites'
+            'favorites',
+            'is_superuser'
         )
         model = Member
 

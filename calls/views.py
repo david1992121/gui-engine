@@ -225,6 +225,22 @@ class OrderView(generics.GenericAPIView):
         serializer = self.get_serializer(data = request.data)
         if serializer.is_valid():
             new_order = serializer.save()
+            new_order.user = request.user
+            new_order.save()
+
+            # send system message
+            from chat.utils import send_super_message
+            location_str = new_order.location.name if new_order.location != None else new_order.location_other
+            start_time_str = new_order.meet_time_iso.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format("*年月日時分")
+            end_time_str = new_order.ended_predict.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format("*年月日時分")
+            message_content = "ご予約のリクエストありがとうございます。\n \
+                現在合流可能なキャストをお探ししています。 \n \
+                尚リクエスト確定後のキャンセルはお受けできません。予めご了承ください。 \n \
+                場所 : {0} \n \
+                時間 : {1} ~ {2} \n \
+                人数 : {3}人".format(location_str, start_time_str, end_time_str, new_order.person)
+            
+            send_super_message("system", request.user, message_content)
             return Response(OrderSerializer(new_order).data, status = status.HTTP_200_OK)
         else:
             print(serializer.errors)
@@ -232,10 +248,11 @@ class OrderView(generics.GenericAPIView):
 
 class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
-    serializer_class = [ OrderSerializer ]
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
 
     def get(self, request, *args, **kwargs):
-        self.retrieve(request, *args, **kwargs)
+        return self.retrieve(request, *args, **kwargs)
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
