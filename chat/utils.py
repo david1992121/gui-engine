@@ -29,10 +29,17 @@ def send_super_message(room_type, receiver_id, message_content, media_ids = []):
         # room send via socket
         async_to_sync(channel_layer.group_send)(
             "chat_{}".format(receiver_id),
-            { "type": "room.send", "content": RoomSerializer(room).data }
+            { "type": "room.send", "content": RoomSerializer(room).data, "event": "create" }
         )
     else:
         room = Room.objects.filter(users__id = receiver_id, room_type = room_type).first()
+
+    # set room last message
+    if message_content != "":
+        room.last_message = message_content
+    else:
+        room.last_message = "『画像』"
+    room.save()
 
     # send message
     self_message = Message.objects.create(
@@ -44,7 +51,8 @@ def send_super_message(room_type, receiver_id, message_content, media_ids = []):
         follower = self_message
     )
     if len(media_ids) > 0:
-        cur_message.media_ids.set(media_ids)
+        self_message.medias.set(media_ids)
+        cur_message.medias.set(media_ids)
 
     # message send via socket
     async_to_sync(channel_layer.group_send)(
@@ -57,7 +65,14 @@ def send_super_room(room_id, sender_id, message_content, media_ids = [], is_read
     sender = Member.objects.get(pk = sender_id)
     channel_layer = get_channel_layer()
     self_message = Message.objects.create(content = message_content, room = room, sender = sender, receiver = sender, is_read = True)
-    self_message.media_ids.set(media_ids)
+    self_message.medias.set(media_ids)
+
+    # set room last message
+    if message_content != "":
+        room.last_message = message_content
+    else:
+        room.last_message = "『画像』"
+    room.save()
 
     for room_member in room.users.all():
         if not room_member.is_superuser:
@@ -68,8 +83,8 @@ def send_super_room(room_id, sender_id, message_content, media_ids = [], is_read
             # send via websocket
             async_to_sync(channel_layer.group_send)(
                 "chat_{}".format(room_member.id),
-                { "type": "room.message", "content": MessageSerializer(cur_message).data }
+                { "type": "message.send", "content": MessageSerializer(cur_message).data }
             )
-            cur_message.media_ids.set(media_ids)
+            cur_message.medias.set(media_ids)
 
     return self_message

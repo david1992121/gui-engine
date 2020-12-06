@@ -35,13 +35,13 @@ class IsSuperuserPermission(BasePermission):
         return request.user.is_superuser
 
 
-class IsCast(BasePermission):
+class IsCastPermission(BasePermission):
     message = "Only Active Cast is allowed"
 
     def has_permission(self, request, view):
         return request.user.role == 0 and request.user.is_active
 
-class IsGuest(BasePermission):
+class IsGuestPermission(BasePermission):
     message = "Only Active Guest is allowed"
 
     def has_permission(self, request, view):
@@ -594,7 +594,7 @@ def edit_choice(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsCast])
+@permission_classes([IsCastPermission])
 def apply_transfer(request):
     import math
     cur_user = request.user
@@ -713,7 +713,7 @@ def count_transfer(request):
     return Response(status_array)
 
 class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
-    permission_classes = (IsCast | IsSuperuserPermission, )
+    permission_classes = (IsCastPermission | IsSuperuserPermission, )
     serializer_class = TransferInfoSerializer
     queryset = TransferInfo.objects.all()
 

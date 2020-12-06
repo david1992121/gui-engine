@@ -1,22 +1,23 @@
 from django.db.models import Sum, Q, Count, F
 from django.db.models import query
-from accounts.views.member import IsAdminPermission, IsSuperuserPermission, IsGuest
+from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission
 from dateutil.parser import parse
 from datetime import datetime, timedelta
 from django.utils import timezone
-import json
+import json, pytz
 
 from django.core.paginator import Paginator
 
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from rest_framework import generics
 from rest_framework import mixins
-
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
+from chat.utils import send_super_message
+from .utils import send_call
 
 # Create your views here.
 class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
@@ -161,7 +162,7 @@ def get_rank_users(request):
     ).data, "values": points_values }, status=status.HTTP_200_OK)
 
 class OrderView(generics.GenericAPIView):
-    permission_classes = ( IsGuest | IsSuperuserPermission, )
+    permission_classes = ( IsGuestPermission | IsSuperuserPermission, )
     serializer_class = OrderSerializer
 
     def get(self, request):
@@ -228,11 +229,10 @@ class OrderView(generics.GenericAPIView):
             new_order.user = request.user
             new_order.save()
 
-            # send system message
-            from chat.utils import send_super_message
+            # send system message       
             location_str = new_order.location.name if new_order.location != None else new_order.location_other
-            start_time_str = new_order.meet_time_iso.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format("*年月日時分")
-            end_time_str = new_order.ended_predict.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format("*年月日時分")
+            start_time_str = new_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+            end_time_str = new_order.ended_predict.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
             message_content = "ご予約のリクエストありがとうございます。\n \
                 現在合流可能なキャストをお探ししています。 \n \
                 尚リクエスト確定後のキャンセルはお受けできません。予めご了承ください。 \n \
@@ -240,7 +240,11 @@ class OrderView(generics.GenericAPIView):
                 時間 : {1} ~ {2} \n \
                 人数 : {3}人".format(location_str, start_time_str, end_time_str, new_order.person)
             
-            send_super_message("system", request.user, message_content)
+            # call send
+            cast_ids = list(Member.objects.filter(location = new_order.parent_location).values_list('id', flat = True).distinct())
+            send_call(new_order, cast_ids, "create")
+
+            send_super_message("system", request.user.id, message_content)
             return Response(OrderSerializer(new_order).data, status = status.HTTP_200_OK)
         else:
             print(serializer.errors)
@@ -293,7 +297,7 @@ def get_order_counts(request):
         })
 
         # cast confirm + start time exceeds
-        query_set = Order.objects.filter(status = 3, meet_time_iso__gt = timezone.now())
+        query_set = Order.objects.filter(status = 3, meet_time_iso__gt = timezone.localtime())
         orders_count = query_set.count()
         ids_array = list(query_set.values_list('id', flat = True).distinct())
         
@@ -386,4 +390,92 @@ def get_month_data(request):
     result_data.append(sum_data)
     return Response(result_data)
 
+class JoinView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = JoinSerializer
+    queryset = Join.objects.all()
 
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def drop_join(request, id):
+    try:
+        join = Join.objects.get(pk = id)
+        join.dropped = True
+        join.save()
+        return Response(status = status.HTTP_200_OK)
+    except Join.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def recover_join(request, id):
+    try:
+        join = Join.objects.get(pk = id)
+        join.dropped = False
+        join.save()
+        return Response(status = status.HTTP_200_OK)
+    except Join.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class OrderCastView(generics.GenericAPIView):
+    permission_classes = [IsCastPermission]
+    serializer_class = OrderSerializer
+
+    def get(self, request):
+        cur_user = request.user
+        mode = request.GET.get('mode', 'today')
+        page = int(request.GET.get('page', "1"))
+
+        query_set = Order.objects.filter(parent_location = cur_user.location)
+
+        today_date = datetime.now(pytz.timezone("Asia/Tokyo"))
+        today_date = today_date.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+
+        tomorrow_date = today_date + timedelta(days = 1)
+        if mode == 'today':
+            query_set = query_set.filter(meet_time_iso__gte = today_date, meet_time_iso__lt = tomorrow_date)
+        elif mode == 'tomorrow':
+            query_set = query_set.filter(meet_time_iso__gte = tomorrow_date)
+        else:
+            query_set = query_set.filter(joins__user = cur_user)
+
+        query_set = query_set.order_by('-created_at')
+        paginator = Paginator(query_set, 5)
+        orders = paginator.page(page)
+
+        return Response(OrderSerializer(orders, many=True).data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsCastPermission])
+def apply_order(request, id):
+    try:
+        curOrder = Order.objects.get(pk = id)
+        newJoin = Join.objects.create(user = request.user, order = curOrder)
+        joins_num = curOrder.joins.count()
+        if joins_num == curOrder.person and curOrder.status == 0:
+            curOrder.status = 1
+            curOrder.save()
+
+            collect_end = curOrder.collect_ended_at.astimezone(pytz.timezone("Asia/Tokyo"))
+            
+            # send message to guest
+            cur_message = "おめでとうございます♪\n \
+                キャストが集まり、オーダーのリクエストが確定されました。\n \
+                <a href='/main/call/desire/{0}'>こちら</a>よりお好みのキャストの選択ができます♪\n \
+                ＊このオーダーは現在募集中なので、より多くのキャストが集まる可能性がございます。\n \
+                ＊お好みのキャスト2名を選択するか{1}を過ぎると自動でマッチングが開始されチャットルームが作成されます。\n \
+                <a class='gui-message-btn' href='/main/call/desire/{0}'>キャスト選択画面へ</a> \
+                ".format(curOrder.id, collect_end.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分"))
+
+            send_super_message("system", curOrder.user.id, cur_message)
+
+        return Response(JoinSerializer(newJoin).data)
+
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

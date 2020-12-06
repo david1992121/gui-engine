@@ -82,6 +82,7 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
     guest_level = LevelsSerializer(read_only=True)
     cast_class = ClassesSerializer(read_only=True)
     job = serializers.SerializerMethodField()
+    annual = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
@@ -90,6 +91,7 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'birthday',
             'word',
             'job',
+            'annual',
             'point_half',
             'status',
             'left_at',
@@ -103,6 +105,9 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
 
     def get_job(self, obj):
         return "" if not obj.detail.job else obj.detail.job
+    
+    def get_annual(self, obj):
+        return "" if not obj.detail.annual else obj.detail.annual
 
 class UserSerializer(serializers.ModelSerializer):
     average_review = serializers.SerializerMethodField()

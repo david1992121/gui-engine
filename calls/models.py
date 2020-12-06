@@ -91,8 +91,7 @@ class Join(models.Model):
 
     STATUS_CHOICES = (
         (0, 'ドラフト'),
-        (1, '確定'),
-        (4, '却下')        
+        (1, '確定'),        
     )
 
     user = models.ForeignKey(Member, related_name = "joins", on_delete = models.SET_NULL, null = True, verbose_name="ユーザー")
@@ -101,6 +100,7 @@ class Join(models.Model):
     ended_at = models.DateTimeField("修了時間", null = True)
     status = models.IntegerField('状態', choices = STATUS_CHOICES, default = 0)
     selection = models.IntegerField('選択', choices = SELECT_CHOICES, default = 0)
+    dropped = models.BooleanField('却下', default = False)
 
     is_started = models.BooleanField("開始", default = False)
     is_extended = models.BooleanField("延長", default = False)

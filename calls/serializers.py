@@ -13,14 +13,16 @@ class JoinSerializer(serializers.ModelSerializer):
     Join Serializer
     """
     user = GeneralInfoSerializer(read_only=True)
-
+    user_id = serializers.IntegerField(write_only = True)
+    order_id = serializers.IntegerField(write_only = True)
+    
     class Meta:
-        fields = ('started_at', 'is_extended',
-                  'is_fivepast', 'ended_at', 'user', 'status', 'selection')
+        fields = ('id', 'started_at', 'is_extended', 'order_id', 'user_id',
+                  'is_fivepast', 'ended_at', 'user', 'status', 'selection', 'dropped')
         model = Join
 
 class OrderSerializer(serializers.ModelSerializer):
-    user = MainInfoSerializer(read_only = True)
+    user = GeneralInfoSerializer(read_only = True)
     joined = MainInfoSerializer(many = True, read_only = True)
     parent_location = LocationSerializer(read_only = True)
     location = LocationSerializer(read_only = True)
@@ -36,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
         child = serializers.IntegerField(), write_only = True
     )
     joins = JoinSerializer(many = True, read_only = True)
+    applying = serializers.SerializerMethodField(read_only = True)
     class Meta:
         fields = (
             'id', 'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
@@ -45,12 +48,15 @@ class OrderSerializer(serializers.ModelSerializer):
             'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
             'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids',
             'night_started_at', 'night_ended_at', 'night_fund', 'operator_message', 'joins',
-            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio'
+            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying'
         )
         model = Order
         extra_kwargs = {
             'remark': { 'allow_blank': True },
         }
+
+    def get_applying(self, obj):
+        return obj.joins.filter(selection = 0, status = 0).count()    
 
     def create(self, validated_data):
         from django.utils import timezone
