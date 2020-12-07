@@ -948,7 +948,7 @@ def toggle_present(request):
     cur_user = request.user
     cur_user.is_present = not cur_user.is_present
     if cur_user.is_present:
-        cur_user.presented_at = timezone.now()
+        cur_user.presented_at = timezone.now() + timedelta(days = 1)
     else:
         cur_user.presented_at = None
     cur_user.save()

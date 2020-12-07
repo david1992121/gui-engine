@@ -1,12 +1,18 @@
 from .models import Invoice, Order, Join
 from rest_framework import serializers
+
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+
+from basics.models import Location
 from basics.serializers import ChoiceSerializer, LocationSerializer, CostplanSerializer, ClassesSerializer
+
 from chat.serializers import RoomSerializer
+
 from accounts.serializers.member import GeneralInfoSerializer, MainInfoSerializer
 from accounts.models import Member
-from django.db.models import Sum
-from dateutil.parser import parse
-from basics.models import Location
+
 
 class JoinSerializer(serializers.ModelSerializer):
     """
@@ -33,7 +39,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     parent_location_id = serializers.IntegerField(write_only = True)
     user_id = serializers.IntegerField(write_only = True, required = False)
-    location_id = serializers.IntegerField(write_only = True)
+    location_id = serializers.IntegerField(write_only = True, required = False)
     cost_plan_id = serializers.IntegerField(write_only = True)
     situation_ids = serializers.ListField(
         child = serializers.IntegerField(), write_only = True
@@ -61,9 +67,7 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_applying(self, obj):
         return obj.joins.filter(selection = 0, status = 0).count()    
 
-    def create(self, validated_data):
-        from django.utils import timezone
-        from datetime import datetime, timedelta
+    def create(self, validated_data):        
 
         location_id = validated_data.pop('location_id')
         situation_ids = validated_data.pop('situation_ids')
@@ -93,6 +97,17 @@ class OrderSerializer(serializers.ModelSerializer):
 
         new_order.save()
         return new_order
+
+    def update(self, instance, validated_data):
+        situation_ids = validated_data.pop('situation_ids')
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.ended_predict = instance.meet_time_iso + timedelta(hours = instance.period)
+        instance.save()
+        instance.situations.set(situation_ids)
+        return instance
 
 class InvoiceSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only = True)

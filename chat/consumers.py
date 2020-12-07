@@ -71,6 +71,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "data": event['content']
         }))
 
+    # Send Call Type
+    async def call_type_send(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "CALLTYPE",
+            "data": event['content']
+        }))
+
     # Send Applier
     async def applier_send(self, event):
         await self.send(text_data=json.dumps({

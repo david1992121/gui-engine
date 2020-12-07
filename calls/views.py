@@ -18,9 +18,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
-from .utils import send_call, send_applier
+from .utils import send_call, send_applier, send_call_type
 from chat.utils import send_notice_to_room, send_super_message, send_room_to_users
-from chat.models import Room, Message
+from chat.models import Room
 
 # Create your views here.
 class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
@@ -202,9 +202,18 @@ def create_order(request):
         if notify_guest > 0:
             send_super_message("system", order.user_id, message_content)
 
+        today_date = datetime.now().astimezone(pytz.timezone("Asia/Tokyo")).date()
+        meet_date = order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).date()
+        
         # send order create
         cast_ids = list(Member.objects.filter(role = 0, location = order.parent_location).values_list('id', flat = True))
         send_call(order, cast_ids, "create")
+        
+        # call type send 
+        if meet_date == today_date:
+            send_call_type("today", cast_ids)
+        if meet_date > today_date:
+            send_call_type("tomorrow", cast_ids)
             
         return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     else:
@@ -290,9 +299,18 @@ class OrderView(generics.GenericAPIView):
                 時間 : {1} ~ {2} \n \
                 人数 : {3}人".format(location_str, start_time_str, end_time_str, new_order.person)
             
+            today_date = datetime.now().astimezone(pytz.timezone("Asia/Tokyo")).date()
+            meet_date = new_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).date()
+            
             # call send
             cast_ids = list(Member.objects.filter(location = new_order.parent_location).values_list('id', flat = True).distinct())
             send_call(new_order, cast_ids, "create")
+
+            # call type send 
+            if meet_date == today_date:
+                send_call_type("today", cast_ids)
+            if meet_date > today_date:
+                send_call_type("tomorrow", cast_ids)
 
             send_super_message("system", request.user.id, message_content)
             return Response(OrderSerializer(new_order).data, status = status.HTTP_200_OK)
@@ -300,13 +318,16 @@ class OrderView(generics.GenericAPIView):
             print(serializer.errors)
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
-class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
+class OrderDetailView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
     permission_classes = (IsGuestPermission | IsSuperuserPermission, )
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
@@ -335,7 +356,7 @@ def get_order_counts(request):
         ]
 
         # collecting cast not enough
-        query_set = Order.objects.annotate(joined_count = Count('joined')).filter(status = 0, joined_count__lt = F('person'))
+        query_set = Order.objects.annotate(joined_count = Count('joins')).filter(status = 0, joined_count__lt = F('person'))
         orders_count = query_set.count()
         ids_array = list(query_set.values_list('id', flat = True).distinct())
 
