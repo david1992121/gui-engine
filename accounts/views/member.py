@@ -321,6 +321,25 @@ class MemberView(APIView):
                 role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
 
+class CastView(APIView):
+    permission_classes = [IsAdminPermission]
+
+    def get(self, request):
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+        is_present = int(request.GET.get("is_present", "0"))
+
+        if is_present > 0:
+            query_set = Member.objects.filter(is_registered=True, role=0, is_present=True)
+        else:
+            query_set = Member.objects.filter(is_registered=True, role=0)
+
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('id'), size)
+        members = paginator.page(page)
+
+        return Response({"total": total, "results": MemberSerializer(members, many=True).data}, status=status.HTTP_200_OK)
+
 class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = UserSerializer
