@@ -18,6 +18,7 @@ urlpatterns = [
     path('orders', OrderView.as_view(), name = "admin_order"),
     path('orders/<int:pk>', OrderDetailView.as_view(), name = "admin_detail_order"),
     path('orders/<int:id>/apply', apply_order, name = "cast_apply_order"),
+    path('orders/<int:id>/confirm/<int:user_id>', confirm_cast, name = "cast_confirm"),
     path('orders/counts', get_order_counts, name = "admin_order_counts"),
     path('month_data', get_month_data, name = "admin_month_data"),
 

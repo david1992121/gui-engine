@@ -23,10 +23,7 @@ from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, 
 from chat.models import Room, Message
 from basics.serializers import ChoiceSerializer
 from chat.serializers import RoomSerializer, MessageSerializer
-
-# use channel
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+from chat.utils import send_room_to_users, send_message_to_user
 
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
@@ -742,7 +739,6 @@ def like_person(request, id):
         return Response(room.id, status = status.HTTP_200_OK)
     else:
         Friendship.objects.create(follower = cur_user, favorite = target_user)
-        channel_layer = get_channel_layer()
 
         # search room first
         old_room_exist = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).count()
@@ -753,11 +749,8 @@ def like_person(request, id):
             new_room.users.set([cur_user.id, target_user.id])
 
             # send room
-            for user_id in [target_user.id, cur_user.id]:
-                async_to_sync(channel_layer.group_send)(
-                    "chat_{}".format(user_id),
-                    { "type": "room.send", "content": RoomSerializer(new_room).data, "event": "create" }
-                )
+            send_room_to_users(new_room, [target_user.id, cur_user.id], "create")
+
         else:
             new_room = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).get()
         
@@ -769,10 +762,7 @@ def like_person(request, id):
                 receiver=Member.objects.get(pk=user_id), is_like=True, is_read=cur_user.id==user_id)
 
             # send socket
-            async_to_sync(channel_layer.group_send)(
-                "chat_{}".format(user_id),
-                { "type": "message.send", "content": MessageSerializer(cur_message).data }
-            )
+            send_message_to_user(cur_message, [user_id])
 
         return Response(new_room.id, status = status.HTTP_200_OK)
 

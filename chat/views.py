@@ -22,11 +22,7 @@ from accounts.models import Member
 from accounts.serializers.member import UserSerializer
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 
-# use channel
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-
-from .utils import send_super_message, send_super_room
+from .utils import send_super_message, send_super_room, send_message_to_user
 
 # def index(request):
 #     return render(request, 'chat/index.html', {})
@@ -174,7 +170,6 @@ def message_list(request, room_id):
             input_data = serializer.validated_data
             media_ids = input_data.get('media_ids', [])
             gift_id = input_data.get('gift_id', 0)
-            channel_layer = get_channel_layer()
 
             # create self message
             self_message = Message.objects.create(
@@ -204,13 +199,8 @@ def message_list(request, room_id):
                     if gift_id > 0:
                         message.gift_id = gift_id
                         message.save()
-                    async_to_sync(channel_layer.group_send)(
-                        "chat_{}".format(user.id),
-                        {
-                            "type": "message.send",
-                            "content": MessageSerializer(message).data
-                        }
-                    )
+                    
+                    send_message_to_user(message, user.id)
 
             room.last_sender = request.user
             if len(media_ids) > 0:

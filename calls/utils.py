@@ -11,3 +11,10 @@ def send_call(order, receiver_ids, call_event):
             "chat_{}".format(receiver_id),
             { "type": "call.send", "content": OrderSerializer(order).data, "event": call_event }
         )
+
+def send_applier(order_id, guest_id):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "chat_{}".format(guest_id),
+        { "type": "applier.send", "content": { "order": order_id } }
+    )

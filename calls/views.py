@@ -1,12 +1,13 @@
+from inspect import formatargvalues
+import json, pytz
+from datetime import datetime, timedelta
+
 from django.db.models import Sum, Q, Count, F
 from django.db.models import query
-from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission
-from dateutil.parser import parse
-from datetime import datetime, timedelta
-from django.utils import timezone
-import json, pytz
-
 from django.core.paginator import Paginator
+from django.utils import timezone
+from dateutil.parser import parse
+from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission
 
 from rest_framework import status
 from rest_framework import generics
@@ -16,8 +17,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
-from chat.utils import send_super_message
-from .utils import send_call
+from .utils import send_call, send_applier
+from chat.utils import send_super_message, send_room_to_users
+from chat.models import Room, Message
 
 # Create your views here.
 class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
@@ -251,7 +253,7 @@ class OrderView(generics.GenericAPIView):
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
-    permission_classes = [IsSuperuserPermission]
+    permission_classes = (IsGuestPermission | IsSuperuserPermission, )
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
@@ -439,9 +441,9 @@ class OrderCastView(generics.GenericAPIView):
 
         tomorrow_date = today_date + timedelta(days = 1)
         if mode == 'today':
-            query_set = query_set.filter(meet_time_iso__gte = today_date, meet_time_iso__lt = tomorrow_date)
+            query_set = query_set.filter(status__lt = 3, meet_time_iso__gte = today_date, meet_time_iso__lt = tomorrow_date)
         elif mode == 'tomorrow':
-            query_set = query_set.filter(meet_time_iso__gte = tomorrow_date)
+            query_set = query_set.filter(status__lt = 3, meet_time_iso__gte = tomorrow_date)
         else:
             query_set = query_set.filter(joins__user = cur_user)
 
@@ -455,27 +457,88 @@ class OrderCastView(generics.GenericAPIView):
 @permission_classes([IsCastPermission])
 def apply_order(request, id):
     try:
-        curOrder = Order.objects.get(pk = id)
-        newJoin = Join.objects.create(user = request.user, order = curOrder)
-        joins_num = curOrder.joins.count()
-        if joins_num == curOrder.person and curOrder.status == 0:
-            curOrder.status = 1
-            curOrder.save()
+        cur_order = Order.objects.get(pk = id)
+        newJoin = Join.objects.create(user = request.user, order = cur_order)
+        joins_num = cur_order.joins.count()
+        if joins_num == cur_order.person and cur_order.status == 0:
+            cur_order.status = 1
+            cur_order.save()
 
-            collect_end = curOrder.collect_ended_at.astimezone(pytz.timezone("Asia/Tokyo"))
+            collect_end = cur_order.collect_ended_at.astimezone(pytz.timezone("Asia/Tokyo"))
             
             # send message to guest
             cur_message = "おめでとうございます♪\n \
                 キャストが集まり、オーダーのリクエストが確定されました。\n \
                 <a href='/main/call/desire/{0}'>こちら</a>よりお好みのキャストの選択ができます♪\n \
                 ＊このオーダーは現在募集中なので、より多くのキャストが集まる可能性がございます。\n \
-                ＊お好みのキャスト2名を選択するか{1}を過ぎると自動でマッチングが開始されチャットルームが作成されます。\n \
+                ＊お好みのキャスト{2}名を選択するか{1}を過ぎると自動でマッチングが開始されチャットルームが作成されます。\n \
                 <a class='gui-message-btn' href='/main/call/desire/{0}'>キャスト選択画面へ</a> \
-                ".format(curOrder.id, collect_end.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分"))
+                ".format(cur_order.id, collect_end.strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分"), cur_order.person)
 
-            send_super_message("system", curOrder.user.id, cur_message)
+            send_super_message("system", cur_order.user.id, cur_message)
+
+        # inform guest of new cast application
+        if joins_num > cur_order.person:
+            send_applier(cur_order.id, cur_order.user.id)
+
+        # inform applier to casts
+        cur_order = Order.objects.get(pk = id)
+
+        cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
+        send_call(cur_order, cast_ids, "update")
 
         return Response(JoinSerializer(newJoin).data)
 
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsGuestPermission])
+def confirm_cast(request, id, user_id):
+    try:
+        cur_order = Order.objects.get(pk = id)
+
+        # if it has already been confirmed
+        if cur_order.status >= 3:
+            return Response(status = status.HTTP_403_FORBIDDEN)
+        
+        # else
+        curUser = Member.objects.get(pk = user_id)
+
+        if cur_order.joins.filter(user__id = curUser.id).count() == 0:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            cur_order.joins.filter(user__id = curUser.id).update(status = 1, selection = 1)
+            room_created = False
+            room_id = 0
+
+            # if confirmed person fills
+            if cur_order.joins.filter(status = 1, selection = 1).count() == cur_order.person:
+
+                # create new room and message           
+                user_ids = [cur_order.user]
+                user_ids = user_ids + list(cur_order.joins.filter(status = 1, selection = 1).values_list("user_id", flat = True))
+
+                new_message = "おめでとうございます♪ \n \
+                    マッチングが確定しました♪ \n \
+                    ゲストさんはキャストさんへお店の場所を教えてあげて下さい。\n \
+                    キャストさんはゲストさんへ到着予定時間をお伝え下さい。\n \
+                    それでは素敵な時間をお過ごしください。"
+                location_name = cur_order.location.name if cur_order.location != None else cur_order.location_other
+                date_str = cur_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+                room_title = "合流：{0} {1} キャスト{2}人".format(location_name, date_str, cur_order.person)
+                new_room = Room.objects.create(
+                    last_message = new_message, room_type = "public", room_title = room_title, 
+                    is_group = True, last_sender = Member.objects.get(username = "system"))
+                new_room.users.set(user_ids)
+
+                send_room_to_users(new_room, user_ids, "create")
+                room_id = new_room.id
+                room_created = True                
+                
+            # send confirm to cast
+            send_call(cur_order, [curUser.id], "confirm")
+
+            return Response({ "created": room_created, "room": room_id }, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)

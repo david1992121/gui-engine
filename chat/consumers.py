@@ -1,5 +1,8 @@
 import json
+from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from accounts.models import Member
+from django.utils import timezone
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -12,6 +15,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
+        # status save
+        await on_status(int(self.room_name))
+
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -20,6 +26,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+
+        # status save
+        await off_status(int(self.room_name))
 
     # Receive message from WebSocket
     async def receive(self, text_data):
@@ -54,11 +63,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "data": event['content']
         }))
 
-    # Send Room
+    # Send Call
     async def call_send(self, event):
         await self.send(text_data=json.dumps({
             "type": "CALL",
             "event": event['event'],
+            "data": event['content']
+        }))
+
+    # Send Applier
+    async def applier_send(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "APPLIER",            
             "data": event['content']
         }))
 
@@ -71,3 +87,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "type": "MESSAGE",
             "data": content
         }))
+
+
+# user status on
+@sync_to_async
+def on_status(user_id):
+    # status save
+    try:
+        member = Member.objects.get(pk = user_id)
+        member.status = True
+        member.save()
+    except Member.DoesNotExist:
+        pass
+
+# user status off
+@sync_to_async
+def off_status(user_id):
+    try:
+        member = Member.objects.get(pk = user_id)
+        member.status = False
+        member.left_at = timezone.now()
+        member.save()
+    except Member.DoesNotExist:
+        return

@@ -1,3 +1,4 @@
+from django.dispatch.dispatcher import receiver
 from accounts.models import Member
 from .models import Room, Message
 from .serializers import RoomSerializer, MessageSerializer
@@ -88,3 +89,31 @@ def send_super_room(room_id, sender_id, message_content, media_ids = [], is_read
             cur_message.medias.set(media_ids)
 
     return self_message
+
+
+
+def send_room_to_users(room, receiver_ids, event_str):
+    channel_layer = get_channel_layer()
+    for user_id in receiver_ids:
+        async_to_sync(channel_layer.group_send)(
+            "chat_{}".format(user_id),
+            { "type": "room.send", "content": RoomSerializer(room).data, "event": event_str }
+        )
+
+def send_message_to_user(message, receiver_id):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "chat_{}".format(receiver_id),
+        { "type": "message.send", "content": MessageSerializer(message).data }
+    )
+
+def send_notice_to_room(room, message):
+    system_user = Member.objects.get(username = "system", is_superuser = True)
+    self_message = Message.objects.create(content = message, room = room, sender = system_user, receiver = system_user, is_read = True)
+
+    for receiver in room.users:
+        new_message = Message.objects.create(
+            content = message, room = room, sender = system_user, receiver = receiver, is_read = False, 
+            is_notice = True, follower = self_message
+        )
+        send_message_to_user(new_message, receiver.id)
