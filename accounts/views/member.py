@@ -486,7 +486,13 @@ def get_fresh_casts(request):
     today = timezone.now()
     three_months_ago = today - timedelta(days=90)
 
-    casts = Member.objects.filter(role=0, started_at__gt=three_months_ago)
+    casts = Member.objects.filter(role=0, started_at__gt=three_months_ago, is_active = True)
+    return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([IsGuestPermission])
+def get_present_casts(request):
+    casts = Member.objects.filter(role = 0, is_present = True, is_active = True)
     return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
@@ -935,3 +941,16 @@ def member_apply(request, member_id):
         return Response(
             status=status.HTTP_200_OK
         )
+
+@api_view(['GET'])
+@permission_classes([IsCastPermission])
+def toggle_present(request):
+    cur_user = request.user
+    cur_user.is_present = not cur_user.is_present
+    if cur_user.is_present:
+        cur_user.presented_at = timezone.now()
+    else:
+        cur_user.presented_at = None
+    cur_user.save()
+
+    return Response(MemberSerializer(cur_user).data)

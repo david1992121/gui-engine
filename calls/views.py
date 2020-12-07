@@ -7,6 +7,7 @@ from django.db.models import query
 from django.core.paginator import Paginator
 from django.utils import timezone
 from dateutil.parser import parse
+from rest_framework.serializers import Serializer
 from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission
 
 from rest_framework import status
@@ -18,7 +19,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
 from .utils import send_call, send_applier
-from chat.utils import send_super_message, send_room_to_users
+from chat.utils import send_notice_to_room, send_super_message, send_room_to_users
 from chat.models import Room, Message
 
 # Create your views here.
@@ -162,6 +163,53 @@ def get_rank_users(request):
             'from': parse(date_from).strftime("%Y-%m-%d") if date_from != "" else "", 
             'to': parse(date_to).strftime("%Y-%m-%d") if date_to != "" else "" }
     ).data, "values": points_values }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAdminPermission])
+def create_order(request):
+    serializer = AdminOrderCreateSerializer(data = request.data)
+
+    if serializer.is_valid():
+        input_data = serializer.validated_data
+        order_data = input_data.get('order')
+        notify_cast = input_data.get('notify_cast')
+        notify_guest = input_data.get('notify_guest')
+
+        order_data.pop('situation_ids')
+
+        # check guest
+        guest_id = order_data.get('user_id', 0)
+        try:
+            guest = Member.objects.get(pk = guest_id)
+            if guest.role != 1:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)    
+        except Member.DoesNotExist:
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+        
+        order = Order.objects.create(**order_data)
+        
+        # notification
+        message_content = "管理者によりオーダーが作られました。\n 確認お願いいたします。"
+        if notify_cast > 0:
+            cast_ids = []
+            if notify_cast == 1:
+                cast_ids = list(Member.objects.filter(role = 0, location = order.parent_location).values_list('id', flat = True))
+            else:
+                cast_ids = list(Member.objects.filter(role = 0, is_present = True).values_list('id', flat = True))
+            for cast_id in cast_ids:
+                send_super_message("system", cast_id, message_content)
+        
+        if notify_guest > 0:
+            send_super_message("system", order.user_id, message_content)
+
+        # send order create
+        cast_ids = list(Member.objects.filter(role = 0, location = order.parent_location).values_list('id', flat = True))
+        send_call(order, cast_ids, "create")
+            
+        return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    else:
+        print(serializer.errors)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class OrderView(generics.GenericAPIView):
     permission_classes = ( IsGuestPermission | IsSuperuserPermission, )
@@ -516,7 +564,7 @@ def confirm_cast(request, id, user_id):
             if cur_order.joins.filter(status = 1, selection = 1).count() == cur_order.person:
 
                 # create new room and message           
-                user_ids = [cur_order.user]
+                user_ids = [cur_order.user.id]
                 user_ids = user_ids + list(cur_order.joins.filter(status = 1, selection = 1).values_list("user_id", flat = True))
 
                 new_message = "おめでとうございます♪ \n \
@@ -528,14 +576,25 @@ def confirm_cast(request, id, user_id):
                 date_str = cur_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
                 room_title = "合流：{0} {1} キャスト{2}人".format(location_name, date_str, cur_order.person)
                 new_room = Room.objects.create(
-                    last_message = new_message, room_type = "public", room_title = room_title, 
+                    last_message = new_message, room_type = "public", title = room_title, 
                     is_group = True, last_sender = Member.objects.get(username = "system"))
                 new_room.users.set(user_ids)
 
                 send_room_to_users(new_room, user_ids, "create")
                 room_id = new_room.id
-                room_created = True                
-                
+                room_created = True
+
+                # send notice to room members
+                send_notice_to_room(new_room, new_message, False)
+
+                # change order status into confirm state
+                cur_order.status = 3
+                cur_order.save()
+
+                # send order remove to casts
+                user_ids.remove(cur_order.user.id)
+                send_call(cur_order, user_ids, "delete")
+
             # send confirm to cast
             send_call(cur_order, [curUser.id], "confirm")
 

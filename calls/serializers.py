@@ -32,6 +32,7 @@ class OrderSerializer(serializers.ModelSerializer):
     room = RoomSerializer(read_only = True)
 
     parent_location_id = serializers.IntegerField(write_only = True)
+    user_id = serializers.IntegerField(write_only = True, required = False)
     location_id = serializers.IntegerField(write_only = True)
     cost_plan_id = serializers.IntegerField(write_only = True)
     situation_ids = serializers.ListField(
@@ -39,6 +40,7 @@ class OrderSerializer(serializers.ModelSerializer):
     )
     joins = JoinSerializer(many = True, read_only = True)
     applying = serializers.SerializerMethodField(read_only = True)
+    
     class Meta:
         fields = (
             'id', 'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
@@ -48,11 +50,12 @@ class OrderSerializer(serializers.ModelSerializer):
             'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
             'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids',
             'night_started_at', 'night_ended_at', 'night_fund', 'operator_message', 'joins',
-            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying'
+            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying', 'user_id'
         )
         model = Order
         extra_kwargs = {
             'remark': { 'allow_blank': True },
+            'operator_message': { 'allow_blank': True }
         }
 
     def get_applying(self, obj):
@@ -84,6 +87,9 @@ class OrderSerializer(serializers.ModelSerializer):
         # meet_time = parse(meet_time_iso)
         new_order.meet_time_iso = meet_time_iso
         new_order.ended_predict = meet_time_iso + timedelta(hours=new_order.period)
+
+        new_order.night_started_at = "00:00"
+        new_order.night_ended_at = "06:00"
 
         new_order.save()
         return new_order
@@ -185,3 +191,8 @@ class RankUserSerializer(serializers.ModelSerializer):
             return self.get_gave_took(obj).filter(invoice_type = "GIFT").count()
         else:
             return self.get_gave_took(obj).filter(invoice_type = "GIFT").count()
+
+class AdminOrderCreateSerializer(serializers.Serializer):
+    order = OrderSerializer(write_only = True)
+    notify_cast = serializers.IntegerField(write_only = True)
+    notify_guest = serializers.IntegerField(write_only = True)

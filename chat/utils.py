@@ -107,13 +107,13 @@ def send_message_to_user(message, receiver_id):
         { "type": "message.send", "content": MessageSerializer(message).data }
     )
 
-def send_notice_to_room(room, message):
+def send_notice_to_room(room, message, is_notice = True):
     system_user = Member.objects.get(username = "system", is_superuser = True)
     self_message = Message.objects.create(content = message, room = room, sender = system_user, receiver = system_user, is_read = True)
 
-    for receiver in room.users:
+    for receiver in room.users.all():
         new_message = Message.objects.create(
             content = message, room = room, sender = system_user, receiver = receiver, is_read = False, 
-            is_notice = True, follower = self_message
+            is_notice = is_notice, follower = self_message
         )
         send_message_to_user(new_message, receiver.id)

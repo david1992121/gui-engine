@@ -177,6 +177,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'inviter_code',
             'favorites',
             'is_superuser',
+            'is_present',
             'status',
             'left_at',
             'cast_class',

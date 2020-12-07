@@ -74,6 +74,7 @@ urlpatterns = [
 
     # search
     path('casts/fresh', get_fresh_casts, name = "fresh_casts"),
+    path('casts/present', get_present_casts, name = "present_casts"),
     path('casts/search', search_casts, name = "search_casts"),
     path('guests/search', search_guests, name = "search_guests"),
 
@@ -91,6 +92,8 @@ urlpatterns = [
     path('favorites/<int:id>', like_person, name = "like_person"),
 
     # count users
-    path('count', get_user_statistics, name = "user_statistics")
+    path('count', get_user_statistics, name = "user_statistics"),
 
+    # toggle present
+    path('toggle_present', toggle_present, name = "toggle_present"),
 ]
