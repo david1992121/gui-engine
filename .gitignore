@@ -116,3 +116,6 @@ media/
 /static/images/*.jpg
 /static/admin
 /static/rest_framework
+/celerybeat-schedule.dir
+/celerybeat-schedule.bak
+/celerybeat-schedule.dat
