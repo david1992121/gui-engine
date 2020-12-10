@@ -13,7 +13,6 @@ from chat.serializers import RoomSerializer
 from accounts.serializers.member import GeneralInfoSerializer, MainInfoSerializer
 from accounts.models import Member
 
-
 class JoinSerializer(serializers.ModelSerializer):
     """
     Join Serializer
@@ -23,8 +22,8 @@ class JoinSerializer(serializers.ModelSerializer):
     order_id = serializers.IntegerField(write_only = True)
     
     class Meta:
-        fields = ('id', 'started_at', 'is_extended', 'order_id', 'user_id',
-                  'is_fivepast', 'ended_at', 'user', 'status', 'selection', 'dropped')
+        fields = ('id', 'started_at', 'is_extended', 'order_id', 'user_id', 'is_started',
+                  'is_ended', 'ended_at', 'user', 'status', 'selection', 'dropped')
         model = Join
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -65,7 +64,7 @@ class OrderSerializer(serializers.ModelSerializer):
         }
 
     def get_applying(self, obj):
-        return obj.joins.filter(selection = 0, status = 0).count()    
+        return obj.joins.count()    
 
     def create(self, validated_data):        
 
@@ -99,6 +98,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return new_order
 
     def update(self, instance, validated_data):
+        old_status = instance.status
         situation_ids = validated_data.pop('situation_ids')
         
         for attr, value in validated_data.items():
@@ -107,6 +107,7 @@ class OrderSerializer(serializers.ModelSerializer):
         instance.ended_predict = instance.meet_time_iso + timedelta(hours = instance.period)
         instance.save()
         instance.situations.set(situation_ids)
+
         return instance
 
 class InvoiceSerializer(serializers.ModelSerializer):

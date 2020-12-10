@@ -20,11 +20,11 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, B
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
+from accounts.utils import send_present
 from chat.models import Room, Message
 from basics.serializers import ChoiceSerializer
 from chat.serializers import RoomSerializer, MessageSerializer
 from chat.utils import send_room_to_users, send_message_to_user
-
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
 
@@ -492,7 +492,7 @@ def get_fresh_casts(request):
 @api_view(["GET"])
 @permission_classes([IsGuestPermission])
 def get_present_casts(request):
-    casts = Member.objects.filter(role = 0, is_present = True, is_active = True)
+    casts = Member.objects.filter(role = 0, is_present = True, is_active = True)    
     return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
@@ -759,37 +759,33 @@ def proceed_transfer(request, id):
 def like_person(request, id):
     cur_user = request.user
     target_user = Member.objects.get(pk = id)
-    if Friendship.objects.filter(follower = cur_user, favorite = target_user).count() > 0:
-        room = Friendship.objects.get(follower = cur_user, favorite = target_user)
-        return Response(room.id, status = status.HTTP_200_OK)
-    else:
+    if Friendship.objects.filter(follower = cur_user, favorite = target_user).count() == 0:
         Friendship.objects.create(follower = cur_user, favorite = target_user)
 
-        # search room first
-        old_room_exist = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).count()
-        if old_room_exist == 0:
+    # search room first
+    old_room_exist = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).count()
+    
+    if old_room_exist == 0:
 
-            # create room
-            new_room = Room.objects.create(last_message = "♥ いいね", room_type = "private")        
-            new_room.users.set([cur_user.id, target_user.id])
+        # create room
+        new_room = Room.objects.create(last_message = "♥ いいね", room_type = "private")        
+        new_room.users.set([cur_user.id, target_user.id])
 
-            # send room
-            send_room_to_users(new_room, [target_user.id, cur_user.id], "create")
+        # send room
+        send_room_to_users(new_room, [target_user.id, cur_user.id], "create")
 
-        else:
-            new_room = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).get()
-        
         # send message
-        for user_id in [target_user.id, cur_user.id]:
+        cur_message = Message.objects.create(room=new_room, sender=cur_user,
+            receiver=cur_user, is_like=True, is_read=True)
+        send_message_to_user(cur_message, cur_user.id)
 
-            # create message
-            cur_message = Message.objects.create(room=new_room, sender=cur_user,
-                receiver=Member.objects.get(pk=user_id), is_like=True, is_read=cur_user.id==user_id)
+        target_message = Message.objects.create(room=new_room, sender=cur_user,
+            receiver=target_user, is_like=True, is_read=False, follower = cur_message)
+        send_message_to_user(target_message, target_user.id)
+    else:
+        new_room = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).get()    
 
-            # send socket
-            send_message_to_user(cur_message, [user_id])
-
-        return Response(new_room.id, status = status.HTTP_200_OK)
+    return Response(new_room.id, status = status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
@@ -952,5 +948,12 @@ def toggle_present(request):
     else:
         cur_user.presented_at = None
     cur_user.save()
+
+    # notify to guests
+    guest_ids = list(Member.objects.filter(role = 1, is_active = True).values_list('id', flat = True))
+    if cur_user.is_present:
+        send_present(cur_user, "add", guest_ids)
+    else:
+        send_present(cur_user, "remove", guest_ids)
 
     return Response(MemberSerializer(cur_user).data)

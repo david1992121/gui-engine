@@ -105,13 +105,12 @@ def room_list(request):
             rooms = rooms.filter(users__nickname__icontains=keyword)
 
         # order by created at and pagination
-        rooms = rooms.order_by(
-            '-updated_at').all()[start_index:start_index + page_size]
+        rooms = rooms.order_by('-updated_at').all()[start_index:start_index + page_size]
         rooms = rooms.annotate(unread=Count('messages', filter=Q(
             messages__receiver=request.user) & Q(messages__is_read=False)))
         return Response(
-            data=RoomSerializer(rooms, many=True).data,
-            status=status.HTTP_200_OK
+            data = RoomSerializer(rooms, many=True).data,
+            status = status.HTTP_200_OK
         )
 
 

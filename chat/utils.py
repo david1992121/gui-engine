@@ -2,10 +2,13 @@ from django.dispatch.dispatcher import receiver
 from accounts.models import Member
 from .models import Room, Message
 from .serializers import RoomSerializer, MessageSerializer
+import pytz
 
 # use channel
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+from calls.utils import send_call
 
 def send_super_message(room_type, receiver_id, message_content, media_ids = []):
     try:
@@ -90,8 +93,6 @@ def send_super_room(room_id, sender_id, message_content, media_ids = [], is_read
 
     return self_message
 
-
-
 def send_room_to_users(room, receiver_ids, event_str):
     channel_layer = get_channel_layer()
     for user_id in receiver_ids:
@@ -107,13 +108,50 @@ def send_message_to_user(message, receiver_id):
         { "type": "message.send", "content": MessageSerializer(message).data }
     )
 
-def send_notice_to_room(room, message, is_notice = True):
+def send_notice_to_room(room, message, is_notice = True, cast_id = 0):
     system_user = Member.objects.get(username = "system", is_superuser = True)
     self_message = Message.objects.create(content = message, room = room, sender = system_user, receiver = system_user, is_read = True)
 
     for receiver in room.users.all():
-        new_message = Message.objects.create(
-            content = message, room = room, sender = system_user, receiver = receiver, is_read = False, 
-            is_notice = is_notice, follower = self_message
-        )
-        send_message_to_user(new_message, receiver.id)
+        if cast_id == 0 or (cast_id > 0 and receiver.id == cast_id):
+            new_message = Message.objects.create(
+                content = message, room = room, sender = system_user, receiver = receiver, is_read = False, 
+                is_notice = is_notice, follower = self_message
+            )
+            send_message_to_user(new_message, receiver.id)
+
+def create_room(order, cast_ids):
+    # create new room and message           
+    user_ids = [order.user.id]
+    user_ids = user_ids + cast_ids
+
+    new_message = "おめでとうございます♪ \n \
+        マッチングが確定しました♪ \n \
+        ゲストさんはキャストさんへお店の場所を教えてあげて下さい。\n \
+        キャストさんはゲストさんへ到着予定時間をお伝え下さい。\n \
+        それでは素敵な時間をお過ごしください。"
+    location_name = order.location.name if order.location != None else order.location_other
+    date_str = order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+    room_title = "合流：{0} {1} キャスト{2}人".format(location_name, date_str, order.person)
+    new_room = Room.objects.create(
+        last_message = new_message, room_type = "public", title = room_title, 
+        is_group = True, last_sender = Member.objects.get(username = "system"), status = 2)
+    new_room.users.set(user_ids)    
+
+    send_room_to_users(new_room, user_ids, "create")
+    room_id = new_room.id
+
+    # send notice to room members
+    send_notice_to_room(new_room, new_message, False)
+
+    # change order status into confirm state
+    if order.status < 3:
+        order.status = 3
+    order.room = new_room
+    order.save()
+
+    # send order remove to casts
+    user_ids.remove(order.user.id)
+    send_call(order, user_ids, "delete")
+
+    return room_id

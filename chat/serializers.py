@@ -71,8 +71,7 @@ class RoomSerializer(serializers.ModelSerializer):
     Room Serializer
     """
     users = MainInfoSerializer(read_only=True, many=True)
-    # joins = JoinSerializer(read_only=True, many=True)
-    unread = serializers.IntegerField(read_only=True)
+    unread = serializers.IntegerField(read_only=True, default = 0)
     last_sender = MainInfoSerializer(read_only=True)
     user_ids = ListField(
         child = serializers.IntegerField(), write_only = True
@@ -89,8 +88,8 @@ class RoomSerializer(serializers.ModelSerializer):
             'last_sender',
             'room_type',
             'title',
-            # 'joins',
             'unread',
+            'status',
             'created_at',
             'updated_at',
             'user_ids',

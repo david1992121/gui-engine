@@ -17,13 +17,13 @@ class Order(models.Model):
         (6, '完了（決済未完了'),
         (7, '決済完了'),
         (8, 'キャスト不足でキャンセル'),
-        (9, '一般なエラー'),
+        (9, '運営側キャンセル'),
+        (10, '一般なエラー'),
     )
     status = models.IntegerField('状態', choices = STATUS_CHOICES, default = 0)
     reservation = models.CharField('予約名', null = True, blank = True, max_length = 100)
     place = models.CharField('予約場所', null=True, blank=True, max_length=100)
     user = models.ForeignKey(Member, related_name='orders', on_delete = models.SET_NULL, null = True, blank = True, verbose_name='オーダー')
-    # joined = models.ManyToManyField(Member, related_name = "applied", verbose_name="応募者")
     parent_location = models.ForeignKey(Location, related_name = "with_parent", on_delete = models.PROTECT, null = True, blank = True)
     meet_time = models.CharField("合流時間", default = "", max_length = 50)
     meet_time_iso = models.DateTimeField("ISO時間", null = True, blank = True)
@@ -103,5 +103,6 @@ class Join(models.Model):
     dropped = models.BooleanField('却下', default = False)
 
     is_started = models.BooleanField("開始", default = False)
+    is_ten_left = models.BooleanField("10分前", default = False)
     is_extended = models.BooleanField("延長", default = False)
-    is_fivepast = models.BooleanField("5分延長", default = False)
+    is_ended = models.BooleanField("修了", default = False)

@@ -37,6 +37,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'basics',
     'accounts',
     'calls',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -203,6 +205,13 @@ CHANNEL_LAYERS = {
     },
 }
 
+# Celery settings
+BROKER_URL = 'redis://192.168.0.254:6379/0'  # our redis address
+# use json format for everything
+CELERY_RESULT_BACKEND = 'redis://192.168.0.254:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 
 # Django resized
 DJANGORESIZED_DEFAULT_QUALITY = 75
@@ -240,3 +249,7 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# simpleui setting
+SIMPLEUI_HOME_INFO = False
+SIMPLEUI_STATIC_OFFLINE = True

@@ -20,9 +20,9 @@ def send_call_type(mode, receiver_ids):
             { "type": "call_type.send", "content": mode}
         )
 
-def send_applier(order_id, guest_id):
+def send_applier(order_id, room_id, guest_id):
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         "chat_{}".format(guest_id),
-        { "type": "applier.send", "content": { "order": order_id } }
+        { "type": "applier.send", "content": { "order": order_id, "room": room_id } }
     )

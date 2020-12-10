@@ -19,7 +19,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
 from .utils import send_call, send_applier, send_call_type
-from chat.utils import send_notice_to_room, send_super_message, send_room_to_users
+from chat.utils import create_room, send_notice_to_room, send_super_message, send_room_to_users
 from chat.models import Room
 
 # Create your views here.
@@ -327,7 +327,46 @@ class OrderDetailView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generi
         return self.retrieve(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        cur_order = self.get_object()
+        old_status = cur_order.status
+
+        serializer = self.get_serializer(cur_order, data = request.data)
+        if serializer.is_valid():
+            new_order = serializer.save()
+
+            # call status changed handler
+            if old_status != new_order.status:
+                print("status changed")
+
+            return Response(OrderSerializer(new_order).data)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def cancel_order(request, id):
+    cur_admin = request.user
+    cur_order = Order.objects.get(pk = id)
+    if cur_admin.location_id != cur_order.parent_location_id:
+        return Response(status = status.HTTP_403_FORBIDDEN)
+    else:
+        if cur_order.status != 9:
+            cur_order.status = 9
+            cur_order.save()
+
+        message = "管理画面よりオーダーをキャンセルにいたしました。\n お問い合わせは運営局へご連絡ください。"
+        if cur_order.room != None:
+            cur_order.room.status = 3
+            cur_order.room.save()
+            send_notice_to_room(cur_order.room, message, False)
+
+        cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True))
+        send_call(cur_order, cast_ids, "delete")
+        
+        join_ids = list(cur_order.joins.values_list('user_id', flat = True))
+        send_call(cur_order, join_ids, "mine")
+
+        return Response(OrderSerializer(cur_order).data, status = status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
@@ -342,7 +381,10 @@ def get_order_counts(request):
         ]
         status_numbers = [0, 1, 3, 5, 6, 7, 8]
         for index, status_number in enumerate(status_numbers):
-            orders_count = Order.objects.filter(status = status_number).count()
+            if status_number != 3:
+                orders_count = Order.objects.filter(status = status_number).count()
+            else:
+                orders_count = Order.objects.filter(Q(status = 3) | Q(status = 4)).count()
             status_array.append({
                 "title": status_title[index],
                 "count": orders_count,
@@ -368,7 +410,7 @@ def get_order_counts(request):
         })
 
         # cast confirm + start time exceeds
-        query_set = Order.objects.filter(status = 3, meet_time_iso__gt = timezone.localtime())
+        query_set = Order.objects.filter(status = 3, ended_predict__lt = timezone.now())
         orders_count = query_set.count()
         ids_array = list(query_set.values_list('id', flat = True).distinct())
         
@@ -380,8 +422,8 @@ def get_order_counts(request):
         })
 
         # extended time exceeds
-        ended_predict = timezone.now() - timedelta(days = 8)
-        query_set = Order.objects.filter(status = 4, ended_at__lt = ended_predict)
+        ended_predict_time = timezone.now() - timedelta(hours = 8)
+        query_set = Order.objects.filter(status = 4, ended_predict__lt = ended_predict_time)
         orders_count = query_set.count()
         ids_array = list(query_set.values_list('id', flat = True).distinct())
         
@@ -393,7 +435,7 @@ def get_order_counts(request):
         })
 
         # payment failed
-        query_set = Order.objects.filter(status = 9)
+        query_set = Order.objects.filter(status = 10)
         orders_count = query_set.count()
         ids_array = list(query_set.values_list('id', flat = True).distinct())
         
@@ -514,7 +556,7 @@ class OrderCastView(generics.GenericAPIView):
         elif mode == 'tomorrow':
             query_set = query_set.filter(status__lt = 3, meet_time_iso__gte = tomorrow_date)
         else:
-            query_set = query_set.filter(joins__user = cur_user)
+            query_set = query_set.filter(status__lte = 6).filter(joins__user = cur_user)
 
         query_set = query_set.order_by('-created_at')
         paginator = Paginator(query_set, 5)
@@ -527,7 +569,12 @@ class OrderCastView(generics.GenericAPIView):
 def apply_order(request, id):
     try:
         cur_order = Order.objects.get(pk = id)
-        newJoin = Join.objects.create(user = request.user, order = cur_order)
+
+        # order validation
+        if cur_order.is_private or cur_order.status >= 2:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+        new_join = Join.objects.create(user = request.user, order = cur_order)
         joins_num = cur_order.joins.count()
         if joins_num == cur_order.person and cur_order.status == 0:
             cur_order.status = 1
@@ -548,7 +595,7 @@ def apply_order(request, id):
 
         # inform guest of new cast application
         if joins_num > cur_order.person:
-            send_applier(cur_order.id, cur_order.user.id)
+            send_applier(cur_order.id, 0, cur_order.user.id)
 
         # inform applier to casts
         cur_order = Order.objects.get(pk = id)
@@ -556,7 +603,7 @@ def apply_order(request, id):
         cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
         send_call(cur_order, cast_ids, "update")
 
-        return Response(JoinSerializer(newJoin).data)
+        return Response(JoinSerializer(new_join).data)
 
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
@@ -564,61 +611,236 @@ def apply_order(request, id):
 @api_view(['GET'])
 @permission_classes([IsGuestPermission])
 def confirm_cast(request, id, user_id):
+    guest = request.user
     try:
         cur_order = Order.objects.get(pk = id)
 
+        # check if user is call's guest
+        if cur_order.user.id != guest.id:
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+
         # if it has already been confirmed
         if cur_order.status >= 3:
-            return Response(status = status.HTTP_403_FORBIDDEN)
+            return Response(status = status.HTTP_403_FORBIDDEN)      
         
         # else
-        curUser = Member.objects.get(pk = user_id)
+        cur_user = Member.objects.get(pk = user_id)
 
-        if cur_order.joins.filter(user__id = curUser.id).count() == 0:
+        if cur_order.joins.filter(user__id = cur_user.id).count() == 0:
             return Response(status = status.HTTP_400_BAD_REQUEST)
         else:
-            cur_order.joins.filter(user__id = curUser.id).update(status = 1, selection = 1)
+            cur_order.joins.filter(user__id = cur_user.id).update(status = 1, selection = 1)
             room_created = False
             room_id = 0
 
             # if confirmed person fills
             if cur_order.joins.filter(status = 1, selection = 1).count() == cur_order.person:
-
-                # create new room and message           
-                user_ids = [cur_order.user.id]
-                user_ids = user_ids + list(cur_order.joins.filter(status = 1, selection = 1).values_list("user_id", flat = True))
-
-                new_message = "おめでとうございます♪ \n \
-                    マッチングが確定しました♪ \n \
-                    ゲストさんはキャストさんへお店の場所を教えてあげて下さい。\n \
-                    キャストさんはゲストさんへ到着予定時間をお伝え下さい。\n \
-                    それでは素敵な時間をお過ごしください。"
-                location_name = cur_order.location.name if cur_order.location != None else cur_order.location_other
-                date_str = cur_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
-                room_title = "合流：{0} {1} キャスト{2}人".format(location_name, date_str, cur_order.person)
-                new_room = Room.objects.create(
-                    last_message = new_message, room_type = "public", title = room_title, 
-                    is_group = True, last_sender = Member.objects.get(username = "system"))
-                new_room.users.set(user_ids)
-
-                send_room_to_users(new_room, user_ids, "create")
-                room_id = new_room.id
+                cast_ids = list(cur_order.joins.filter(status = 1, selection = 1).values_list('user_id', flat = True))
                 room_created = True
+                room_id = create_room(cur_order, cast_ids)
 
-                # send notice to room members
-                send_notice_to_room(new_room, new_message, False)
-
-                # change order status into confirm state
-                cur_order.status = 3
-                cur_order.save()
-
-                # send order remove to casts
-                user_ids.remove(cur_order.user.id)
-                send_call(cur_order, user_ids, "delete")
+            # send system message to rejected casts
+            remove_cast_ids = list(cur_order.joins.exclude(status = 1, selection = 1).values_list('user_id', flat = True))
+            start_time_str = cur_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+            message = "オーダーにエントリー頂き、誠にありが \
+                とうございました。 残念ながら「合流: {0} {1} キャスト{2}人」のマッチングでは外れました。\
+                是非またオーダーにエントリー頂けます。ようお願いいたします!".format(
+                    cur_order.location.name if cur_order.location else cur_order.location_other, start_time_str, cur_order.person)
+            for cast_id in remove_cast_ids:
+                send_super_message("system", cast_id, message)
 
             # send confirm to cast
-            send_call(cur_order, [curUser.id], "confirm")
+            send_call(cur_order, [cur_user.id], "confirm")
 
             return Response({ "created": room_created, "room": room_id }, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAdminPermission])
+def make_room(request, id):
+    cur_admin = request.user
+    cur_order = Order.objects.get(pk = id)
+    if cur_admin.location_id != cur_order.parent_location_id:
+        return Response(status = status.HTTP_403_FORBIDDEN)
+    else:
+        cast_ids = list(cur_order.joins.filter(dropped = False).values_list('user_id', flat = True))
+
+        # remove room if exists
+        old_cast_ids = []
+        if cur_order.room != None:
+            old_cast_ids = list(cur_order.room.users.filter(role = 0).values_list('id', flat = True))
+            room_title = cur_order.room.title
+
+            old_room_users = list(cur_order.room.users.values_list('id', flat = True))
+
+            # send room delete
+            send_room_to_users(cur_order.room, old_room_users, "delete")
+
+            cur_order.room.delete()
+            message = "残念ですが管理画面よりチャットルーム「{0}」から却下されました。\
+                是非またオーダーにエントリー頂けますようお願いいたします!".format(room_title)
+
+            # old cast ids
+            for cast_id in old_cast_ids:
+                if not cast_id in cast_ids:
+                    send_super_message("system", cast_id, message)
+
+        # remove dropped casts
+        cur_order.joins.filter(dropped = True).delete()
+        cur_order.joins.update(status = True)
+        cur_order.person = cur_order.joins.count()
+        create_room(cur_order, cast_ids)
+
+        return Response(OrderSerializer(Order.objects.get(pk = cur_order.id)).data, status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsGuestPermission])
+def auto_match(request, id):
+    guest = request.user
+    try:
+        cur_order = Order.objects.get(pk = id)
+
+        # check if user is call's guest
+        if cur_order.user.id != guest.id:
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+        
+        # if it has already been confirmed
+        if cur_order.status != 1:
+            return Response(status = status.HTTP_403_FORBIDDEN)
+        
+        persons = cur_order.person
+
+        if cur_order.joins.filter(status = 1).count() < persons:
+                
+            # if remaining casts are less than required
+            if cur_order.joins.filter(status = 0, dropped = False).count() < persons - cur_order.joins.filter(status = 1).count():
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+
+            # order remaining casts by call times
+            candidates = list(cur_order.joins.filter(status = 0, dropped = False).order_by('user__call_times').values_list('id', flat = True))
+            added_cast_ids = []
+            for _ in range(persons - cur_order.joins.filter(status = 1).count()):
+                candidate_id = candidates.pop(0)
+                added_cast_ids.append(candidate_id)
+                cur_join = Join.objects.get(pk = candidate_id)
+                cur_join.status = 1
+                cur_join.selection = 0
+                cur_join.save()
+            
+            # send cast ids call
+            send_call(cur_order, added_cast_ids, "create")
+
+            # remove other joins
+            remove_cast_ids = list(cur_order.joins.filter(status = 0).values_list('user_id', flat = True))
+            start_time_str = cur_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime("%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+            message = "オーダーにエントリー頂き、誠にありが \
+                とうございました。 残念ながら「合流: {0} {1} キャスト{2}人」のマッチングでは外れました。\
+                是非またオーダーにエントリー頂けますようお願いいたします!".format(
+                    cur_order.location.name if cur_order.location else cur_order.location_other, start_time_str, cur_order.person)
+            for cast_id in remove_cast_ids:
+                send_super_message("system", cast_id, message)
+
+            cur_order.joins.filter(status = 0).delete()
+
+            # make room for confirmed join casts
+            room_id = create_room(cur_order, list(cur_order.joins.values_list('user_id', flat = True)))
+
+            # notify guest
+            send_applier(cur_order.id, room_id, cur_order.user_id)
+
+            return Response(RoomSerializer(Room.objects.get(pk = room_id)).data, status = status.HTTP_200_OK)
+        
+        else:
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsCastPermission])
+def check_meet_time(request, id):
+    try:
+        room = Room.objects.get(pk = id)
+        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+            cur_order = room.orders.order_by('-created_at').first()
+            return Response(cur_order.ended_predict < timezone.now())            
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsCastPermission])
+def get_room_joins(request, id):
+    try:
+        room = Room.objects.get(pk = id)
+        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+            cur_order = room.orders.order_by('-created_at').first()
+            if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
+                cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
+                return Response(JoinSerializer(cur_join).data)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsCastPermission])
+def start_joins(request, id):
+    try:
+        room = Room.objects.get(pk = id)
+        if room.status == 2:
+            if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+                cur_order = room.orders.order_by('-created_at').first()
+
+                if cur_order.status != 3 and cur_order.status != 4:
+                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+
+                if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
+                    cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
+                    cur_join.is_started = True
+                    cur_join.started_at = timezone.now()
+                    cur_join.save()
+
+                    if cur_order.status == 3:
+                        cur_order.status = 4
+                        cur_order.save()
+                    
+                    # send system message
+                    message = "{0}は合流しました。".format(request.user.nickname)
+                    send_notice_to_room(room, message, True)
+
+                    return Response(JoinSerializer(cur_join).data)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsCastPermission])
+def end_joins(request, id):
+    try:
+        room = Room.objects.get(pk = id)
+        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+            cur_order = room.orders.order_by('-created_at').first()
+            if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
+                cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
+                cur_join.is_ended = True
+                cur_join.ended_at = timezone.now()
+                cur_join.save()
+
+                # send system message
+                message = "{0}は解散しました。".format(request.user.nickname)
+                send_notice_to_room(room, message, True)
+
+                # if all finished
+                if cur_order.joins.filter(is_ended = False).count() == 0:
+                    message = "終了しました。"
+                    send_notice_to_room(room, message, True)
+
+                    # update order status
+                    cur_order.status = 5
+                    cur_order.save()
+
+                return Response(JoinSerializer(cur_join).data)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
