@@ -358,6 +358,7 @@ def cancel_order(request, id):
         message = "管理画面よりオーダーをキャンセルにいたしました。\n お問い合わせは運営局へご連絡ください。"
         if cur_order.room != None:
             cur_order.room.status = 3
+            cur_order.room.last_message = message
             cur_order.room.save()
             send_notice_to_room(cur_order.room, message, False)
 
@@ -776,7 +777,8 @@ def get_room_joins(request, id):
     try:
         room = Room.objects.get(pk = id)
         if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
-            cur_order = room.orders.order_by('-created_at').first()
+            cur_order = room.orders.filter(is_private = True).filter(Q(status = 4) | Q(status = 3)).order_by(
+                '-status', 'meet_time_iso').first()
             if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
                 cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
                 return Response(JoinSerializer(cur_join).data)
@@ -808,6 +810,8 @@ def start_joins(request, id):
                     
                     # send system message
                     message = "{0}は合流しました。".format(request.user.nickname)
+                    room.last_message = message
+                    room.save()
                     send_notice_to_room(room, message, True)
 
                     return Response(JoinSerializer(cur_join).data)
@@ -830,11 +834,16 @@ def end_joins(request, id):
 
                 # send system message
                 message = "{0}は解散しました。".format(request.user.nickname)
+                room.last_message = message
+                room.save()
                 send_notice_to_room(room, message, True)
 
                 # if all finished
                 if cur_order.joins.filter(is_ended = False).count() == 0:
                     message = "終了しました。"
+                    room.last_message = message
+                    room.status = 3
+                    room.save()
                     send_notice_to_room(room, message, True)
 
                     # update order status
@@ -849,10 +858,15 @@ def end_joins(request, id):
 @api_view(['POST'])
 @permission_classes((IsCastPermission | IsGuestPermission, ))
 def request_call(request):
+    for key_item in ["cost_plan_id", "situations"]:
+        if key_item in request.data.keys():
+            request.data.pop(key_item)
+        
     serializer = OrderSerializer(data = request.data)
-    if serializer.is_valid():
-        order = serializer.save()       
 
+    if serializer.is_valid():
+        order = serializer.save()
+        
         period_start_str = order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime(
             "%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
         period_end_str = (order.meet_time_iso + timedelta(hours = order.period)).astimezone(pytz.timezone("Asia/Tokyo")).strftime(
@@ -866,7 +880,7 @@ def request_call(request):
                 時間：{1} ~ {2}\n\
                 料金：{3:,d}P\n\
                 <a href = '/main/chat/request/{4}?room_id={5}'>詳細はこちら</a>".format(
-                    order.address.name, period_start_str, period_end_str, order.point_half, order.id, order.room.id
+                    order.location.name, period_start_str, period_end_str, order.cost_value * 2 * order.period, order.id, order.room.id
                 )
         else:
             message = "個人オーダーのリクエストありがとうございます。\n\
@@ -875,7 +889,7 @@ def request_call(request):
                 場所：{0}\n\
                 時間：{1} ~ {2}\n\
                 <a href = '/main/chat/request/{3}?room_id={4}'>詳細はこちら</a>".format(
-                    order.address.name, period_start_str, period_end_str, order.id, order.room.id
+                    order.location.name, period_start_str, period_end_str, order.id, order.room.id
                 )
         
         self_message = Message.objects.create(content = message, room = order.room, 
@@ -888,8 +902,12 @@ def request_call(request):
 
         order.user = request.user
         order.target = partner
-        if partner.role == 0:
-            order.point_half = partner.point_half
+        if order.user.role == 1:
+            order.cost_value = partner.point_half
+            order.cost_extended = order.cost_value * 1.3
+        else:
+            order.cost_extended = order.cost_value * 1.3
+
         order.save()
 
         target_message = Message.objects.create(content = message, room = order.room,
@@ -928,12 +946,15 @@ def cancel_order(request, pk):
                 return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
             else:
                 order.is_cancelled = True
+                order.save()
 
                 # send notification
                 message = "{}はオーダー依頼をキャンセルしました。".format(cur_user.nickname)
+                order.room.last_message = message
+                order.room.save()
                 send_notice_to_room(order.room, message, True)
 
-            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+                return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
@@ -955,9 +976,11 @@ def reject_order(request, pk):
 
                 # send notification
                 message = "{}は合流拒否しました。".format(cur_user.nickname)
+                order.room.last_message = message
+                order.room.save()
                 send_notice_to_room(order.room, message, True)
 
-            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+                return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
@@ -975,17 +998,24 @@ def confirm_order(request, pk):
             else:
                 order.is_replied = True
                 order.is_accepted = True
+                order.status = 3
                 order.save()
 
+                # create join
+                cast = order.user if order.user.role == 0 else order.target
+                Join.objects.create(user = cast, order = order, status = 1, selection = 0)
+                
                 # send notification
                 message = "個人オーダーのリクエストが確定しました。\n\
                     素敵な時間をお過ごしください♪"
+                order.room.status = 2
+                order.room.last_message = message
+                order.room.save()
+
                 send_notice_to_room(order.room, message, True)
 
                 # create order
-                guest = order.user if order.user.role == 1 else order.target
-                cast = order.user if order.user.role == 0 else order.target
+                return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
 
-            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)

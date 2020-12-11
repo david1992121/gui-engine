@@ -20,6 +20,14 @@ def send_call_type(mode, receiver_ids):
             { "type": "call_type.send", "content": mode}
         )
 
+def send_room_event(event, room):
+    channel_layer = get_channel_layer()
+    for user in room.users:
+        async_to_sync(channel_layer.group_send)(
+            "chat_{}".format(user.id),
+            { "type": "room_event.send", "content": event}
+        )
+
 def send_applier(order_id, room_id, guest_id):
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(

@@ -104,6 +104,8 @@ def call_notify():
 
                         # notification
                         message = "終了予定10分前です。時間を過ぎると自動延長になります。"
+                        order_item.room.last_message = message
+                        order_item.room.save()
                         send_notice_to_room(order_item.room, message, True, join.user_id)
                 else:
 

@@ -64,7 +64,6 @@ class Order(models.Model):
 
     # private call
     target = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, related_name = "asked")
-    point_half = models.IntegerField('時間単価', default = 0)
     is_cancelled = models.BooleanField('キャンセル', default = False)
     is_accepted = models.BooleanField('OK', default = False)
     is_replied = models.BooleanField('応答', default = False)    

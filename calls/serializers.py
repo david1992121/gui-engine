@@ -38,8 +38,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
     parent_location_id = serializers.IntegerField(write_only = True)
     user_id = serializers.IntegerField(write_only = True, required = False)
+    target_id = serializers.IntegerField(write_only = True, required = False)
     location_id = serializers.IntegerField(write_only = True, required = False)
-    cost_plan_id = serializers.IntegerField(write_only = True)
+    cost_plan_id = serializers.IntegerField(write_only = True, required = False)
     situation_ids = serializers.ListField(
         child = serializers.IntegerField(), write_only = True
     )
@@ -51,18 +52,19 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'status', 'reservation', 'place', 'user', 'joined', 'parent_location',
             'meet_time', 'meet_time_iso', 'time_other', 'location', 'location_other',
-            'person', 'period', 'cost_plan', 'situations', 'desired', 'is_private',
+            'person', 'period', 'cost_plan', 'situations', 'is_private',
             'created_at', 'updated_at', 'room', 'collect_started_at', 'collect_ended_at',
             'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
             'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids',
             'night_started_at', 'night_ended_at', 'night_fund', 'operator_message', 'joins',
             'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying', 'user_id',
-            'target', 'is_cancelled', 'is_accepted', 'is_replied', 'point_half'
+            'target', 'is_cancelled', 'is_accepted', 'is_replied', 'room_id', 'target_id'
         )
         model = Order
         extra_kwargs = {
             'remark': { 'allow_blank': True },
-            'operator_message': { 'allow_blank': True }
+            'operator_message': { 'allow_blank': True },
+            'meet_time': { 'allow_blank': True }
         }
 
     def get_applying(self, obj):
@@ -85,8 +87,9 @@ class OrderSerializer(serializers.ModelSerializer):
         new_order.collect_ended_at = cur_time + timedelta(minutes=15)
         
         # get cost plan
-        new_order.cost_value = new_order.cost_plan.cost
-        new_order.cost_extended = new_order.cost_plan.extend_cost
+        if new_order.cost_plan != None:
+            new_order.cost_value = new_order.cost_plan.cost
+            new_order.cost_extended = new_order.cost_plan.extend_cost
 
         # ended predict
         # meet_time = parse(meet_time_iso)

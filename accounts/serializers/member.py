@@ -101,7 +101,8 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
             'guest_level',
             'cast_class',
             'back_ratio',
-            'call_times'
+            'call_times',
+            'role'
         )
         model = Member
 
