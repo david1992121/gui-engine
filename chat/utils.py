@@ -111,6 +111,8 @@ def send_message_to_user(message, receiver_id):
 def send_notice_to_room(room, message, is_notice = True, cast_id = 0):
     system_user = Member.objects.get(username = "system", is_superuser = True)
     self_message = Message.objects.create(content = message, room = room, sender = system_user, receiver = system_user, is_read = True)
+    room.last_message = message
+    room.save()
 
     for receiver in room.users.all():
         if cast_id == 0 or (cast_id > 0 and receiver.id == cast_id):

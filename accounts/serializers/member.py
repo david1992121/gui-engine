@@ -62,6 +62,7 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 
 class MainInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
+    location = LocationSerializer(read_only = True)
 
     class Meta:
         fields = (
@@ -72,7 +73,8 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'birthday',
             'avatars',
             'role',
-            'point'
+            'point',
+            'location'
         )
         model = Member
 

@@ -1,9 +1,10 @@
 """
 APIs for Chat
 """
+from datetime import timedelta
 from re import L
 from django.db.models import query
-import json
+import json, pytz
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q, Count, F
 from django.views import generic
@@ -16,11 +17,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Notice, Room, Message, AdminNotice
-from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
+from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer, SuggestSerializer
 
 from accounts.models import Member
 from accounts.serializers.member import UserSerializer
-from accounts.views.member import IsAdminPermission, IsSuperuserPermission
+from accounts.views.member import IsAdminPermission, IsCastPermission, IsGuestPermission, IsSuperuserPermission
 
 from .utils import send_super_message, send_super_room, send_message_to_user
 
@@ -634,5 +635,53 @@ class RoomMessageView(APIView):
 
         return Response({ "total": total, "results": MessageSerializer(messages, many=True).data }, status=status.HTTP_200_OK)
 
-    def post(self, request, pk):
-        message = MessageSerializer()
+@api_view(['POST'])
+@permission_classes((IsCastPermission | IsGuestPermission, ))
+def request_call(request):
+    serializer = SuggestSerializer(data = request.data)
+    if serializer.is_valid():
+        suggest = serializer.save()                
+        suggest.user = request.user
+        suggest.save()
+
+        period_start_str = suggest.meet_at.astimezone(pytz.timezone("Asia/Tokyo")).strftime(
+            "%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+        period_end_str = (suggest.meet_at + timedelta(hours = suggest.period)).astimezone(pytz.timezone("Asia/Tokyo")).strftime(
+            "%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+        message = ""
+
+        if request.user.role == 0:
+            message = "個人オーダーのリクエストありがとうございます。\n\
+                お客様からの返答をお待ちください。 \n \
+                場所：{0}\n\
+                時間：{1} ~ {2}\n\
+                料金：{3:,d}P\n\
+                <a href = '/main/call/request/{4}'>詳細はこちら</a>".format(
+                    suggest.address.name, period_start_str, period_end_str, suggest.point_half, suggest.id
+                )
+        else:
+            message = "個人オーダーのリクエストありがとうございます。\n\
+                キャストからの返答をお待ちください。\n\
+                尚リクエスト確定後のキャンセルはお受けできません。予めご了承ください。\n\
+                場所：{0}\n\
+                時間：{1} ~ {2}\n\
+                <a href = '/main/call/request/{3}'>詳細はこちら</a>".format(
+                    suggest.address.name, period_start_str, period_end_str, suggest.id
+                )
+        
+        self_message = Message.objects.create(content = message, room = suggest.room, 
+            sender = request.user, receiver = request.user, is_read = True)
+
+        suggest.room.last_message = message
+        suggest.room.save()
+
+        partner = suggest.room.users.exclude(id = request.user.id).first()
+        target_message = Message.objects.create(content = message, room = suggest.room,
+            sender = request.user, receiver = Member.objects.get(pk = partner.id), is_read = False, follower = self_message)
+        
+        send_message_to_user(target_message, partner.id)
+
+        return Response(MessageSerializer(self_message).data)
+    else:
+        print(serializer.erros)
+        return Response(status = status.HTTP_400_BAD_REQUEST)

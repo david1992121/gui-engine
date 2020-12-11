@@ -33,6 +33,7 @@ urlpatterns = [
     path('messages/admin/unread/count', get_unread_admin_messages_count, name = "admin_unread_message_count"),
     path('messages/delete/<int:id>', delete_message, name = "delete_message"),
     path('messages/change/<int:id>', change_message_state, name = "change_message_state"),
+    path('messages/request', request_call, name = "request_call"),
     
     # admin all rooms
     path('all_rooms', get_all_rooms, name = "all_rooms_view"),

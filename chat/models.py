@@ -2,6 +2,7 @@
 Models for Chat
 """
 from django.db import models
+from django.db.models.fields import related
 from accounts.models import Member, Media
 from basics.models import Gift, Location
 
@@ -38,7 +39,7 @@ class Message(models.Model):
         Gift, on_delete=models.SET_NULL, null=True, verbose_name='ギフト')
     is_read = models.BooleanField('読み済み', default=False)
     room = models.ForeignKey(Room, related_name="messages",
-                             on_delete=models.CASCADE, null=True, blank=True, verbose_name='ルーム')
+        on_delete=models.CASCADE, null=True, blank=True, verbose_name='ルーム')
     sender = models.ForeignKey(
         Member, related_name="sended", on_delete=models.SET_NULL, null=True)
     receiver = models.ForeignKey(
@@ -50,6 +51,20 @@ class Message(models.Model):
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
+class Suggestion(models.Model):
+    """
+    Suggestion Model
+    """
+    meet_at = models.DateTimeField('日程')
+    period = models.IntegerField('時間', default = 1)
+    address = models.ForeignKey(Location, on_delete = models.CASCADE, null = True)
+    point_half = models.IntegerField('時間単価')
+    is_cancelled = models.BooleanField('キャンセル', default = False)
+    is_accepted = models.BooleanField('OK', default = False)
+    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, related_name = "suggestions")
+    room = models.ForeignKey(Room, on_delete = models.CASCADE, related_name = "suggestions")
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
 
 class Notice(models.Model):
     """

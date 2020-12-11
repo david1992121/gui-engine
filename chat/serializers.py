@@ -16,7 +16,7 @@ from accounts.models import Media, Member
 from basics.serializers import GiftSerializer, LocationSerializer
 
 # app
-from .models import AdminNotice, Room, Message, Notice
+from .models import AdminNotice, Room, Message, Notice, Suggestion
 
 
 def file_validator(file):
@@ -127,6 +127,15 @@ class RoomSerializer(serializers.ModelSerializer):
             room.users.add(Member.objects.get(is_superuser = True, username = "system"))
         
         return room
+
+class SuggestSerializer(serializers.ModelSerializer):
+    address = LocationSerializer(read_only = True)
+    address_id = serializers.IntegerField(write_only = True)
+    room_id = serializers.IntegerField(write_only = True)
+        
+    class Meta:
+        model = Suggestion
+        fields = ('id', 'address', 'address_id', 'meet_at', 'period', 'point_half', 'is_cancelled', 'room_id')
 
 class MessageSerializer(serializers.ModelSerializer):
     """
