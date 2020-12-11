@@ -3,9 +3,7 @@ Serializers for Chat
 """
 from django.db.models import Count
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.fields import ListField
-from rest_framework.serializers import ListSerializer
 
 # accounts app
 from accounts.serializers.auth import MediaImageSerializer
@@ -16,7 +14,7 @@ from accounts.models import Media, Member
 from basics.serializers import GiftSerializer, LocationSerializer
 
 # app
-from .models import AdminNotice, Room, Message, Notice, Suggestion
+from .models import AdminNotice, Room, Message, Notice
 
 
 def file_validator(file):
@@ -128,14 +126,17 @@ class RoomSerializer(serializers.ModelSerializer):
         
         return room
 
-class SuggestSerializer(serializers.ModelSerializer):
-    address = LocationSerializer(read_only = True)
-    address_id = serializers.IntegerField(write_only = True)
-    room_id = serializers.IntegerField(write_only = True)
+# class SuggestSerializer(serializers.ModelSerializer):
+#     address = LocationSerializer(read_only = True)
+#     address_id = serializers.IntegerField(write_only = True)
+#     room_id = serializers.IntegerField(write_only = True)
+#     target = MainInfoSerializer(read_only = True)
+#     user = MainInfoSerializer(read_only = True)
         
-    class Meta:
-        model = Suggestion
-        fields = ('id', 'address', 'address_id', 'meet_at', 'period', 'point_half', 'is_cancelled', 'room_id')
+#     class Meta:
+#         model = Suggestion
+#         fields = ('id', 'address', 'address_id', 'meet_at', 'period', 'point_half', 
+#             'is_cancelled', 'room_id', 'user', 'target', 'is_replied')
 
 class MessageSerializer(serializers.ModelSerializer):
     """

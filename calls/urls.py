@@ -25,6 +25,13 @@ urlpatterns = [
     path('orders/counts', get_order_counts, name = "admin_order_counts"),
     path('month_data', get_month_data, name = "admin_month_data"),
 
+    # private call request
+    path('orders/request', request_call, name = "request_call"),
+    path('orders/request/<int:pk>', get_order, name = "get_order"),
+    path('orders/request/<int:pk>/cancel', cancel_order, name = "cancel_order"),
+    path('orders/request/<int:pk>/confirm', confirm_order, name = "confirm_order"),
+    path('orders/request/<int:pk>/reject', reject_order, name = "reject_order"),
+
     # admin create order
     path('admin/orders', create_order, name = "admin_order_create"),
 

@@ -28,12 +28,12 @@ class JoinSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     user = GeneralInfoSerializer(read_only = True)
+    target = GeneralInfoSerializer(read_only = True)
     joined = MainInfoSerializer(many = True, read_only = True)
     parent_location = LocationSerializer(read_only = True)
     location = LocationSerializer(read_only = True)
     cost_plan = CostplanSerializer(read_only = True)
     situations = ChoiceSerializer(read_only = True, many = True)
-    desired = MainInfoSerializer(read_only = True, many = True)
     room = RoomSerializer(read_only = True)
 
     parent_location_id = serializers.IntegerField(write_only = True)
@@ -43,6 +43,7 @@ class OrderSerializer(serializers.ModelSerializer):
     situation_ids = serializers.ListField(
         child = serializers.IntegerField(), write_only = True
     )
+    room_id = serializers.IntegerField(write_only = True, required = False)
     joins = JoinSerializer(many = True, read_only = True)
     applying = serializers.SerializerMethodField(read_only = True)
     
@@ -55,7 +56,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'ended_predict', 'ended_at', 'cost_value', 'cost_extended', 'remark',
             'parent_location_id', 'location_id', 'cost_plan_id', 'situation_ids',
             'night_started_at', 'night_ended_at', 'night_fund', 'operator_message', 'joins',
-            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying', 'user_id'
+            'final_cost', 'desire_back_ratio', 'desire_cost', 'night_back_ratio', 'applying', 'user_id',
+            'target', 'is_cancelled', 'is_accepted', 'is_replied', 'point_half'
         )
         model = Order
         extra_kwargs = {

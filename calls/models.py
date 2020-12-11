@@ -34,7 +34,6 @@ class Order(models.Model):
     period = models.IntegerField('合流時間', default=1)
     cost_plan = models.ForeignKey(CostPlan, on_delete = models.SET_NULL, null = True, blank = True)
     situations = models.ManyToManyField(Choice, verbose_name='気持ち', related_name = "with_choice")
-    desired = models.ManyToManyField(Member, related_name = "invited", verbose_name="ご希望のキャスト")
     is_private = models.BooleanField('プライベート', default=False)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, related_name = "orders", null=True, blank=True, verbose_name="チャットルーム")
 
@@ -62,6 +61,13 @@ class Order(models.Model):
     # desire cast
     desire_cost = models.IntegerField('指名料', default = 2000)
     desire_back_ratio = models.IntegerField('指名料バック率', default = 0)
+
+    # private call
+    target = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, related_name = "asked")
+    point_half = models.IntegerField('時間単価', default = 0)
+    is_cancelled = models.BooleanField('キャンセル', default = False)
+    is_accepted = models.BooleanField('OK', default = False)
+    is_replied = models.BooleanField('応答', default = False)    
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)

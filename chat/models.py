@@ -51,20 +51,22 @@ class Message(models.Model):
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
-class Suggestion(models.Model):
-    """
-    Suggestion Model
-    """
-    meet_at = models.DateTimeField('日程')
-    period = models.IntegerField('時間', default = 1)
-    address = models.ForeignKey(Location, on_delete = models.CASCADE, null = True)
-    point_half = models.IntegerField('時間単価')
-    is_cancelled = models.BooleanField('キャンセル', default = False)
-    is_accepted = models.BooleanField('OK', default = False)
-    user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, related_name = "suggestions")
-    room = models.ForeignKey(Room, on_delete = models.CASCADE, related_name = "suggestions")
-    created_at = models.DateTimeField('作成日時', auto_now_add=True)
-    updated_at = models.DateTimeField('更新日時', auto_now=True)
+# class Suggestion(models.Model):
+#     """
+#     Suggestion Model
+#     """
+#     meet_at = models.DateTimeField('日程')
+#     period = models.IntegerField('時間', default = 1)
+#     address = models.ForeignKey(Location, on_delete = models.CASCADE, null = True)
+#     point_half = models.IntegerField('時間単価')
+#     is_cancelled = models.BooleanField('キャンセル', default = False)
+#     is_accepted = models.BooleanField('OK', default = False)
+#     is_replied = models.BooleanField('応答', default = False)    
+#     user = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, related_name = "suggested")
+#     target = models.ForeignKey(Member, on_delete = models.SET_NULL, null = True, related_name = "asked")
+#     room = models.ForeignKey(Room, on_delete = models.CASCADE, related_name = "suggestions")
+#     created_at = models.DateTimeField('作成日時', auto_now_add=True)
+#     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
 class Notice(models.Model):
     """

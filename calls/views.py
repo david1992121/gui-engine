@@ -19,8 +19,9 @@ from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
 from .utils import send_call, send_applier, send_call_type
-from chat.utils import create_room, send_notice_to_room, send_super_message, send_room_to_users
-from chat.models import Room
+from chat.utils import create_room, send_notice_to_room, send_super_message, send_room_to_users, send_message_to_user
+from chat.models import Room, Message
+from chat.serializers import MessageSerializer
 
 # Create your views here.
 class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
@@ -843,4 +844,148 @@ def end_joins(request, id):
                 return Response(JoinSerializer(cur_join).data)
         return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes((IsCastPermission | IsGuestPermission, ))
+def request_call(request):
+    serializer = OrderSerializer(data = request.data)
+    if serializer.is_valid():
+        order = serializer.save()       
+
+        period_start_str = order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).strftime(
+            "%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+        period_end_str = (order.meet_time_iso + timedelta(hours = order.period)).astimezone(pytz.timezone("Asia/Tokyo")).strftime(
+            "%Y{0}%m{1}%d{2}%H{3}%M{4}").format(*"年月日時分")
+        message = ""
+
+        if request.user.role == 0:
+            message = "個人オーダーのリクエストありがとうございます。\n\
+                お客様からの返答をお待ちください。 \n \
+                場所：{0}\n\
+                時間：{1} ~ {2}\n\
+                料金：{3:,d}P\n\
+                <a href = '/main/chat/request/{4}?room_id={5}'>詳細はこちら</a>".format(
+                    order.address.name, period_start_str, period_end_str, order.point_half, order.id, order.room.id
+                )
+        else:
+            message = "個人オーダーのリクエストありがとうございます。\n\
+                キャストからの返答をお待ちください。\n\
+                尚リクエスト確定後のキャンセルはお受けできません。予めご了承ください。\n\
+                場所：{0}\n\
+                時間：{1} ~ {2}\n\
+                <a href = '/main/chat/request/{3}?room_id={4}'>詳細はこちら</a>".format(
+                    order.address.name, period_start_str, period_end_str, order.id, order.room.id
+                )
+        
+        self_message = Message.objects.create(content = message, room = order.room, 
+            sender = request.user, receiver = request.user, is_read = True)
+
+        order.room.last_message = message
+        order.room.save()
+
+        partner = order.room.users.exclude(id = request.user.id).first()
+
+        order.user = request.user
+        order.target = partner
+        if partner.role == 0:
+            order.point_half = partner.point_half
+        order.save()
+
+        target_message = Message.objects.create(content = message, room = order.room,
+            sender = request.user, receiver = Member.objects.get(pk = partner.id), is_read = False, follower = self_message)
+        
+        send_message_to_user(target_message, partner.id)
+
+        return Response(MessageSerializer(self_message).data)
+    else:
+        print(serializer.errors)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_order(request, pk):
+    try:
+        order = Order.objects.get(pk = pk)
+        cur_user = request.user
+        if order.user.id != cur_user.id and order.target.id != cur_user.id:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def cancel_order(request, pk):
+    try:
+        order = Order.objects.get(pk = pk)
+        cur_user = request.user
+        if order.user.id != cur_user.id:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            if order.is_cancelled or order.is_replied:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                order.is_cancelled = True
+
+                # send notification
+                message = "{}はオーダー依頼をキャンセルしました。".format(cur_user.nickname)
+                send_notice_to_room(order.room, message, True)
+
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reject_order(request, pk):
+    try:
+        order = Order.objects.get(pk = pk)
+        cur_user = request.user
+        if order.user.id == cur_user.id:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            if order.is_cancelled or order.is_replied:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                order.is_replied = True
+                order.is_accepted = False
+                order.save()
+
+                # send notification
+                message = "{}は合流拒否しました。".format(cur_user.nickname)
+                send_notice_to_room(order.room, message, True)
+
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def confirm_order(request, pk):
+    try:
+        order = Order.objects.get(pk = pk)
+        cur_user = request.user
+        if order.user.id == cur_user.id:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            if order.is_cancelled or order.is_replied:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                order.is_replied = True
+                order.is_accepted = True
+                order.save()
+
+                # send notification
+                message = "個人オーダーのリクエストが確定しました。\n\
+                    素敵な時間をお過ごしください♪"
+                send_notice_to_room(order.room, message, True)
+
+                # create order
+                guest = order.user if order.user.role == 1 else order.target
+                cast = order.user if order.user.role == 0 else order.target
+
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
