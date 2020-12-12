@@ -13,9 +13,9 @@ class Room(models.Model):
 
     ROOM_CHOICES = (
         (0, 'default'),
-        (1, 'suggest'),
+        (1, 'suggest'),  # not used
         (2, 'confirm'),
-        (3, 'end')
+        (3, 'end')       # effective only groupchat
     )
 
     is_group = models.BooleanField('グループ',  default=False)

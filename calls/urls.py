@@ -28,9 +28,9 @@ urlpatterns = [
     # private call request
     path('orders/request', request_call, name = "request_call"),
     path('orders/request/<int:pk>', get_order, name = "get_order"),
-    path('orders/request/<int:pk>/cancel', cancel_order, name = "cancel_order"),
-    path('orders/request/<int:pk>/confirm', confirm_order, name = "confirm_order"),
-    path('orders/request/<int:pk>/reject', reject_order, name = "reject_order"),
+    path('orders/request/<int:pk>/cancel', cancel_request, name = "cancel_request"),
+    path('orders/request/<int:pk>/confirm', confirm_request, name = "confirm_request"),
+    path('orders/request/<int:pk>/reject', reject_request, name = "reject_request"),
 
     # admin create order
     path('admin/orders', create_order, name = "admin_order_create"),
@@ -46,7 +46,11 @@ urlpatterns = [
 
     # get cast room joins
     path('rooms/<int:id>/check', check_meet_time, name = "check_meet_status"),
+    path('rooms/<int:id>/suggestable', check_room_status, name = "check_room_status"),
     path('rooms/<int:id>/joins', get_room_joins, name = "room_join"),
     path('rooms/<int:id>/joins/start', start_joins, name = "start_join"),
     path('rooms/<int:id>/joins/end', end_joins, name = "end_join"),
+
+    # user reiviews
+    path('reviews', ReviewView.as_view(), name = "user_review_view"),
 ]

@@ -630,4 +630,3 @@ class RoomMessageView(APIView):
         messages = paginator.page(page)
 
         return Response({ "total": total, "results": MessageSerializer(messages, many=True).data }, status=status.HTTP_200_OK)
-

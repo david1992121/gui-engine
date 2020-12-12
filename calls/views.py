@@ -3,7 +3,6 @@ import json, pytz
 from datetime import datetime, timedelta
 
 from django.db.models import Sum, Q, Count, F
-from django.db.models import query
 from django.core.paginator import Paginator
 from django.utils import timezone
 from dateutil.parser import parse
@@ -18,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
-from .utils import send_call, send_applier, send_call_type
+from .utils import send_call, send_applier, send_call_type, send_room_event
 from chat.utils import create_room, send_notice_to_room, send_super_message, send_room_to_users, send_message_to_user
 from chat.models import Room, Message
 from chat.serializers import MessageSerializer
@@ -331,13 +330,30 @@ class OrderDetailView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generi
         cur_order = self.get_object()
         old_status = cur_order.status
 
+        if cur_order.is_private:
+            for key_item in ["cost_plan_id", "situations"]:
+                if key_item in request.data.keys():
+                    request.data.pop(key_item)
+
         serializer = self.get_serializer(cur_order, data = request.data)
         if serializer.is_valid():
             new_order = serializer.save()
 
             # call status changed handler
             if old_status != new_order.status:
-                print("status changed")
+                if new_order.status >= 5:
+                    for ongoingJoin in new_order.joins.filter(is_started = True, is_ended = False, status = 1):
+                        ongoingJoin.is_ended = True
+                        ongoingJoin.ended_at = timezone.now()
+                        ongoingJoin.save()
+
+                        message = "{}の合流は終了されました。".format(ongoingJoin.user.nickname)
+                        send_notice_to_room(new_order.room, message, True)
+                    
+                    if new_order.room != None:                       
+
+                        # send room event
+                        send_room_event("update", new_order.room)
 
             return Response(OrderSerializer(new_order).data)
         else:
@@ -355,12 +371,25 @@ def cancel_order(request, id):
             cur_order.status = 9
             cur_order.save()
 
+        # end join
+        for ongoingJoin in cur_order.joins.filter(status = 1, is_started = True, is_ended = False):
+            ongoingJoin.is_ended = True
+            ongoingJoin.ended_at = timezone.now()
+            ongoingJoin.save()
+
+        # update room and send event
         message = "管理画面よりオーダーをキャンセルにいたしました。\n お問い合わせは運営局へご連絡ください。"
         if cur_order.room != None:
-            cur_order.room.status = 3
+            # if cur_order.room.is_group:
+            #     cur_order.room.status = 3
+            # else:
+            #     cur_order.room.status = 0            
             cur_order.room.last_message = message
             cur_order.room.save()
             send_notice_to_room(cur_order.room, message, False)
+
+            # send room event
+            send_room_event("ended", cur_order.room)
 
         cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True))
         send_call(cur_order, cast_ids, "delete")
@@ -547,7 +576,7 @@ class OrderCastView(generics.GenericAPIView):
         mode = request.GET.get('mode', 'today')
         page = int(request.GET.get('page', "1"))
 
-        query_set = Order.objects.filter(parent_location = cur_user.location)
+        query_set = Order.objects.filter(parent_location = cur_user.location, is_private = False)
 
         today_date = datetime.now(pytz.timezone("Asia/Tokyo"))
         today_date = today_date.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
@@ -782,8 +811,25 @@ def get_room_joins(request, id):
             if cur_order != None:
                 if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
                     cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
-                    return Response(JoinSerializer(cur_join).data)
+                    return Response({"result": True, "data": JoinSerializer(cur_join).data})
+            return Response({"result": False, "data": None})
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsGuestPermission])
+def check_room_status(request, id):
+    try:
+        room = Room.objects.get(pk = id)
+        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+            cur_order = room.orders.filter(is_private = True).filter(Q(status = 4) | Q(status = 3)).order_by(
+                '-status', 'meet_time_iso').first()
+            
+            return Response(cur_order == None, status = status.HTTP_200_OK)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
@@ -792,30 +838,30 @@ def get_room_joins(request, id):
 def start_joins(request, id):
     try:
         room = Room.objects.get(pk = id)
-        if room.status == 2:
-            if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
-                cur_order = room.orders.order_by('-created_at').first()
+        # if room.status == 2:
+        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+            cur_order = room.orders.order_by('-created_at').first()
 
-                if cur_order.status != 3 and cur_order.status != 4:
-                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            if cur_order.status != 3 and cur_order.status != 4:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
 
-                if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
-                    cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
-                    cur_join.is_started = True
-                    cur_join.started_at = timezone.now()
-                    cur_join.save()
+            if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
+                cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
+                cur_join.is_started = True
+                cur_join.started_at = timezone.now()
+                cur_join.save()
 
-                    if cur_order.status == 3:
-                        cur_order.status = 4
-                        cur_order.save()
-                    
-                    # send system message
-                    message = "{0}は合流しました。".format(request.user.nickname)
-                    room.last_message = message
-                    room.save()
-                    send_notice_to_room(room, message, True)
+                if cur_order.status == 3:
+                    cur_order.status = 4
+                    cur_order.save()
+                
+                # send system message
+                message = "{0}は合流しました。".format(request.user.nickname)
+                room.last_message = message
+                room.save()
+                send_notice_to_room(room, message, True)
 
-                    return Response(JoinSerializer(cur_join).data)
+                return Response(JoinSerializer(cur_join).data)
         return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
@@ -842,16 +888,22 @@ def end_joins(request, id):
                 # send review message to cast
                 cast_message = "この度はオーダーへのご参加ありがとうございます。\n\
                     お客様のレビューにご協力お願いいたします。\n\
-                    <a href = '/main/call/{0}/review'>レビュー画面へ</a>".format(cur_order.id)
+                    <a href = '/main/chat/review/{0}'>レビュー画面へ</a>".format(cur_order.id)
                 send_super_message("system", cur_join.user_id, cast_message)
 
                 # if all finished
                 if cur_order.joins.filter(is_ended = False).count() == 0:
                     message = "終了しました。"
                     room.last_message = message
-                    room.status = 3
+                    # if room.is_group:
+                    #     room.status = 3
+                    # else:
+                    #     room.status = 0
                     room.save()
                     send_notice_to_room(room, message, True)
+
+                    # send room event
+                    send_room_event("ended", room)
 
                     # send review message
                     guest = cur_order.user
@@ -863,7 +915,7 @@ def end_joins(request, id):
                         キャストの評価をお願いしております。\n\
                         もしよろしければ、今後のサービス向上のため\n\
                         お手すきの際に評価をいただけますでしょうか。\n\
-                        <a href = '/main/call/{0}/review'>レビュー画面へ</a>".format(cur_order.id)
+                        <a href = '/main/chat/review/{0}'>レビュー画面へ</a>".format(cur_order.id)
                     send_super_message("system", guest.id, guest_message)
 
                     # update order status
@@ -955,7 +1007,7 @@ def get_order(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def cancel_order(request, pk):
+def cancel_request(request, pk):
     try:
         order = Order.objects.get(pk = pk)
         cur_user = request.user
@@ -980,7 +1032,7 @@ def cancel_order(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def reject_order(request, pk):
+def reject_request(request, pk):
     try:
         order = Order.objects.get(pk = pk)
         cur_user = request.user
@@ -1006,7 +1058,7 @@ def reject_order(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def confirm_order(request, pk):
+def confirm_request(request, pk):
     try:
         order = Order.objects.get(pk = pk)
         cur_user = request.user
@@ -1028,14 +1080,40 @@ def confirm_order(request, pk):
                 # send notification
                 message = "個人オーダーのリクエストが確定しました。\n\
                     素敵な時間をお過ごしください♪"
-                order.room.status = 2
+                # order.room.status = 2
                 order.room.last_message = message
                 order.room.save()
 
                 send_notice_to_room(order.room, message, True)
+
+                # send room event 'confirmed'
+                send_room_event('confirmed', order.room)
 
                 # create order
                 return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
 
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+class ReviewView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Review.objects.all()
+
+    def get_queryset(self):
+        user_id = int(self.request.GET.get("user_id", "0"))
+        if user_id > 0:
+            return Review.objects.filter(target_id = user_id).order_by('-created_at')
+        else:
+            return Review.objects.all().order_by('-created_at')
+
+    def get(self, request, *args, **kwargs):
+        total = self.get_queryset().count()
+        paginator = Paginator(self.get_queryset().order_by('-created_at'), 10)
+        page = int(request.GET.get("page", "1"))
+        reviews = paginator.page(page)
+
+        return Response({"total": total, "results": ReviewSerializer(reviews, many=True).data}, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)

@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import tree
 from accounts.models import Member
 from basics.models import Location, CostPlan, Choice
+from django.core.validators import MaxValueValidator, MinValueValidator
 from chat.models import Room
 
 # Create your models here.
@@ -111,3 +112,12 @@ class Join(models.Model):
     is_ten_left = models.BooleanField("10分前", default = False)
     is_extended = models.BooleanField("延長", default = False)
     is_ended = models.BooleanField("修了", default = False)
+
+class Review(models.Model):
+    source = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_targets', verbose_name='レビュー元')
+    target = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_sources', verbose_name='レビュー先')
+    stars = models.IntegerField('スター', default = 5, validators=[MaxValueValidator(5),  MinValueValidator(1)])
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null = True, verbose_name="オーダー", related_name = "reviews")
+    content = models.TextField('内容', null = True, blank = True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)

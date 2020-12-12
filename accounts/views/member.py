@@ -1,5 +1,4 @@
 import json
-from django.dispatch.dispatcher import receiver
 import jwt
 from datetime import timedelta
 import requests
@@ -15,7 +14,7 @@ from rest_framework import mixins
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny, BasePermission
+from rest_framework.permissions import IsAuthenticated, BasePermission
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
@@ -23,7 +22,6 @@ from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, 
 from accounts.utils import send_present
 from chat.models import Room, Message
 from basics.serializers import ChoiceSerializer
-from chat.serializers import RoomSerializer, MessageSerializer
 from chat.utils import send_room_to_users, send_message_to_user
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
@@ -824,30 +822,6 @@ def set_choices(request):
             user.save()
             return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
     return Response(status=status.HTTP_400_BAD_REQUEST)
-
-class ReviewView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
-    queryset = Review.objects.all()
-
-    def get_queryset(self):
-        user_id = int(self.request.GET.get("user_id", "0"))
-        if user_id > 0:
-            return Review.objects.filter(target_id = user_id).order_by('-created_at')
-        else:
-            return Review.objects.all().order_by('-created_at')
-
-    def get(self, request, *args, **kwargs):
-        total = self.get_queryset().count()
-        paginator = Paginator(self.get_queryset().order_by('-created_at'), 10)
-        page = int(request.GET.get("page", "1"))
-        reviews = paginator.page(page)
-
-        return Response({"total": total, "results": ReviewSerializer(reviews, many=True).data}, status=status.HTTP_200_OK)
-
-    def post(self, request, *args, **kwargs):
-        print(request.data)
-        return self.create(request, *args, **kwargs)
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])

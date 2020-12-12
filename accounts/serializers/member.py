@@ -13,7 +13,7 @@ from rest_framework import serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from accounts.models import Media, Tweet, Member, TransferApplication, Detail, Review
+from accounts.models import Media, Tweet, Member, TransferApplication, Detail
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer, ChoiceSerializer
 from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
 
@@ -472,15 +472,4 @@ class MediaListSerializer(serializers.Serializer):
             cur_user.avatars.add(media_image)
             return_array.append(media_image)
 
-        return return_array
-
-class ReviewSerializer(serializers.ModelSerializer):
-    source = MainInfoSerializer(read_only = True)
-    target = MainInfoSerializer(read_only = True)
-    source_id = serializers.IntegerField(write_only = True)
-    target_id = serializers.IntegerField(write_only = True)
-    
-    class Meta:
-        fields = ('source', 'target', 'stars', 'content', 'created_at', 'source_id', 'target_id')
-        model = Review
-  
+        return return_array  

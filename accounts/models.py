@@ -1,6 +1,5 @@
 from re import T
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.db.models.fields import related
 from django_resized import ResizedImageField
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -8,8 +7,6 @@ from .softmodels import SoftDeletionModel
 from basics.models import Setting, CastClass, GuestLevel, Location, Choice
 
 # Create your models here.
-
-
 class Media(models.Model):
     def __str__(self):
         return self.uri.url
@@ -310,12 +307,4 @@ class Friendship(models.Model):
         verbose_name = 'フォロー関係'
         verbose_name_plural = 'フォロー関係'
         unique_together = ('follower', 'favorite')
-
-class Review(models.Model):
-    source = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_targets', verbose_name='レビュー元')
-    target = models.ForeignKey(Member, on_delete=models.SET_NULL, null = True, blank = True, related_name='review_sources', verbose_name='レビュー先')
-    stars = models.IntegerField('スター', default = 5, validators=[MaxValueValidator(5),  MinValueValidator(1)])
-    content = models.TextField('内容', null = True, blank = True)
-    created_at = models.DateTimeField('作成日時', auto_now_add=True)
-    updated_at = models.DateTimeField('更新日時', auto_now=True)
 

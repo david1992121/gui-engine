@@ -1,4 +1,4 @@
-from .models import Invoice, Order, Join
+from .models import Invoice, Order, Join, Review
 from rest_framework import serializers
 
 from django.db.models import Sum
@@ -217,3 +217,15 @@ class AdminOrderCreateSerializer(serializers.Serializer):
     order = OrderSerializer(write_only = True)
     notify_cast = serializers.IntegerField(write_only = True)
     notify_guest = serializers.IntegerField(write_only = True)
+
+class ReviewSerializer(serializers.ModelSerializer):
+    source = MainInfoSerializer(read_only = True)
+    target = MainInfoSerializer(read_only = True)
+    source_id = serializers.IntegerField(write_only = True)
+    target_id = serializers.IntegerField(write_only = True)
+    order = OrderSerializer(read_only = True)
+    order_id = serializers.IntegerField(write_only = True, required = False)
+    
+    class Meta:
+        fields = ('source', 'target', 'stars', 'content', 'created_at', 'source_id', 'target_id', 'order', 'order_id')
+        model = Review

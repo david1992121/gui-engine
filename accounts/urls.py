@@ -26,9 +26,6 @@ urlpatterns = [
     # user choices
     path('choices', set_choices, name = "user_set_choice"),
 
-    # user reiviews
-    path('reviews', ReviewView.as_view(), name = "user_review_view"),
-
     # member management
     path('members', MemberView.as_view(), name = "member_view"),
     path('members/<int:pk>', MemberDetailView.as_view(), name = "member_view"),
