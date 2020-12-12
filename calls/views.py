@@ -779,9 +779,10 @@ def get_room_joins(request, id):
         if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
             cur_order = room.orders.filter(is_private = True).filter(Q(status = 4) | Q(status = 3)).order_by(
                 '-status', 'meet_time_iso').first()
-            if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
-                cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
-                return Response(JoinSerializer(cur_join).data)
+            if cur_order != None:
+                if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
+                    cur_join = cur_order.joins.filter(status = 1, user = request.user).first()
+                    return Response(JoinSerializer(cur_join).data)
         return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
@@ -838,6 +839,12 @@ def end_joins(request, id):
                 room.save()
                 send_notice_to_room(room, message, True)
 
+                # send review message to cast
+                cast_message = "この度はオーダーへのご参加ありがとうございます。\n\
+                    お客様のレビューにご協力お願いいたします。\n\
+                    <a href = '/main/call/{0}/review'>レビュー画面へ</a>".format(cur_order.id)
+                send_super_message("system", cur_join.user_id, cast_message)
+
                 # if all finished
                 if cur_order.joins.filter(is_ended = False).count() == 0:
                     message = "終了しました。"
@@ -845,6 +852,19 @@ def end_joins(request, id):
                     room.status = 3
                     room.save()
                     send_notice_to_room(room, message, True)
+
+                    # send review message
+                    guest = cur_order.user
+                    if cur_order.is_private:
+                        guest = cur_order.user if cur_order.user.role == 1 else cur_order.target
+                    guest_message = "この度はご利用頂きありがとうございます！\n\
+                        ご満足いただけましたでしょうか？\n\
+                        Guiではサービス向上の一環として、ご利用いただいたお客様へ\n\
+                        キャストの評価をお願いしております。\n\
+                        もしよろしければ、今後のサービス向上のため\n\
+                        お手すきの際に評価をいただけますでしょうか。\n\
+                        <a href = '/main/call/{0}/review'>レビュー画面へ</a>".format(cur_order.id)
+                    send_super_message("system", guest.id, guest_message)
 
                     # update order status
                     cur_order.status = 5
