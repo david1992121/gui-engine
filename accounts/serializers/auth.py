@@ -173,6 +173,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'location',
             'cast_status',
             'transfer_infos',
+            'axes_exist',
             'username',
             'inviter_code',
             'favorites',

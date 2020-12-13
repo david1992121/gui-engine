@@ -85,6 +85,20 @@ class Invoice(models.Model):
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
+class InvoiceDetail(models.Model):
+
+    invoice = models.ForeignKey(Invoice, on_delete = models.SET_NULL, null = True, verbose_name='インボイス', related_name="details")
+    join_time = models.IntegerField("合流時間")
+    extend_point = models.IntegerField("延長ポイント", default = 0)
+    extend_min = models.IntegerField('延長時間', default = 0)
+    night_point = models.IntegerField("深夜ポイント", default = 0)
+    desire_point = models.IntegerField("指名料金", default = 0)
+    total_point = models.IntegerField("総合", default = 0)
+    cast = models.ForeignKey(Member, on_delete = models.CASCADE, verbose_name='キャスト', related_name="detail_invoices")
+    cast_point = models.IntegerField('キャストポイント', default = 0)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+
 class Join(models.Model):
     """
     Join Model

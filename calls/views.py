@@ -1,3 +1,4 @@
+from accounts.serializers.member import UserSerializer
 from inspect import formatargvalues
 import json, pytz
 from datetime import datetime, timedelta
@@ -80,6 +81,13 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
         invoices = paginator.page(page)
 
         return Response({"total": total, "results": InvoiceSerializer(invoices, many=True).data}, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+class DetailInvoiceView(mixins.CreateModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAdminPermission]
+    serializer_class = InvoiceDetailSerializer
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -703,25 +711,43 @@ def make_room(request, id):
             old_cast_ids = list(cur_order.room.users.filter(role = 0).values_list('id', flat = True))
             room_title = cur_order.room.title
 
-            old_room_users = list(cur_order.room.users.values_list('id', flat = True))
-
-            # send room delete
-            send_room_to_users(cur_order.room, old_room_users, "delete")
-
-            cur_order.room.delete()
+            # cur_order.room.delete()
             message = "残念ですが管理画面よりチャットルーム「{0}」から却下されました。\
                 是非またオーダーにエントリー頂けますようお願いいたします!".format(room_title)
 
             # old cast ids
+            kicked_users = []
             for cast_id in old_cast_ids:
                 if not cast_id in cast_ids:
+                    kicked_users.append(cast_id)
                     send_super_message("system", cast_id, message)
 
-        # remove dropped casts
-        cur_order.joins.filter(dropped = True).delete()
-        cur_order.joins.update(status = True)
-        cur_order.person = cur_order.joins.count()
-        create_room(cur_order, cast_ids)
+            # send room delete
+            send_room_to_users(cur_order.room, kicked_users, "delete")
+            
+            # room users change
+            room_users = [cur_order.user.id] + cast_ids
+            cur_order.room.users.clear()
+            cur_order.room.users.set(room_users)
+
+            # added users
+            add_users = []
+            for cast_id in cast_ids:
+                if not cast_id in old_cast_ids:
+                    add_users.append(cast_id)
+            send_room_to_users(cur_order.room, add_users, "create")
+
+            # remove dropped casts
+            cur_order.joins.filter(dropped = True).delete()
+            cur_order.joins.update(status = True)
+            cur_order.person = cur_order.joins.count()            
+
+        else:            
+            # remove dropped casts
+            cur_order.joins.filter(dropped = True).delete()
+            cur_order.joins.update(status = True)
+            cur_order.person = cur_order.joins.count()
+            create_room(cur_order, cast_ids)
 
         return Response(OrderSerializer(Order.objects.get(pk = cur_order.id)).data, status = status.HTTP_200_OK)
 
@@ -793,9 +819,13 @@ def auto_match(request, id):
 def check_meet_time(request, id):
     try:
         room = Room.objects.get(pk = id)
-        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
-            cur_order = room.orders.order_by('-created_at').first()
-            return Response(cur_order.ended_predict < timezone.now())            
+        if room.users.filter(id = request.user.id).count() > 0:
+            cur_order = room.orders.filter(is_private = not room.is_group).filter(Q(status = 4) | Q(status = 3)).order_by(
+                '-status', 'meet_time_iso').first()
+            if cur_order != None:
+                return Response(cur_order.ended_predict < timezone.now())
+            else:
+                return Response(False)
         return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
@@ -805,8 +835,8 @@ def check_meet_time(request, id):
 def get_room_joins(request, id):
     try:
         room = Room.objects.get(pk = id)
-        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
-            cur_order = room.orders.filter(is_private = True).filter(Q(status = 4) | Q(status = 3)).order_by(
+        if room.users.filter(id = request.user.id).count() > 0:            
+            cur_order = room.orders.filter(is_private = not room.is_group).filter(Q(status = 4) | Q(status = 3)).order_by(
                 '-status', 'meet_time_iso').first()
             if cur_order != None:
                 if cur_order.joins.filter(status = 1, user = request.user).count() > 0:
@@ -823,7 +853,7 @@ def get_room_joins(request, id):
 def check_room_status(request, id):
     try:
         room = Room.objects.get(pk = id)
-        if room.users.filter(id = request.user.id).count() > 0 and room.orders.count() > 0:
+        if room.users.filter(id = request.user.id).count() > 0:
             cur_order = room.orders.filter(is_private = True).filter(Q(status = 4) | Q(status = 3)).order_by(
                 '-status', 'meet_time_iso').first()
             
@@ -851,9 +881,24 @@ def start_joins(request, id):
                 cur_join.started_at = timezone.now()
                 cur_join.save()
 
+                # cast update call times
+                cur_join.user.call_times += 1
+                cur_join.user.save()
+
                 if cur_order.status == 3:
                     cur_order.status = 4
                     cur_order.save()
+
+                    # update guest call times, group times, private times
+                    guest = cur_order.user
+                    if cur_order.is_private:
+                        guest = cur_order.user if cur_order.user.role == 1 else cur_order.target
+                        guest.private_times += 1
+                    else:
+                        guest.group_times += 1
+                    
+                    guest.call_times += 1
+                    guest.save()                    
                 
                 # send system message
                 message = "{0}は合流しました。".format(request.user.nickname)
@@ -888,7 +933,7 @@ def end_joins(request, id):
                 # send review message to cast
                 cast_message = "この度はオーダーへのご参加ありがとうございます。\n\
                     お客様のレビューにご協力お願いいたします。\n\
-                    <a href = '/main/chat/review/{0}'>レビュー画面へ</a>".format(cur_order.id)
+                    <a href = '/main/chat/review/{0}?room_id={1}'>レビュー画面へ</a>".format(cur_order.id, room.id)
                 send_super_message("system", cur_join.user_id, cast_message)
 
                 # if all finished
@@ -915,7 +960,7 @@ def end_joins(request, id):
                         キャストの評価をお願いしております。\n\
                         もしよろしければ、今後のサービス向上のため\n\
                         お手すきの際に評価をいただけますでしょうか。\n\
-                        <a href = '/main/chat/review/{0}'>レビュー画面へ</a>".format(cur_order.id)
+                        <a href = '/main/chat/review/{0}?room_id={1}'>レビュー画面へ</a>".format(cur_order.id, room.id)
                     send_super_message("system", guest.id, guest_message)
 
                     # update order status
@@ -1117,3 +1162,38 @@ class ReviewView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Generi
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_reviews(request, id):
+    try:
+        cur_order = Order.objects.get(pk = id)
+        if cur_order.reviews.filter(source = request.user).count() > 0:
+            return Response({"result": True, "data": ReviewSerializer(cur_order.reviews.filter(source = request.user), many = True).data})
+        else:
+            user_ids = []
+            if cur_order.is_private:
+                target = cur_order.user if cur_order.user.id != request.user.id else cur_order.target
+                user_ids = [target.id]
+            else:
+                if request.user.role == 1:
+                    user_ids = list(cur_order.joins.filter(status = 1, is_ended = True).values_list('user_id', flat = True))
+                else:
+                    user_ids = [cur_order.user.id]
+            return Response({"result": False, "data": MainInfoSerializer(Member.objects.filter(id__in = user_ids), many = True).data})
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAdminPermission])
+def complete_payment(request, id):
+    try:
+        order = Order.objects.get(pk = id)
+        if order.status != 5:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            order.status = 7
+            order.save()
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

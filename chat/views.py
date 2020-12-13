@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Notice, Room, Message, AdminNotice
+from calls.models import Invoice
+from basics.models import Gift
 from .serializers import AdminMessageSerializer, NoticeSerializer, RoomSerializer, AdminNoticeSerializer, MessageSerializer, FileListSerializer
 
 from accounts.models import Member
@@ -176,9 +178,27 @@ def message_list(request, room_id):
                 is_read=True
             )
             self_message.medias.set(media_ids)
-            if gift_id > 0:
-                self_message.gift_id = gift_id
-                self_message.save()
+            if not room.is_group and room.room_type == "private":
+                if gift_id > 0:
+                    try: 
+                        gift = Gift.objects.get(pk = gift_id)
+
+                        self_message.gift_id = gift_id
+                        self_message.save()
+
+                        # give and take gift point
+                        Invoice.objects.create(invoice_type = "GIFT", give_amount = gift.point, giver = request.user)
+                        request.user.point -= gift.point
+                        request.user.point_used += gift.point
+                        request.user.save()
+
+                        for user in room.users.all():
+                            if user.id != request.user.id:
+                                Invoice.objects.create(invoice_type = "GIFT", take_amount = gift.point, taker = user)
+                                user.point += gift.point
+                                user.save()
+                    except:
+                        pass
 
             # create others message
             for user in room.users.all():

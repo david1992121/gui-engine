@@ -1,4 +1,5 @@
-from .models import Invoice, Order, Join, Review
+from django.core.exceptions import ValidationError
+from .models import Invoice, Order, Join, Review, InvoiceDetail
 from rest_framework import serializers
 
 from django.db.models import Sum
@@ -103,7 +104,6 @@ class OrderSerializer(serializers.ModelSerializer):
         return new_order
 
     def update(self, instance, validated_data):
-        old_status = instance.status
         situation_ids = validated_data.pop('situation_ids')
         
         for attr, value in validated_data.items():
@@ -115,23 +115,88 @@ class OrderSerializer(serializers.ModelSerializer):
 
         return instance
 
+class InvoiceDetailSerializer(serializers.ModelSerializer):
+    cast = MainInfoSerializer(read_only = True)
+    cast_id = serializers.IntegerField(write_only = True)
+    invoice_id = serializers.IntegerField(write_only = True)
+
+    class Meta:
+        fields = ('id', 'invoice', 'invoice_id', 'extend_point', 'night_point', 'desire_point',
+            'total_point', 'cast', 'cast_id', 'created_at', 'cast_point', 'join_time', 'extend_min')
+        model = InvoiceDetail
+
+    def create(self, validated_data):
+        invoice_detail = InvoiceDetail.objects.create(**validated_data)        
+        
+        # Invoice create for cast
+        Invoice.objects.create(invoice_type = "CALL", taker = invoice_detail.cast, order = invoice_detail.invoice.order, take_amount = invoice_detail.cast_point)
+        cur_cast = invoice_detail.cast
+        cur_cast.point += invoice_detail.cast_point
+
+        # cast expire data update
+        if invoice_detail.extend_min > 0:
+            cur_cast.expire_times += 1
+            cur_cast.expire_amount += invoice_detail.extend_min        
+        cur_cast.save()
+
+        # guest expire data update
+        if invoice_detail.extend_min > 0:
+            cur_order = invoice_detail.invoice.order
+            guest = cur_order.user
+            if cur_order.is_private:
+                guest = cur_order.user if cur_order.user.role == 1 else cur_order.target
+            guest.expire_times += 1
+            guest.expire_amount += invoice_detail.extend_min
+            guest.save()
+        
+
+        admin = Member.objects.get(is_superuser = True, username = "admin")
+        Invoice.objects.create(invoice_type = "ADMIN", taker = admin, take_amount = invoice_detail.total_point - invoice_detail.cast_point, order = invoice_detail.invoice.order)
+        admin.point += invoice_detail.total_point - invoice_detail.cast_point
+        admin.save()
+
+        return invoice_detail
 class InvoiceSerializer(serializers.ModelSerializer):
     order = OrderSerializer(read_only = True)
     giver = MainInfoSerializer(read_only = True)
     taker = MainInfoSerializer(read_only = True)
     giver_id = serializers.IntegerField(write_only = True, required = False)
     taker_id = serializers.IntegerField(write_only = True, required = False)
+    details = InvoiceDetailSerializer(many = True, read_only = True)
+    order_id = serializers.IntegerField(write_only = True, required = False)
 
     class Meta:
         fields = (
             'id', 'invoice_type', 'give_amount', 'reason', 'order', 'giver', 'taker', 
-            'take_amount', 'updated_at', 'giver_id', 'taker_id')
+            'take_amount', 'updated_at', 'giver_id', 'taker_id', 'details', 'order_id')
         model = Invoice
+        extra_kwargs = {
+            'reason': { 'allow_blank': True },
+        }
 
     def create(self, validated_data):
-        taker = Member.objects.get(pk = validated_data['taker_id'])
-        taker.point = taker.point + validated_data['take_amount']
-        taker.save()
+        if "taker_id" in validated_data.keys():
+            try:
+                taker = Member.objects.get(pk = validated_data['taker_id'])
+            except:
+                raise ValidationError("User Not Found")
+            taker.point = taker.point + validated_data['take_amount']
+            taker.save()
+        
+        if "giver_id" in validated_data.keys():
+            try:
+                giver = Member.objects.get(pk = validated_data['giver_id'])
+            except Member.DoesNotExist:
+                raise ValidationError("User Not Found")
+            giver.point = giver.point - validated_data['give_amount']
+            giver.point_used += validated_data['give_amount']
+
+            if giver.point < 0:
+                # payment with card
+                pass
+
+            giver.save()
+        
         return super(InvoiceSerializer, self).create(validated_data)
 
 class RankUserSerializer(serializers.ModelSerializer):

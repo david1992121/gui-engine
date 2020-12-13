@@ -9,6 +9,7 @@ from .views import *
 urlpatterns = [
     # account management
     path('invoices', InvoiceView.as_view(), name = "invoice_view"),
+    path('detail_invoices', DetailInvoiceView.as_view(), name = "detail_invoice_view"),
     path('ranking', get_rank_users, name = "get_ranking"),
 
     # admin point statistics
@@ -22,6 +23,8 @@ urlpatterns = [
     path('orders/<int:id>/room', make_room, name = "make_room"),
     path('orders/<int:id>/cancel', cancel_order, name = "cancel_order"),
     path('orders/<int:id>/auto', auto_match, name = "auto_match"),
+    path('orders/<int:id>/reviews', get_reviews, name = "get_reviews"),
+    path('orders/<int:id>/complete', complete_payment, name = "complete_payment"),
     path('orders/counts', get_order_counts, name = "admin_order_counts"),
     path('month_data', get_month_data, name = "admin_month_data"),
 

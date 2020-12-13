@@ -191,7 +191,6 @@ class Member(SoftDeletionModel):
     cast_status = models.ManyToManyField(Choice, verbose_name='ステータス')
     cast_class = models.ForeignKey(
         CastClass, on_delete=models.SET_NULL, null=True, blank=True)
-    # cast_started_at = models.DateTimeField('キャスト登録日時', null=True, blank=True)
     back_ratio = models.IntegerField('バック率', default = 75)
     expire_amount = models.IntegerField('延長時間', default = 0)
     expire_times = models.IntegerField('延長回数', default = 0)
