@@ -18,6 +18,7 @@ urlpatterns = [
     # order
     path('orders', OrderView.as_view(), name = "order_view"),
     path('orders/<int:pk>', OrderDetailView.as_view(), name = "order_detail_view"),
+    path('orders/<int:id>/check', check_order, name = "cast_check_order"),
     path('orders/<int:id>/apply', apply_order, name = "cast_apply_order"),
     path('orders/<int:id>/confirm/<int:user_id>', confirm_cast, name = "cast_confirm"),
     path('orders/<int:id>/room', make_room, name = "make_room"),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('orders/<int:id>/reviews', get_reviews, name = "get_reviews"),
     path('orders/<int:id>/complete', complete_payment, name = "complete_payment"),
     path('orders/counts', get_order_counts, name = "admin_order_counts"),
+    path('orders/cancel', cancel_order_apply, name = "cast_cancel_order"),
     path('month_data', get_month_data, name = "admin_month_data"),
 
     # private call request

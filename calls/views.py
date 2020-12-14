@@ -542,7 +542,7 @@ def get_month_data(request):
     result_data.append(sum_data)
     return Response(result_data)
 
-class JoinView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
+class JoinView(mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = JoinSerializer
     queryset = Join.objects.all()
@@ -550,8 +550,73 @@ class JoinView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.Generi
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+    def put(self, request, pk, *args, **kwargs):
+        cur_obj = Join.objects.get(pk = pk)
+        ex_started_at = cur_obj.started_at 
+        ex_ended_at = cur_obj.ended_at
+        ex_started = cur_obj.is_started
+        ex_ended = cur_obj.is_ended
+
+        serializer = self.get_serializer(cur_obj, data = request.data)
+
+        if serializer.is_valid():
+            new_obj = serializer.save()
+            if new_obj.order.room != None:
+                cur_room = new_obj.order.room
+                if ex_started_at == None and new_obj.started_at != None:
+                    message = "{0}は合流しました。".format(new_obj.user.nickname)
+                    new_obj.is_started = True
+                    new_obj.save()
+                    send_notice_to_room(cur_room, message)
+                if ex_started_at != None and new_obj.started_at == None:
+                    message = "{0}の合流は管理者によりキャンセルされました。".format(new_obj.user.nickname)
+                    new_obj.is_started = False
+                    new_obj.save()
+                    send_notice_to_room(cur_room, message)                    
+                if ex_ended_at == None and new_obj.ended_at != None:
+                    message = "{0}は解散しました。".format(new_obj.user.nickname)
+                    new_obj.is_ended = True
+                    new_obj.save()
+                    send_notice_to_room(cur_room, message)
+                if ex_ended_at != None and new_obj.ended_at == None:
+                    message = "{0}の解散は管理者によりキャンセルされました。".format(new_obj.user.nickname)
+                    new_obj.is_ended = False
+                    new_obj.save()
+                    send_notice_to_room(cur_room, message)
+                
+                # order state update
+                cur_order = Order.objects.get(pk = new_obj.order_id)
+                if not ex_ended and new_obj.is_ended:
+                    if cur_order.joins.filter(is_ended = False).count() == 0 and cur_order.status < 5:
+                        cur_order.status = 5
+                        cur_order.save()
+                        message = "管理者より合流が完了しました。"
+                elif ex_ended and not new_obj.is_ended:
+                    if cur_order.status == 5:
+                        if new_obj.is_started:
+                            cur_order.status = 4
+                        else:
+                            if cur_order.joins.filter(is_started = True).count() > 0:
+                                cur_order.status = 4
+                            else:
+                                cur_order.status = 3
+                        cur_order.save()
+                elif not ex_ended and not new_obj.is_ended:
+                    if not ex_started and new_obj.is_started:
+                        if cur_order.status == 3:
+                            cur_order.status = 4
+                    if ex_started and not new_obj.is_started:
+                        if cur_order.joins.filter(is_started = True).count() == 0:
+                            cur_order.status = 3
+                        else:
+                            cur_order.status = 4
+                    cur_order.save()
+                    
+                send_room_event("update", cur_room)
+            return Response(JoinSerializer(new_obj).data)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
@@ -612,6 +677,7 @@ def apply_order(request, id):
         # order validation
         if cur_order.is_private or cur_order.status >= 2:
             return Response(status = status.HTTP_400_BAD_REQUEST)
+        
 
         new_join = Join.objects.create(user = request.user, order = cur_order)
         joins_num = cur_order.joins.count()
@@ -646,6 +712,83 @@ def apply_order(request, id):
 
     except Order.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsCastPermission])
+def check_order(request, id):
+    try:
+        cur_order = Order.objects.get(pk = id)
+        cast = request.user
+
+        started_time = cur_order.meet_time_iso
+        end_time = cur_order.meet_time_iso + timedelta(hours = cur_order.period)
+
+        candidate_ranges = []
+
+        # get current join data
+        for joinItem in cast.joins.filter(is_ended = False):
+            if joinItem.is_started:
+
+                candidate_item = {
+                    "started_at": joinItem.started_at,
+                    "ended_at": joinItem.started_at + timedelta(hours = joinItem.order.period),
+                    "allowed": False,
+                    "id": joinItem.order.id
+                }
+
+            else:
+                candidate_item = {
+                    "started_at": joinItem.order.meet_time_iso,
+                    "ended_at": joinItem.order.meet_time_iso + timedelta(hours = joinItem.order.period),
+                    "allowed": False,
+                    "id": joinItem.order.id
+                }
+                if joinItem.order.status == 0:
+                    candidate_item["allowed"] = True
+
+            candidate_ranges.append(candidate_item)
+        
+        # check join data
+        cur_orders = []
+        for range_item in candidate_ranges:
+
+            # two ranges intersected
+            if range_item['ended_at'] > started_time and range_item['started_at'] < end_time:
+                if range_item['allowed']:
+                    cur_orders.append(OrderSerializer(Order.objects.get(pk = range_item['id'])).data)
+                else:
+                    return Response({
+                        "result": False, "data": [OrderSerializer(Order.objects.get(pk = range_item['id'])).data]
+                    })
+        return Response({
+            "result": True, "data": cur_orders
+        })
+
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsCastPermission])
+def cancel_order_apply(request):
+    cancel_ids = request.GET.get('ids').split(",")
+    for orderIdStr in cancel_ids:
+        orderId = int(orderIdStr)
+        try:
+            cur_order = Order.objects.get(pk = orderId)
+            cur_join = cur_order.joins.filter(user = request.user).get()
+            if cur_order != None:
+                if cur_order.status == 0:
+                    cur_join.delete()
+
+                    # notify to cast
+                    cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
+                    send_call(cur_order, cast_ids, "update")
+                else:
+                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+        except Join.DoesNotExist:
+            continue        
+
+    return Response(status = status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsGuestPermission])
