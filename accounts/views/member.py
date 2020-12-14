@@ -22,6 +22,7 @@ from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, 
 from accounts.utils import send_present
 from chat.models import Room, Message
 from calls.models import Invoice
+from calls.axes import create_axes_payment
 from basics.serializers import ChoiceSerializer
 from chat.utils import send_room_to_users, send_message_to_user
 class IsSuperuserPermission(BasePermission):
@@ -939,15 +940,19 @@ def buy_point(request):
     point = int(request.data.get('points', "0"))
     user = request.user
     if point > 0:
-        user.point += point
-        user.save()
-
-        # create invoice
-        Invoice.objects.create(taker = request.user, take_amount = point, invoice_type = "BUY")
 
         # create axes payment
-        pass
+        if not create_axes_payment(request.user, point):
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+        else:
+            user.point += point
+            user.save()
 
-    return Response(MemberSerializer(user).data)
+            # create invoice
+            Invoice.objects.create(taker = request.user, take_amount = point, invoice_type = "BUY")
+
+            return Response(MemberSerializer(user).data)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
 
         

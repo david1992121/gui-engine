@@ -25,7 +25,7 @@ from chat.models import Room, Message
 from chat.serializers import MessageSerializer
 
 # Create your views here.
-class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView):
+class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InvoiceSerializer
 
@@ -84,7 +84,15 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
         return Response({"total": total, "results": InvoiceSerializer(invoices, many=True).data}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        serializer = self.get_serializer(data = request.data)
+        if serializer.is_valid():
+            try:
+                new_invoice = serializer.save()
+                return Response(InvoiceSerializer(new_invoice).data)
+            except ValidationError:
+                return Response(status = status.HTTP_406_NOT_ACCEPTABLE)            
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class InvoiceDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -93,7 +101,6 @@ class InvoiceDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
-
 
 class UserInvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -1397,6 +1404,20 @@ def complete_payment(request, id):
             return Response(status = status.HTTP_400_BAD_REQUEST)
         else:
             order.status = 7
+            order.save()
+            return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
+    except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAdminPermission])
+def fail_payment(request, id):
+    try:
+        order = Order.objects.get(pk = id)
+        if order.status != 5:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        else:
+            order.status = 10
             order.save()
             return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     except Order.DoesNotExist:

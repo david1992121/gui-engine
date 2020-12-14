@@ -174,7 +174,6 @@ class Member(SoftDeletionModel):
     guest_level = models.ForeignKey(
         GuestLevel, on_delete=models.SET_NULL, null=True, blank=True)
     call_times = models.IntegerField('合流利用回数', default=0)
-    # guest_started_at = models.DateTimeField('ゲスト登録日時', null=True, blank=True)
     group_times = models.IntegerField('グループ回数', default = 0)
     private_times = models.IntegerField('プライベート回数', default = 0)
     is_introducer = models.BooleanField('紹介者', default = False)

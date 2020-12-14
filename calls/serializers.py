@@ -13,6 +13,7 @@ from chat.serializers import RoomSerializer
 
 from accounts.serializers.member import GeneralInfoSerializer, MainInfoSerializer
 from accounts.models import Member
+from .axes import create_axes_payment
 
 class JoinSerializer(serializers.ModelSerializer):
     """
@@ -175,6 +176,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        from math import ceil
+
         if "taker_id" in validated_data.keys():
             try:
                 taker = Member.objects.get(pk = validated_data['taker_id'])
@@ -192,8 +195,14 @@ class InvoiceSerializer(serializers.ModelSerializer):
             giver.point_used += validated_data['give_amount']
 
             if giver.point < 0:
-                # payment with card
-                pass
+                auto_charge = ceil( (-giver.point) / 1000) * 1000
+
+                # create axes payment
+                if not create_axes_payment(giver, auto_charge): 
+                    raise ValidationError('Payment Failed')
+                else:
+                    Invoice.objects.create(invoice_type = "AUTO", taker = giver, take_amount = auto_charge)
+                    giver.point += auto_charge
 
             giver.save()
         

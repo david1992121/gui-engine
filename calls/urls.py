@@ -31,6 +31,7 @@ urlpatterns = [
     path('orders/<int:id>/auto', auto_match, name = "auto_match"),
     path('orders/<int:id>/reviews', get_reviews, name = "get_reviews"),
     path('orders/<int:id>/complete', complete_payment, name = "complete_payment"),
+    path('orders/<int:id>/fail', fail_payment, name = "fail_payment"),
     path('orders/counts', get_order_counts, name = "admin_order_counts"),
     path('orders/cancel', cancel_order_apply, name = "cast_cancel_order"),
     path('month_data', get_month_data, name = "admin_month_data"),
