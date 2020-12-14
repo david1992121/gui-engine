@@ -15,6 +15,9 @@ urlpatterns = [
     # admin point statistics
     path('admin_invoices', get_invoice_total, name = "admin_invoice"),
 
+    # admin schedule statistics
+    path('schedules', get_schedule_data, name = "schedule_data"),
+
     # order
     path('orders', OrderView.as_view(), name = "order_view"),
     path('orders/<int:pk>', OrderDetailView.as_view(), name = "order_detail_view"),

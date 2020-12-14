@@ -1,3 +1,4 @@
+from django.core.validators import MinLengthValidator
 from accounts.serializers.member import UserSerializer
 from inspect import formatargvalues
 import json, pytz
@@ -8,7 +9,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from dateutil.parser import parse
 from rest_framework.serializers import Serializer
-from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission
+from accounts.views.member import IsAdminPermission, IsCastPermission, IsSuperuserPermission, IsGuestPermission, set_choices
 
 from rest_framework import status
 from rest_framework import generics
@@ -1339,4 +1340,69 @@ def complete_payment(request, id):
             order.save()
             return Response(OrderSerializer(order).data, status = status.HTTP_200_OK)
     except Order.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAdminPermission])
+def get_schedule_data(request):
+    page = int(request.GET.get('page', "1"))
+    cur_query = request.GET.get("query", "")
+    size = int(request.GET.get('size', "100"))
+
+    if cur_query != "":
+        try:
+            query_obj = json.loads(cur_query)
+        except:
+            return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+
+        query_date = query_obj.get('date', "")
+        is_present = query_obj.get('present', False)
+        type_val = query_obj.get('type', "all")
+        start_time = None
+        end_time = None
+
+        if query_date != "":
+            start_time = datetime.strptime("{}-+0900".format(query_date), "%Y-%m-%d-%z")
+            start_time = start_time.astimezone(pytz.timezone('UTC'))
+            end_time = start_time + timedelta(days = 1)
+
+            print(start_time)
+            print(end_time)
+        print(type_val)
+
+        memberQuery = Member.objects.filter(role = 0, is_active = True)
+        if is_present:
+            memberQuery = memberQuery.filter(is_present = True)
+
+        total = memberQuery.count()       
+        users = memberQuery.all()[(page - 1) * size:page * size]
+        
+        if start_time != None:
+            start_time = timezone.now()
+
+        return_array = []
+        for user in users:
+            print(user)
+            print(type(user))
+
+            cur_obj = {}
+            cur_obj["user"] = MainInfoSerializer(user).data
+            cur_obj["schedules"] = []
+
+            join_query = user.joins
+            if type_val == "confirm":
+                join_query = join_query.filter(status = 1)
+            elif type_val == "select":
+                join_query = join_query.filter(selection = 1)
+            elif type_val == "applying":
+                join_query = join_query.filter(status = 0, selection = 0)
+
+            # print(join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).count())
+            for join in join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).order_by("started_at"):
+                cur_obj["schedule"].append(JoinSerializer(join).data)
+            
+            return_array.append(cur_obj)
+
+        return Response({ "total": total, "results": return_array })
+    else:
         return Response(status = status.HTTP_400_BAD_REQUEST)

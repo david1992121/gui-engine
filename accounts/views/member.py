@@ -21,6 +21,7 @@ from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, De
 from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
 from accounts.utils import send_present
 from chat.models import Room, Message
+from calls.models import Invoice
 from basics.serializers import ChoiceSerializer
 from chat.utils import send_room_to_users, send_message_to_user
 class IsSuperuserPermission(BasePermission):
@@ -931,3 +932,22 @@ def toggle_present(request):
         send_present(cur_user, "remove", guest_ids)
 
     return Response(MemberSerializer(cur_user).data)
+
+@api_view(['GET'])
+@permission_classes([IsGuestPermission])
+def buy_point(request):
+    point = int(request.GET.get('points', "0"))
+    user = request.user
+    if point > 0:
+        user.point += point
+        user.save()
+
+        # create invoice
+        Invoice.objects.create(taker = request.user, take_amount = point, invoice_type = "BUY")
+
+        # create axes payment
+        pass
+
+    return Response(MemberSerializer(user).data)
+
+        

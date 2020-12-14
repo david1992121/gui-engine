@@ -93,4 +93,7 @@ urlpatterns = [
 
     # toggle present
     path('toggle_present', toggle_present, name = "toggle_present"),
+
+    # point buy
+    path('point/buy', buy_point, name = "buy_point"),
 ]
