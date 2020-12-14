@@ -86,6 +86,21 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+class UserInvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InvoiceSerializer
+
+    def get(self, request, *args, **kwargs):
+        page = int(request.GET.get('page', "1"))
+
+        # user type
+        query_set = Invoice.objects.filter(Q(giver = request.user) | Q(taker = request.user))
+        total = query_set.count()
+        paginator = Paginator(query_set.order_by('-created_at'), 10)
+        invoices = paginator.page(page)
+
+        return Response({"total": total, "results": InvoiceSerializer(invoices, many=True).data}, status=status.HTTP_200_OK)
+
 class DetailInvoiceView(mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = InvoiceDetailSerializer
@@ -1390,6 +1405,7 @@ def get_schedule_data(request):
             cur_obj["schedules"] = []
 
             join_query = user.joins
+            print(user.joins.count())
             if type_val == "confirm":
                 join_query = join_query.filter(status = 1)
             elif type_val == "select":
@@ -1397,7 +1413,7 @@ def get_schedule_data(request):
             elif type_val == "applying":
                 join_query = join_query.filter(status = 0, selection = 0)
 
-            # print(join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).count())
+            print(join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).count())
             for join in join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).order_by("started_at"):
                 cur_obj["schedule"].append(JoinSerializer(join).data)
             

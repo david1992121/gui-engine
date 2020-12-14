@@ -11,6 +11,7 @@ urlpatterns = [
     path('invoices', InvoiceView.as_view(), name = "invoice_view"),
     path('detail_invoices', DetailInvoiceView.as_view(), name = "detail_invoice_view"),
     path('ranking', get_rank_users, name = "get_ranking"),
+    path('users/invoices', UserInvoiceView.as_view(), name = "user_invoice_view"),
 
     # admin point statistics
     path('admin_invoices', get_invoice_total, name = "admin_invoice"),
