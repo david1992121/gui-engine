@@ -141,7 +141,17 @@ def get_invoice_total(request):
     normal_invoices = Invoice.objects.exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO_CHARGE')
     use_point = normal_invoices.aggregate(Sum('give_amount'))['give_amount__sum']
     pay_point = normal_invoices.aggregate(Sum('take_amount'))['take_amount__sum']
-    profit_point = use_point - pay_point
+
+    if buy_point == None:
+        buy_point = 0
+
+    if use_point == None:
+        use_point = 0
+
+    if pay_point == None:
+        pay_point = 0
+
+    profit_point = use_point - pay_point    
 
     return Response({
         "buy": buy_point, "use": use_point, "pay": pay_point, "profit": profit_point
