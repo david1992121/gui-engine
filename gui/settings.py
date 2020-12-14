@@ -199,9 +199,9 @@ CHANNEL_LAYERS = {
 }
 
 # Celery settings
-BROKER_URL = 'redis://192.168.0.254:6379/0'  # our redis address
+BROKER_URL = 'redis://{}:6379/0'.format(ENV("REDIS_HOST"))  # our redis address
 # use json format for everything
-CELERY_RESULT_BACKEND = 'redis://192.168.0.254:6379/0'
+CELERY_RESULT_BACKEND = 'redis://{}:6379/0'.format(ENV("REDIS_HOST"))
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
