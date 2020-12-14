@@ -9,6 +9,7 @@ from .views import *
 urlpatterns = [
     # account management
     path('invoices', InvoiceView.as_view(), name = "invoice_view"),
+    path('invoices/<int:pk>', InvoiceDetailView.as_view(), name = "invoice_detail_view"),
     path('detail_invoices', DetailInvoiceView.as_view(), name = "detail_invoice_view"),
     path('ranking', get_rank_users, name = "get_ranking"),
     path('users/invoices', UserInvoiceView.as_view(), name = "user_invoice_view"),
@@ -35,7 +36,7 @@ urlpatterns = [
     path('month_data', get_month_data, name = "admin_month_data"),
 
     # private call request
-    path('orders/request', request_call, name = "request_call"),
+    path('orders/request', request_call, name = "request_call"),    
     path('orders/request/<int:pk>', get_order, name = "get_order"),
     path('orders/request/<int:pk>/cancel', cancel_request, name = "cancel_request"),
     path('orders/request/<int:pk>/confirm', confirm_request, name = "confirm_request"),
@@ -59,6 +60,7 @@ urlpatterns = [
     path('rooms/<int:id>/joins', get_room_joins, name = "room_join"),
     path('rooms/<int:id>/joins/start', start_joins, name = "start_join"),
     path('rooms/<int:id>/joins/end', end_joins, name = "end_join"),
+    path('rooms/<int:id>/joins/check', check_cast_status, name = "check_cast_join"),
 
     # user reiviews
     path('reviews', ReviewView.as_view(), name = "user_review_view"),
