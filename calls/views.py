@@ -1381,10 +1381,6 @@ def get_schedule_data(request):
             start_time = start_time.astimezone(pytz.timezone('UTC'))
             end_time = start_time + timedelta(days = 1)
 
-            print(start_time)
-            print(end_time)
-        print(type_val)
-
         memberQuery = Member.objects.filter(role = 0, is_active = True)
         if is_present:
             memberQuery = memberQuery.filter(is_present = True)
@@ -1392,20 +1388,17 @@ def get_schedule_data(request):
         total = memberQuery.count()       
         users = memberQuery.all()[(page - 1) * size:page * size]
         
-        if start_time != None:
+        if start_time == None:
             start_time = timezone.now()
 
         return_array = []
         for user in users:
-            print(user)
-            print(type(user))
-
             cur_obj = {}
             cur_obj["user"] = MainInfoSerializer(user).data
             cur_obj["schedules"] = []
 
             join_query = user.joins
-            print(user.joins.count())
+
             if type_val == "confirm":
                 join_query = join_query.filter(status = 1)
             elif type_val == "select":
@@ -1413,9 +1406,8 @@ def get_schedule_data(request):
             elif type_val == "applying":
                 join_query = join_query.filter(status = 0, selection = 0)
 
-            print(join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).count())
             for join in join_query.filter(ended_at__gt = start_time, started_at__lt = end_time).order_by("started_at"):
-                cur_obj["schedule"].append(JoinSerializer(join).data)
+                cur_obj["schedules"].append(JoinSerializer(join).data)
             
             return_array.append(cur_obj)
 
