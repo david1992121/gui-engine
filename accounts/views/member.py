@@ -933,10 +933,10 @@ def toggle_present(request):
 
     return Response(MemberSerializer(cur_user).data)
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsGuestPermission])
 def buy_point(request):
-    point = int(request.GET.get('points', "0"))
+    point = int(request.data.get('points', "0"))
     user = request.user
     if point > 0:
         user.point += point
