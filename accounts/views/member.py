@@ -19,12 +19,13 @@ from rest_framework.permissions import IsAuthenticated, BasePermission
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
-from accounts.utils import send_present
+from accounts.utils import send_present, send_user
 from chat.models import Room, Message
 from calls.models import Invoice
 from calls.axes import create_axes_payment
 from basics.serializers import ChoiceSerializer
 from chat.utils import send_room_to_users, send_message_to_user
+
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
 
@@ -752,6 +753,14 @@ def proceed_transfer(request, id):
     cur_transfer = TransferApplication.objects.get(pk=id)
     cur_transfer.status = 1
     cur_transfer.save()
+
+    # cast point update
+    print(cur_transfer.user.point)
+    cur_transfer.user.point = cur_transfer.user.point - cur_transfer.point
+    print(cur_transfer.user.point)
+    cur_transfer.user.save()
+    send_user(cur_transfer.user)
+
     return Response({"success": True}, status=status.HTTP_200_OK)
 
 @api_view(["GET"])

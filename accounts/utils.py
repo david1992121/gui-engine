@@ -1,3 +1,4 @@
+from accounts.serializers.auth import MemberSerializer
 from .serializers.member import GeneralInfoSerializer
 
 # use channel
@@ -11,3 +12,10 @@ def send_present(cast, event, guest_ids):
             "chat_{}".format(receiver_id),
             { "type": "cast_present.send", "content": { "cast": GeneralInfoSerializer(cast).data, "event": event }}
         )
+
+def send_user(cast):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "chat_{}".format(cast.id),
+        { "type": "user.send", "content": MemberSerializer(cast).data }
+    )
