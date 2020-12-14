@@ -5,7 +5,7 @@ import json, pytz
 from datetime import datetime, timedelta
 
 from django.db.models import Sum, Q, Count, F
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
 from dateutil.parser import parse
 from rest_framework.serializers import Serializer
@@ -97,9 +97,11 @@ class UserInvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
         query_set = Invoice.objects.filter(Q(giver = request.user) | Q(taker = request.user))
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-created_at'), 10)
-        invoices = paginator.page(page)
-
-        return Response({"total": total, "results": InvoiceSerializer(invoices, many=True).data}, status=status.HTTP_200_OK)
+        try:
+            invoices = paginator.page(page)
+            return Response(data=InvoiceSerializer(invoices, many=True).data, status=status.HTTP_200_OK)
+        except EmptyPage:
+            return Response(data=[], status=status.HTTP_200_OK)
 
 class DetailInvoiceView(mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
