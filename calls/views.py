@@ -86,6 +86,15 @@ class InvoiceView(mixins.CreateModelMixin, mixins.ListModelMixin, generics.Gener
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+class InvoiceDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InvoiceSerializer
+    queryset = Invoice.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+
 class UserInvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InvoiceSerializer
@@ -805,6 +814,42 @@ def cancel_order_apply(request):
             continue        
 
     return Response(status = status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_cast_status(request, id):
+    try:
+        start_time = parse(request.GET.get("start", ""))
+        end_time = parse(request.GET.get("end", ""))
+        print(start_time)
+        print(start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time) is None)
+        print(end_time)
+        try:
+            room = Room.objects.get(pk = id)
+            if room.is_group:
+                return Response(status = status.HTTP_400_BAD_REQUEST)
+            
+            cast = request.user
+            if request.user.role == 1:
+                for user in room.users.all():
+                    if user.role == 0:
+                        cast = user
+            
+            for joinItem in cast.joins.filter(is_ended = False):
+                if joinItem.is_started:
+                    if joinItem.started_at < end_time and (joinItem.started_at + timedelta(hours = joinItem.order.period)) > start_time:
+                        return Response(False)
+                else:
+                    if joinItem.order.meet_time_iso < end_time and joinItem.order.meet_time_iso + timedelta(hours = joinItem.order.period) > start_time:
+                        return Response(False)       
+
+            return Response(True)
+            
+        except Room.DoesNotExist:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(e)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsGuestPermission])
