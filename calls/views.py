@@ -216,6 +216,78 @@ def get_rank_users(request):
             'to': parse(date_to).strftime("%Y-%m-%d") if date_to != "" else "" }
     ).data, "values": points_values }, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_ranking(request):
+    from dateutil.relativedelta import relativedelta
+
+    user_type = request.GET.get('isCast', 'false')
+    is_gift = request.GET.get('isGift', 'false')
+    range = int(request.GET.get('range', '3'))
+
+    # user type
+    query_set = Member.objects
+    if user_type == "false":
+        query_set = query_set.filter(role = 1, is_active = True)
+    else:
+        query_set = query_set.filter(role = 0, is_active = True)
+        if is_gift == "false":
+            query_set = query_set.filter(is_present = True)            
+
+    # query       
+    time_filter = Q()
+
+    start_time = None
+    end_time = None
+    today = datetime.now().astimezone(pytz.timezone("Asia/Tokyo"))
+
+    if range == 0:
+        start_time = today.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+        end_time = start_time + timedelta(days = 1)
+    elif range == 1:
+        week_day = (today.weekday() + 1) % 7
+        start_time = today.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+        start_time = start_time - timedelta(days = week_day)
+        end_time = start_time + timedelta(days = 7)
+    elif range == 2:
+        start_time = today.replace(day = 1, hour = 0, minute = 0, second = 0, microsecond = 0)
+        end_time = start_time + relativedelta(months = 1)
+    else:
+        start_time = today.replace(month = 1, day = 1, hour = 0, minute = 0, second = 0, microsecond = 0)
+        end_time = start_time + relativedelta(years = 1)
+
+    start_time.astimezone(pytz.timezone("UTC"))
+    end_time.astimezone(pytz.timezone("UTC"))
+
+    if user_type == "false":
+        time_filter = Q(gave__created_at__gte = start_time) & Q(gave__created_at__lt = end_time)
+
+        if is_gift == "true":
+            time_filter &= Q(gave__invoice_type = "GIFT")
+            query_set = query_set.annotate(
+                overall_points = Sum('gave__give_amount', filter=time_filter)
+            ).order_by('-overall_points', '-call_times')
+        else:
+            time_filter &= Q(gave__invoice_type = "CALL")
+            query_set = query_set.annotate(
+                overall_points = Sum('gave__give_amount', filter=time_filter)
+            ).order_by('-overall_points', '-call_times')
+    else:        
+        time_filter = Q(took__created_at__gte = start_time) & Q(took__created_at__lt = end_time)
+
+        if is_gift == "true":
+            time_filter &= Q(took__invoice_type = "GIFT")
+            query_set = query_set.annotate(
+                overall_points = Sum('took__take_amount', filter=time_filter)
+            ).order_by('-overall_points', '-call_times')
+        else:
+            time_filter &= Q(took__invoice_type = "CALL")
+            query_set = query_set.annotate(
+                overall_points = Sum('took__take_amount', filter=time_filter)
+            ).order_by('-overall_points', '-call_times')
+    
+    return Response(MainInfoSerializer(query_set, many = True).data)
+
 @api_view(['POST'])
 @permission_classes([IsAdminPermission])
 def create_order(request):

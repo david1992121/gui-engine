@@ -63,6 +63,7 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 class MainInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
     location = LocationSerializer(read_only = True)
+    overall_points = serializers.IntegerField(read_only = True, default = 0)
 
     class Meta:
         fields = (
@@ -74,7 +75,8 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'avatars',
             'role',
             'point',
-            'location'
+            'location',
+            'overall_points'
         )
         model = Member
 

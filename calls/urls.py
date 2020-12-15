@@ -10,12 +10,15 @@ urlpatterns = [
     # account management
     path('invoices', InvoiceView.as_view(), name = "invoice_view"),
     path('invoices/<int:pk>', InvoiceDetailView.as_view(), name = "invoice_detail_view"),
-    path('detail_invoices', DetailInvoiceView.as_view(), name = "detail_invoice_view"),
-    path('ranking', get_rank_users, name = "get_ranking"),
     path('users/invoices', UserInvoiceView.as_view(), name = "user_invoice_view"),
-
+    path('detail_invoices', DetailInvoiceView.as_view(), name = "detail_invoice_view"),    
+    
     # admin point statistics
     path('admin_invoices', get_invoice_total, name = "admin_invoice"),
+
+    # ranking
+    path('admin/ranking', get_rank_users, name = "get_admin_ranking"),
+    path('ranking', get_ranking, name = "get_user_ranking"),
 
     # admin schedule statistics
     path('schedules', get_schedule_data, name = "schedule_data"),

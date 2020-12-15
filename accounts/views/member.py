@@ -5,7 +5,7 @@ import requests
 
 from django.core.paginator import Paginator
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, query
 from django.http import Http404
 
 from rest_framework import status
@@ -965,7 +965,7 @@ def buy_point(request):
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsGuestPermission])
 def export_pdf(request):
     from .pdf.export import export_pdf
     from django.core.files.storage import FileSystemStorage
@@ -975,22 +975,19 @@ def export_pdf(request):
 
     pdf_info = request.GET.get("info")
     query_obj = json.loads(pdf_info)
+    print(query_obj)
     
     seed = query_obj.get("seed", "")
     date = query_obj.get("date", "")
     name_array = query_obj.get("names", [])
-    number = query_obj.get("number", 1)
-    point = query_obj.get("point", 0)
+    number = query_obj.get("number", 1)    
     no = query_obj.get("no", 100)
 
-    export_pdf(seed, date, name_array, number, no, point)
+    try:
+        point = Invoice.objects.get(pk = no).take_amount
+    except Invoice.DoesNotExist:
+        return Response(status = status.HTTP_400_BAD_REQUEST)
 
-    fs = FileSystemStorage()
-    output_filename = '領収書_{}.pdf'.format(datetime.now().strftime('%Y%m%d%H%M%S'))
-    pdf_file = join(settings.BASE_DIR, 'accounts/views/pdf/receipt.pdf')
-
-    if fs.exists(pdf_file):
-        with fs.open(pdf_file) as pdf:
-            response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename={}'.format(urlquote(output_filename))
-            return response
+    filename = export_pdf(seed, date, name_array, number, no, point)
+    
+    return Response(filename)

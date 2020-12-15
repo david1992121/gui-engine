@@ -119,3 +119,4 @@ media/
 /celerybeat-schedule.dir
 /celerybeat-schedule.bak
 /celerybeat-schedule.dat
+/static/pdf/*.pdf

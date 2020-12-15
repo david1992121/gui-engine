@@ -8,6 +8,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import white, black
 from math import ceil
 from basics.models import ReceiptSetting
+from django.conf import settings
+from datetime import datetime
 
 global current_path
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -72,7 +74,15 @@ def export_pdf(seed, date, name_array, number, no, point):
         output.addPage(page)
     
     # finally, write "output" to a real file
-    outputStream = open(os.path.join(current_path, "receipt.pdf"), "wb")
+    file_name = '領収書_{}_{}.pdf'.format(no, datetime.now().strftime('%Y%m%d%H%M%S'))
+    receipt_file = os.path.join(settings.BASE_DIR, "static/pdf/{}".format(file_name))
+    print(settings.BASE_DIR)
+
+    if os.path.exists(receipt_file):
+        os.remove(receipt_file)
+    
+    outputStream = open(receipt_file, "wb")
     output.write(outputStream)
     outputStream.close()
-    return True
+    
+    return "static/pdf/{}".format(file_name)
