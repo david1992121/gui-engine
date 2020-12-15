@@ -305,4 +305,3 @@ class Friendship(models.Model):
         verbose_name = 'フォロー関係'
         verbose_name_plural = 'フォロー関係'
         unique_together = ('follower', 'favorite')
-

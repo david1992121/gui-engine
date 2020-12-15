@@ -14,7 +14,7 @@ from rest_framework import mixins
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
@@ -964,4 +964,33 @@ def buy_point(request):
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
-        
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def export_pdf(request):
+    from .pdf.export import export_pdf
+    from django.core.files.storage import FileSystemStorage
+    from os.path import join
+    from django.http import HttpResponse
+    from django.utils.http import urlquote
+
+    pdf_info = request.GET.get("info")
+    query_obj = json.loads(pdf_info)
+    
+    seed = query_obj.get("seed", "")
+    date = query_obj.get("date", "")
+    name_array = query_obj.get("names", [])
+    number = query_obj.get("number", 1)
+    point = query_obj.get("point", 0)
+    no = query_obj.get("no", 100)
+
+    export_pdf(seed, date, name_array, number, no, point)
+
+    fs = FileSystemStorage()
+    output_filename = '領収書_{}.pdf'.format(datetime.now().strftime('%Y%m%d%H%M%S'))
+    pdf_file = join(settings.BASE_DIR, 'accounts/views/pdf/receipt.pdf')
+
+    if fs.exists(pdf_file):
+        with fs.open(pdf_file) as pdf:
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename={}'.format(urlquote(output_filename))
+            return response

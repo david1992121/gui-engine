@@ -96,4 +96,7 @@ urlpatterns = [
 
     # point buy
     path('point/buy', buy_point, name = "buy_point"),
+
+    # make receipt pdf
+    path('point/pdf', export_pdf, name = "export_pdf"),
 ]

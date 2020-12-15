@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import tree
 from accounts.models import Member
-from basics.models import Location, CostPlan, Choice
+from basics.models import Location, CostPlan, Choice, Gift
 from django.core.validators import MaxValueValidator, MinValueValidator
 from chat.models import Room
 
@@ -81,13 +81,15 @@ class Invoice(models.Model):
     taker = models.ForeignKey(Member, on_delete=models.SET_NULL, related_name = "took", null=True, verbose_name="取得")
     order = models.ForeignKey(Order, on_delete = models.SET_NULL, null = True)
     reason = models.CharField('理由', default = "", max_length=190)
+    gift = models.ForeignKey(Gift, on_delete = models.SET_NULL, null = True, blank=True, verbose_name = "ギフト")
+    room = models.ForeignKey(Room, on_delete = models.SET_NULL, null = True, blank=True, verbose_name = "ルーム")
 
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
 class InvoiceDetail(models.Model):
 
-    invoice = models.ForeignKey(Invoice, on_delete = models.SET_NULL, null = True, verbose_name='インボイス', related_name="details")
+    invoices = models.ManyToManyField(Invoice, verbose_name='インボイス', related_name="details")
     join_time = models.IntegerField("合流時間")
     extend_point = models.IntegerField("延長ポイント", default = 0)
     extend_min = models.IntegerField('延長時間', default = 0)
@@ -95,7 +97,12 @@ class InvoiceDetail(models.Model):
     desire_point = models.IntegerField("指名料金", default = 0)
     total_point = models.IntegerField("総合", default = 0)
     cast = models.ForeignKey(Member, on_delete = models.CASCADE, verbose_name='キャスト', related_name="detail_invoices")
+
     cast_point = models.IntegerField('キャストポイント', default = 0)
+    cast_extend_point = models.IntegerField('キャスト延長ポイント', default = 0)
+    cast_night_point = models.IntegerField('キャスト深夜ポイント', default = 0)
+    cast_desire_point = models.IntegerField('キャスト指名ポイント', default = 0)
+
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 

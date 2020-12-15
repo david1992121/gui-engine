@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from basics.models import Location
-from basics.serializers import ChoiceSerializer, LocationSerializer, CostplanSerializer, ClassesSerializer
+from basics.serializers import ChoiceSerializer, GiftSerializer, LocationSerializer, CostplanSerializer, ClassesSerializer
 
 from chat.serializers import RoomSerializer
 
@@ -119,20 +119,32 @@ class OrderSerializer(serializers.ModelSerializer):
 class InvoiceDetailSerializer(serializers.ModelSerializer):
     cast = MainInfoSerializer(read_only = True)
     cast_id = serializers.IntegerField(write_only = True)
-    invoice_id = serializers.IntegerField(write_only = True)
-
+    invoice_ids = serializers.ListField(
+        child = serializers.IntegerField(), write_only = True
+    )
+    order_id = serializers.IntegerField(write_only = True)
+    
     class Meta:
-        fields = ('id', 'invoice', 'invoice_id', 'extend_point', 'night_point', 'desire_point',
-            'total_point', 'cast', 'cast_id', 'created_at', 'cast_point', 'join_time', 'extend_min')
+        fields = ('id', 'invoice_ids', 'extend_point', 'night_point', 'desire_point',
+            'total_point', 'cast', 'cast_id', 'created_at', 'cast_point', 'join_time', 'extend_min',
+            'cast_extend_point', 'cast_night_point', 'cast_desire_point', 'order_id')
         model = InvoiceDetail
 
     def create(self, validated_data):
-        invoice_detail = InvoiceDetail.objects.create(**validated_data)        
+        invoice_ids = validated_data.pop("invoice_ids")
+        order_id = validated_data.pop("order_id")
+        cur_order = Order.objects.get(pk = order_id)
+        invoice_detail = InvoiceDetail.objects.create(**validated_data)
         
         # Invoice create for cast
-        Invoice.objects.create(invoice_type = "CALL", taker = invoice_detail.cast, order = invoice_detail.invoice.order, take_amount = invoice_detail.cast_point)
+        invoice_cast = Invoice.objects.create(
+            invoice_type = "CALL", taker = invoice_detail.cast, order_id = order_id, take_amount = invoice_detail.cast_point, room = cur_order.room
+        )
         cur_cast = invoice_detail.cast
         cur_cast.point += invoice_detail.cast_point
+
+        invoice_ids.append(invoice_cast.id)
+        invoice_detail.invoices.set(invoice_ids)
 
         # cast expire data update
         if invoice_detail.extend_min > 0:
@@ -142,7 +154,6 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
 
         # guest expire data update
         if invoice_detail.extend_min > 0:
-            cur_order = invoice_detail.invoice.order
             guest = cur_order.user
             if cur_order.is_private:
                 guest = cur_order.user if cur_order.user.role == 1 else cur_order.target
@@ -152,7 +163,9 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         
 
         admin = Member.objects.get(is_superuser = True, username = "admin")
-        Invoice.objects.create(invoice_type = "ADMIN", taker = admin, take_amount = invoice_detail.total_point - invoice_detail.cast_point, order = invoice_detail.invoice.order)
+        Invoice.objects.create(
+            invoice_type = "ADMIN", taker = admin, take_amount = invoice_detail.total_point - invoice_detail.cast_point, order_id = order_id, room = cur_order.room
+        )
         admin.point += invoice_detail.total_point - invoice_detail.cast_point
         admin.save()
 
@@ -165,11 +178,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
     taker_id = serializers.IntegerField(write_only = True, required = False)
     details = InvoiceDetailSerializer(many = True, read_only = True)
     order_id = serializers.IntegerField(write_only = True, required = False)
+    gift = GiftSerializer(read_only = True)
+    room = RoomSerializer(read_only = True)
+    room_id = serializers.IntegerField(write_only = True, required = False)
 
     class Meta:
         fields = (
             'id', 'invoice_type', 'give_amount', 'reason', 'order', 'giver', 'taker', 
-            'take_amount', 'updated_at', 'giver_id', 'taker_id', 'details', 'order_id')
+            'take_amount', 'updated_at', 'giver_id', 'taker_id', 'details', 'order_id', 'gift',
+            'room', 'room_id')
         model = Invoice
         extra_kwargs = {
             'reason': { 'allow_blank': True },

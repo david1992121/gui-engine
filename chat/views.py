@@ -187,14 +187,14 @@ def message_list(request, room_id):
                         self_message.save()
 
                         # give and take gift point
-                        Invoice.objects.create(invoice_type = "GIFT", give_amount = gift.point, giver = request.user)
+                        Invoice.objects.create(invoice_type = "GIFT", give_amount = gift.point, giver = request.user, gift = gift, room = room)
                         request.user.point -= gift.point
                         request.user.point_used += gift.point
                         request.user.save()
 
                         for user in room.users.all():
                             if user.id != request.user.id:
-                                Invoice.objects.create(invoice_type = "GIFT", take_amount = gift.point, taker = user)
+                                Invoice.objects.create(invoice_type = "GIFT", take_amount = gift.point, taker = user, gift = gift, room = room)
                                 user.point += gift.point
                                 user.save()
                     except:
