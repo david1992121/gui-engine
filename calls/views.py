@@ -226,7 +226,7 @@ def get_ranking(request):
     range = int(request.GET.get('range', '3'))
 
     # user type
-    query_set = Member.objects
+    query_set = Member.objects.filter(setting__ranking_display = True)
     if user_type == "false":
         query_set = query_set.filter(role = 1, is_active = True)
     else:
@@ -286,7 +286,7 @@ def get_ranking(request):
                 overall_points = Sum('took__take_amount', filter=time_filter)
             ).order_by('-overall_points', '-call_times')
     
-    return Response(MainInfoSerializer(query_set, many = True).data)
+    return Response(MainInfoSerializer(query_set[:10], many = True).data)
 
 @api_view(['POST'])
 @permission_classes([IsAdminPermission])
