@@ -194,7 +194,7 @@ class EmailRegisterView(APIView):
                 if Member.objects.filter(inviter_code = inviter_code).count() == 0:
                     return Response(status = status.HTTP_400_BAD_REQUEST)
 
-            user, is_created = Member.all_objects.filter(email=email)
+            user, is_created = Member.all_objects.get_or_create(email=email)
             if not is_created:
                 if user.deleted_at == None:
                     return Response({
