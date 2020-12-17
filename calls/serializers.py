@@ -83,20 +83,22 @@ class OrderSerializer(serializers.ModelSerializer):
             new_order.situations.set(situation_ids)
         if location_id > 0:
             new_order.location = Location.objects.get(pk = location_id)
-        
-        cur_time = timezone.now()
-        new_order.collect_started_at = cur_time
-        new_order.collect_ended_at = cur_time + timedelta(minutes=15)
-        
+
+        # ended predict
+        new_order.meet_time_iso = meet_time_iso
+        new_order.ended_predict = meet_time_iso + timedelta(hours=new_order.period)
+
+        # set collect started at and collect ended at
+        if new_order.collect_started_at == None:
+            cur_time = timezone.now()
+            new_order.collect_started_at = cur_time
+        if new_order.collect_ended_at == None:
+            new_order.collect_ended_at = max(new_order.collect_started_at + timedelta(minutes = 15), new_order.meet_time_iso - timedelta(minutes = 30))
+                
         # get cost plan
         if new_order.cost_plan != None:
             new_order.cost_value = new_order.cost_plan.cost
             new_order.cost_extended = new_order.cost_plan.extend_cost
-
-        # ended predict
-        # meet_time = parse(meet_time_iso)
-        new_order.meet_time_iso = meet_time_iso
-        new_order.ended_predict = meet_time_iso + timedelta(hours=new_order.period)
 
         new_order.night_started_at = "00:00"
         new_order.night_ended_at = "06:00"
