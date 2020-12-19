@@ -221,10 +221,11 @@ def change_password(request):
         new_pwd = input_data.get('new', "")
         confirm_pwd = input_data.get('confirm', "")
         user = request.user
-        if old_pwd != "":
+        if old_pwd != "" or new_pwd != confirm_pwd:
             if not user.check_password(old_pwd):
                 return Response(status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_pwd)
+        user.save()
         return Response(status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -267,8 +268,8 @@ class ProfileView(APIView):
         user = request.user
         if serializer.is_valid():
             new_nickname = request.data.get('nickname', "")
-            if Member.objects.exclude(id=user.id).filter(nickname=new_nickname).count() > 0:
-                return Response(status=status.HTTP_409_CONFLICT)
+            # if Member.objects.exclude(id=user.id).filter(nickname=new_nickname).count() > 0:
+            #     return Response(status=status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
             return Response(MemberSerializer(updated_user).data, status=status.HTTP_200_OK)
         else:
@@ -991,3 +992,16 @@ def export_pdf(request):
     filename = export_pdf(seed, date, name_array, number, no, point)
     
     return Response(filename)
+
+@api_view(['GET'])
+@permission_classes([IsAdminPermission])
+def update_admin_profile(request):
+    nickname = request.GET.get('nickname', '')
+    if nickname.strip() != "":
+        new_nickname = nickname.strip()
+        admin = request.user
+        admin.nickname = new_nickname
+        admin.save()
+        return Response(MemberSerializer(admin).data, status = status.HTTP_200_OK)
+    else:
+        return Response(status = status.HTTP_400_BAD_REQUEST)

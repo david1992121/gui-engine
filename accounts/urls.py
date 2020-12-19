@@ -99,4 +99,7 @@ urlpatterns = [
 
     # make receipt pdf
     path('point/pdf', export_pdf, name = "export_pdf"),
+
+    # profile change nickname
+    path('profile', update_admin_profile, name = "update_admin_profile"),
 ]

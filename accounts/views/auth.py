@@ -85,7 +85,10 @@ class LineLoginView(APIView):
                 decoded_payload = jwt.decode(id_token, None, None)
                 line_id = decoded_payload['sub']
                 line_email = decoded_payload['email']
-                role = int(decoded_payload['nonce'])
+                nonceData = json.loads(decoded_payload['nonce'])
+
+                role = nonceData["role"]
+                inviter_code = nonceData["inviter_code"]
 
                 user_obj, is_created = Member.all_objects.get_or_create(
                     email=line_email
@@ -97,6 +100,7 @@ class LineLoginView(APIView):
                     new_code = getInviterCode()
                     user_obj.inviter_code = new_code
                     if inviter_code != "":
+                        print("set introducer")
                         user_obj.introducer = Member.objects.get(inviter_code=inviter_code)
                         
 
@@ -326,8 +330,8 @@ def resend_email(request):
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
-    target_link = "{}/account/result?type=reset_password&token={}".format(
-        settings.CLIENT_URL, reset_password_token.key)
+    target_link = "{}/account/result?type=reset_password&email={}&token={}".format(
+        settings.CLIENT_URL, reset_password_token.user.email, reset_password_token.key)
     html_template = render_to_string(
         "emails/password_forgotten.html", {'link': target_link})
 

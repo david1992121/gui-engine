@@ -89,7 +89,7 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
             credentials['email'] = user_obj.email
 
             if all(credentials.values()):
-                if user_obj.check_password(attrs.get('password')):
+                if user_obj.check_password(attrs.get('password')):                    
                     if not user_obj.is_verified:
                         msg = "You did not verify your email address yet"
                         raise serializers.ValidationError(msg)
