@@ -56,6 +56,9 @@ class BannerSerializer(serializers.ModelSerializer):
         model = Banner
 
     def create(self, validated_data):
+        validated_data.pop('delete_banner')
+        validated_data.pop('delete_main')
+        
         banner_img = None
         main_img = None
         if "banner_image" in validated_data.keys():
@@ -71,7 +74,6 @@ class BannerSerializer(serializers.ModelSerializer):
         return new_banner
 
     def update(self, instance, validated_data):
-        print(validated_data)
         banner_img = None
         main_img = None
         delete_banner = validated_data['delete_banner']

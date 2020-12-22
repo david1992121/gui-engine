@@ -19,7 +19,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from accounts.serializers.member import *
 from accounts.serializers.auth import MemberSerializer, MediaImageSerializer, DetailSerializer, TransferInfoSerializer
 from accounts.models import Member, Tweet, FavoriteTweet, Detail, TransferInfo, Friendship
-from accounts.utils import send_present, send_user
+from accounts.utils import get_edge_time, send_present, send_user
 from chat.models import Room, Message
 from calls.models import Invoice
 from calls.axes import create_axes_payment
@@ -294,8 +294,10 @@ class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateMo
         return self.update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.username = "user_{}".format(user.id)
+        user.save()
         return self.destroy(request, *args, **kwargs)
-
 
 class MemberView(APIView):
     permission_classes = [IsAdminPermission]
@@ -464,6 +466,9 @@ class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins
         return self.update(request, *args, **kwargs)
     
     def delete(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.username = "user_{}".format(user.id)
+        user.save()
         return self.destroy(request, *args, **kwargs)
 
 class MemberDetailView(APIView):
@@ -687,17 +692,15 @@ class TransferView(generics.GenericAPIView):
 
             # transfer from
             date_from = query_obj.get("from", "")
-            if date_from != "":
-                from_date = parse(date_from)
+            if date_from != "":                
                 query_set = query_set.filter(
-                    created_at__date__gte=from_date.strftime("%Y-%m-%d"))
+                    created_at__gte=get_edge_time(date_from, "from"))
 
             # transfer to
             date_to = query_obj.get("to", "")
             if date_to != "":
-                to_date = parse(date_to)
                 query_set = query_set.filter(
-                    created_at__date__lte=to_date.strftime("%Y-%m-%d"))
+                    created_at__lt=get_edge_time(date_to, "to"))
 
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-created_at'), 10)
@@ -997,10 +1000,31 @@ def export_pdf(request):
 @permission_classes([IsAdminPermission])
 def update_admin_profile(request):
     nickname = request.GET.get('nickname', '')
-    if nickname.strip() != "":
+    password = request.GET.get('password', '')
+    old_password = request.GET.get('old_password', '')
+    username = request.GET.get('username', '')
+    point = int(request.GET.get('point', 0))
+    admin = request.user
+
+    if old_password == "":
+        return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+    else:
+        if not admin.check_password(old_password):
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+
+    if password != "":
+        admin.set_password(password)    
+
+    if nickname.strip() != "" and username.strip() != "" and point >= 0:
         new_nickname = nickname.strip()
-        admin = request.user
+        new_username = username.strip()
+
+        if Member.all_objects.exclude(id = admin.id).filter(username = new_username).count() > 0:
+            return Response(status = status.HTTP_409_CONFLICT)            
+
         admin.nickname = new_nickname
+        admin.username = new_username
+        admin.point = point
         admin.save()
         return Response(MemberSerializer(admin).data, status = status.HTTP_200_OK)
     else:

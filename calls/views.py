@@ -19,7 +19,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import *
-from .utils import send_call, send_applier, send_call_type, send_room_event
+from .utils import get_edge_time, send_call, send_applier, send_call_type, send_room_event
 from chat.utils import create_room, send_notice_to_room, send_super_message, send_room_to_users, send_message_to_user
 from chat.models import Room, Message
 from chat.serializers import MessageSerializer
@@ -46,7 +46,7 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
             # location
             location_val = query_obj.get("location_id", 0)
             if location_val > 0:
-                query_set = query_set.filter(location_id=location_val)
+                query_set = query_set.filter(Q(order__parent_location__id = location_val) | Q(gift__location__id = location_val))
 
             # invoice type
             invoice_type = query_obj.get("invoice_type", "")
@@ -66,16 +66,14 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
                         # transfer from
             date_from = query_obj.get("from", "")
             if date_from != "":
-                from_date = parse(date_from)
                 query_set = query_set.filter(
-                    created_at__date__gte=from_date.strftime("%Y-%m-%d"))
+                    created_at__gte = get_edge_time(date_from, "from"))
 
             # transfer to
             date_to = query_obj.get("to", "")
             if date_to != "":
-                to_date = parse(date_to)
                 query_set = query_set.filter(
-                    created_at__date__lte=to_date.strftime("%Y-%m-%d"))
+                    created_at__lt = get_edge_time(date_to, "to"))
 
         total = query_set.count()
         paginator = Paginator(query_set.order_by('-created_at'), 10)
@@ -187,18 +185,18 @@ def get_rank_users(request):
 
     if user_type == "guest":
         if date_from != "":
-            time_filter &= Q(gave__created_at__date__gte = parse(date_from).strftime("%Y-%m-%d"))
+            time_filter &= Q(gave__created_at__gte = get_edge_time(date_from, "from"))
         if date_to != "":
-            time_filter &= Q(gave__created_at__date__lte = parse(date_to).strftime("%Y-%m-%d"))
+            time_filter &= Q(gave__created_at__lt = get_edge_time(date_to, "to"))
         
         query_set = query_set.annotate(
             overall_points = Sum('gave__give_amount', filter=time_filter)
         ).order_by('-overall_points', '-call_times')
     else:        
         if date_from != "":
-            time_filter &= Q(took__created_at__date__gte = parse(date_from).strftime("%Y-%m-%d"))
+            time_filter &= Q(took__created_at__gte = get_edge_time(date_from, "from"))
         if date_to != "":
-            time_filter &= Q(took__created_at__date__lte = parse(date_to).strftime("%Y-%m-%d"))
+            time_filter &= Q(took__created_at__lt = get_edge_time(date_to, "to"))
         
         query_set = query_set.annotate(
             overall_points = Sum('took__take_amount', filter=time_filter)

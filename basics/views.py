@@ -234,7 +234,7 @@ class GiftView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
     def get(self, request, *args, **kwargs):
         is_shown = request.GET.get('is_shown', "")
         if is_shown != "":
-            queryset = Gift.objects.filter(is_shown=True, image__isnull=False)
+            queryset = Gift.objects.filter(is_shown=True, image__isnull=False, location__isnull=False)
             return Response(GiftSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
         else:
             return self.list(request, *args, **kwargs)
@@ -264,7 +264,7 @@ class CostPlanView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Update
     def get(self, request, *args, **kwargs):
         location_id = int(request.GET.get('location', "0"))
         if location_id > 0:
-            queryset = CostPlan.objects.filter(location_id = location_id)
+            queryset = CostPlan.objects.filter(location_id = location_id).order_by('cost')
             return Response(CostplanSerializer(queryset, many = True).data, status = status.HTTP_200_OK)
         else:
             return self.list(request, *args, **kwargs)
