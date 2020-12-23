@@ -24,6 +24,7 @@ def make_page(seed, date, name, no, point):
     # create a new PDF with Reportlab
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
+    can.setFont("Hebrew", 12)
     can.drawString(180, 106, seed)
     can.drawString(480, 210, str(no))
     can.drawString(480, 183, date)
@@ -45,7 +46,7 @@ def make_page(seed, date, name, no, point):
 
         can.drawString(540, 32, receipt_data.charger)
 
-    can.setFont("Helvetica", 15)
+    can.setFont("Hebrew", 15)
     can.drawString(280, 210, name)
     can.save()
 
