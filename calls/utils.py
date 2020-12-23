@@ -31,11 +31,11 @@ def send_room_event(event, room):
             { "type": "room_event.send", "content": event}
         )
 
-def send_applier(order_id, room_id, guest_id):
+def send_applier(order_id, room_id, guest_id, is_exceed = False):
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
         "chat_{}".format(guest_id),
-        { "type": "applier.send", "content": { "order": order_id, "room": room_id } }
+        { "type": "applier.send", "content": { "order": order_id, "room": room_id, "exceed": is_exceed } }
     )
 
 def get_edge_time(cur_date_str, cur_type):

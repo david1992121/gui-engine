@@ -182,7 +182,8 @@ class MemberSerializer(serializers.ModelSerializer):
             'status',
             'left_at',
             'cast_class',
-            'guest_level'
+            'guest_level',
+            'back_ratio'
         )
         model = Member
 

@@ -59,7 +59,7 @@ def make_page(seed, date, name, no, point):
 
     return page
 
-def export_pdf(seed, date, name_array, number, no, point):
+def export_pdf(seed, date, name_array, number, no, point, user_id):
     per_point = ceil(point / number * 1.1)
     output = PdfFileWriter()
 
@@ -74,9 +74,8 @@ def export_pdf(seed, date, name_array, number, no, point):
         output.addPage(page)
     
     # finally, write "output" to a real file
-    file_name = '領収書_{}_{}.pdf'.format(no, datetime.now().strftime('%Y%m%d%H%M%S'))
+    file_name = '領収書_{}_{}.pdf'.format(no, user_id)
     receipt_file = os.path.join(settings.BASE_DIR, "static/pdf/{}".format(file_name))
-    print(settings.BASE_DIR)
 
     if os.path.exists(receipt_file):
         os.remove(receipt_file)

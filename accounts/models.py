@@ -181,7 +181,7 @@ class Member(SoftDeletionModel):
 
     ##### cast info #####
     point_half = models.IntegerField('30分あたりのポイント', default=3000, validators=[
-                                     MaxValueValidator(100000),  MinValueValidator(1000)])
+                                     MaxValueValidator(100000),  MinValueValidator(0)])
     video_point_half = models.IntegerField('ビデオオーダー料金', default=3000, validators=[
                                            MaxValueValidator(100000),  MinValueValidator(1000)])
     is_applied = models.BooleanField('キャスト応募', default=False)

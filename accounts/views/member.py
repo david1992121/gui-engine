@@ -273,6 +273,7 @@ class ProfileView(APIView):
             updated_user = serializer.save()
             return Response(MemberSerializer(updated_user).data, status=status.HTTP_200_OK)
         else:
+            print(serializer.errors)
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -400,9 +401,9 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                 is_applied = query_obj.get("is_applied", -1)
                 if is_applied > -1:
                     if is_applied == 0:
-                        query_set = query_set.filter(role=0)
+                        query_set = query_set.filter(role = 0)
                     else:
-                        query_set = query_set.filter(role=10, is_applied = True)
+                        query_set = query_set.filter(role = 10, is_applied = True)
 
                 # register status
                 reg_status = query_obj.get("reg_status", -1)
@@ -972,14 +973,10 @@ def buy_point(request):
 @permission_classes([IsGuestPermission])
 def export_pdf(request):
     from .pdf.export import export_pdf
-    from django.core.files.storage import FileSystemStorage
-    from os.path import join
-    from django.http import HttpResponse
-    from django.utils.http import urlquote
 
     pdf_info = request.GET.get("info")
     query_obj = json.loads(pdf_info)
-    print(query_obj)
+    # print(query_obj)
     
     seed = query_obj.get("seed", "")
     date = query_obj.get("date", "")
@@ -992,7 +989,7 @@ def export_pdf(request):
     except Invoice.DoesNotExist:
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
-    filename = export_pdf(seed, date, name_array, number, no, point)
+    filename = export_pdf(seed, date, name_array, number, no, point, request.user.id)
     
     return Response(filename)
 

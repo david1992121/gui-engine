@@ -79,7 +79,7 @@ def call_control():
                 room_id = create_room(order_item, list(order_item.joins.values_list('user_id', flat = True)))
 
                 # notify guest
-                send_applier(order_item.id, room_id, order_item.user_id)
+                send_applier(order_item.id, room_id, order_item.user_id, True)
         
 @shared_task
 def call_notify():

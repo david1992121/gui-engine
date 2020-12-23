@@ -378,7 +378,10 @@ class OrderView(generics.GenericAPIView):
                 query_set = query_set.filter(location_id = area_id)
 
             if status_val > -1:
-                query_set = query_set.filter(status = status_val)
+                if status_val != 3:
+                    query_set = query_set.filter(status = status_val)
+                else:
+                    query_set = query_set.filter(Q(status = 3) | Q(status = 4))
             
             if location_id > 0:
                 query_set = query_set.filter(cost_plan_id = cost_plan_id)

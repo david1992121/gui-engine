@@ -76,7 +76,8 @@ class MainInfoSerializer(serializers.ModelSerializer):
             'role',
             'point',
             'location',
-            'overall_points'
+            'overall_points',
+            'point_half'
         )
         model = Member
 
