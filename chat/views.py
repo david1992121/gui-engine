@@ -122,6 +122,8 @@ def room_detail(request, room_id):
 
     try:
         room = Room.objects.get(pk=room_id)
+        if room.users.filter(id = request.user.id).count() == 0:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
     except Room.DoesNotExist:
         return Response(
             status=status.HTTP_404_NOT_FOUND
