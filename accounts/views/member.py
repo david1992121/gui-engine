@@ -75,10 +75,15 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
     pagination_class = TweetPagination
 
     def get_queryset(self):
+        tweet_type = self.request.GET.get('tweet_type', "")
+        
         if self.request.user.role == 1:
             return Tweet.objects.filter(category=0).order_by("-created_at")
         else:
-            return Tweet.objects.order_by("-created_at")
+            if tweet_type == "cast":
+                return Tweet.objects.filter(user__role = 0).order_by("-created_at")
+            else:
+                return Tweet.objects.order_by("-created_at")
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
