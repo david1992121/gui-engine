@@ -34,7 +34,7 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
         cur_request = request.query_params.get("query", "")
 
         # user type
-        query_set = Invoice.objects
+        query_set = Invoice.objects.exclude(invoice_type = "ADMIN")
 
         # query
         if cur_request != "":
@@ -127,10 +127,10 @@ class DetailInvoiceView(mixins.CreateModelMixin, generics.GenericAPIView):
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
 def get_invoice_total(request):
-    buy_point = Invoice.objects.filter(
+    buy_point = Invoice.objects.exclude(invoice_type = "ADMIN").filter(
         Q(invoice_type = 'BUY') | Q(invoice_type = 'CHARGE') | Q(invoice_type = 'AURO CHARGE')
     ).aggregate(Sum('take_amount'))['take_amount__sum']
-    normal_invoices = Invoice.objects.exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO_CHARGE')
+    normal_invoices = Invoice.objects.exclude(invoice_type = 'ADMIN').exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO_CHARGE')
     use_point = normal_invoices.aggregate(Sum('give_amount'))['give_amount__sum']
     pay_point = normal_invoices.aggregate(Sum('take_amount'))['take_amount__sum']
 
@@ -489,7 +489,7 @@ class OrderDetailView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generi
 def cancel_order(request, id):
     cur_admin = request.user
     cur_order = Order.objects.get(pk = id)
-    if cur_admin.location_id != cur_order.parent_location_id:
+    if not cur_admin.is_superuser and cur_admin.location_id != cur_order.parent_location_id:
         return Response(status = status.HTTP_403_FORBIDDEN)
     else:
         if cur_order.status != 9:
