@@ -503,7 +503,7 @@ def cancel_order(request, id):
             ongoingJoin.save()
 
         # update room and send event
-        message = "管理画面よりオーダーをキャンセルにいたしました。\n お問い合わせは運営局へご連絡ください。"
+        message = "管理画面よりオーダーがキャンセルされました。\n お問い合わせは運営局へご連絡ください。"
         if cur_order.room != None:
             # if cur_order.room.is_group:
             #     cur_order.room.status = 3
@@ -515,6 +515,8 @@ def cancel_order(request, id):
 
             # send room event
             send_room_event("ended", cur_order.room)
+        else:
+            send_super_message("system", cur_order.user.id, message)
 
         cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True))
         send_call(cur_order, cast_ids, "delete")
