@@ -21,7 +21,7 @@ from accounts.models import Member
 from accounts.serializers.member import UserSerializer
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 
-from .utils import send_super_message, send_super_room, send_message_to_user
+from .utils import send_super_message, send_super_room, send_message_to_user, send_room_to_users
 
 # def index(request):
 #     return render(request, 'chat/index.html', {})
@@ -652,3 +652,31 @@ class RoomMessageView(APIView):
         messages = paginator.page(page)
 
         return Response({ "total": total, "results": MessageSerializer(messages, many=True).data }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([IsSuperuserPermission])
+def delete_member(request, pk, id):
+    print(pk, id)
+    try:
+        room = Room.objects.get(pk = pk)        
+        deleted_user = Member.objects.get(pk = id)
+        room.users.remove(deleted_user)
+
+        # send room delete
+        send_room_to_users(room, [deleted_user.id], "delete")
+
+        message = "残念ですが管理画面よりチャットルーム「{0}」から却下されました。\
+                是非またオーダーにエントリー頂けますようお願いいたします!".format(room.title)
+        send_super_message("system", deleted_user.id, message)
+
+        # order setting
+        order = room.orders.first()
+        if order != None:
+            order.joins.filter(user = deleted_user).delete()
+            order.person = order.person - 1
+            order.save()
+    except Exception as e:
+        print(e)
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+    return Response(status = status.HTTP_200_OK)

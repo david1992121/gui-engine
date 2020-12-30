@@ -42,4 +42,5 @@ urlpatterns = [
     path('admin/rooms/<int:pk>', RoomDetailView.as_view(), name = "admin_detail_room"),
     path('admin/rooms/<int:pk>/messages', RoomMessageView.as_view(), name = "admin_room_messages"),
     path('admin/rooms/<int:pk>/users', add_member, name = "add_member"),
+    path('admin/rooms/<int:pk>/users/<int:id>', delete_member, name = "delete_member"),
 ]
