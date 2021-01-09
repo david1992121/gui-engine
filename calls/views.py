@@ -92,13 +92,16 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
-class InvoiceDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
+class InvoiceDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InvoiceSerializer
     queryset = Invoice.objects.all()
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 class UserInvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]

@@ -49,7 +49,8 @@ class LocationView(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Dest
             request.data['parent'] = request.data['parent']['id']
         return self.create(request, *args, **kwargs)
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request, pk, *args, **kwargs):
+        Location.objects.filter(parent_id = pk).delete()
         return self.destroy(request, *args, **kwargs)
     
     def put(self, request, *args, **kwargs):
