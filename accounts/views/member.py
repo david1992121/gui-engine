@@ -1041,7 +1041,7 @@ def check_user_exist(request):
     if Member.objects.exclude(id = user_id).filter(email = user_email).count() > 0:
         return Response({"success": False, "deleted": False})
     else:
-        if Member.all_objects.filter(email = user_email).count() > 0:
+        if Member.all_objects.exclude(id = user_id).filter(email = user_email).count() > 0:
             return Response({"success": False, "deleted": False})
     
     return Response({"success": True})
