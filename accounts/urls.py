@@ -18,6 +18,7 @@ urlpatterns = [
     
     path('users/toggle_active/<int:id>', toggle_active, name = "user_active_toggle"),
     path('users/to_cast/<int:id>', to_cast, name = "user_to_cast"),
+    path('users/check', check_user_exist, name = "check_user_exist"),
 
     # user thumbnails
     path('thumbnails', add_thumbnails, name = "user_add_thumbnail"),

@@ -434,7 +434,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
 
             # user_id
             user_id = query_obj.get("user_id", 0)
-            if user_id > 0:
+            if user_id and user_id > 0:
                 query_set = query_set.filter(pk=user_id)
 
             # nickname
@@ -448,7 +448,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
 
             # introducer id
             introducer_id = query_obj.get("introducer_id", 0)
-            if introducer_id > 0:
+            if introducer_id and introducer_id > 0:
                 query_set = query_set.filter(introducer_id=introducer_id)
 
         total = query_set.count()
@@ -1031,3 +1031,17 @@ def update_admin_profile(request):
         return Response(MemberSerializer(admin).data, status = status.HTTP_200_OK)
     else:
         return Response(status = status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsSuperuserPermission])
+def check_user_exist(request):
+    user_id = int(request.query_params.get('id'))
+    user_email = request.query_params.get('email')
+
+    if Member.objects.exclude(user_id = user_id).filter(email = user_email).count() > 0:
+        return Response({"success": False, "deleted": False})
+    else:
+        if Member.all_objects.filter(email = user_email).count() > 0:
+            return Response({"success": False, "deleted": False})
+    
+    return Response({"success": True})

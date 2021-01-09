@@ -57,10 +57,10 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
             point_user_id = query_obj.get("point_user_id", 0)
             point_receiver_id = query_obj.get("point_receiver_id", 0)
 
-            if point_user_id > 0:
+            if point_user_id and point_user_id > 0:
                 query_set = query_set.filter(giver_id = point_user_id)
             else:
-                if point_receiver_id > 0:
+                if point_receiver_id and point_receiver_id > 0:
                     query_set = query_set.filter(taker_id = point_receiver_id)
 
                         # transfer from
@@ -386,8 +386,9 @@ class OrderView(generics.GenericAPIView):
             if location_id > 0:
                 query_set = query_set.filter(cost_plan_id = cost_plan_id)
             
-            if guest_id > 0:                
-                query_set = query_set.filter(user_id = guest_id)
+            if guest_id != None:
+                if guest_id > 0:                
+                    query_set = query_set.filter(user_id = guest_id)
 
         # sort order
         sort_field = request.GET.get("sortField", "")

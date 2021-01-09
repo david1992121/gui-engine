@@ -501,7 +501,9 @@ class MessageView(generics.GenericAPIView):
             room_id = input_data.get('room_id', 0)
             sender_id = input_data.get('sender_id', 0)
             content = input_data.get('content', "")
-            media_ids = input_data.pop('media_ids')
+            media_ids = []
+            if 'media_ids' in input_data:
+                media_ids = input_data.get("media_ids")
 
             is_read = input_data.get("is_read", False)
             if room_id > 0 and sender_id > 0:
@@ -510,7 +512,7 @@ class MessageView(generics.GenericAPIView):
                     self_message = send_super_room(room_id, sender_id, content, media_ids, is_read)                    
                     return Response(MessageSerializer(self_message).data, status = status.HTTP_200_OK)
                 except Room.DoesNotExist:
-                    pass
+                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
 
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
