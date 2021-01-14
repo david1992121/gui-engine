@@ -21,7 +21,7 @@ from accounts.models import Member
 from accounts.serializers.member import UserSerializer
 from accounts.views.member import IsAdminPermission, IsSuperuserPermission
 
-from .utils import send_super_message, send_super_room, send_message_to_user, send_room_to_users
+from .utils import send_super_message, send_super_room, send_message_to_user, send_room_to_users, send_notice_to_room
 
 # def index(request):
 #     return render(request, 'chat/index.html', {})
@@ -438,7 +438,7 @@ def send_bulk_messages(request):
         media_ids = input_data.pop('media_ids')
 
         if len(receiver_ids) == 0:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
 
         sender = request.user        
 
@@ -619,7 +619,17 @@ class RoomView(mixins.CreateModelMixin, generics.GenericAPIView):
         return Response({"total": total, "results": RoomSerializer(rooms, many=True).data}, status=status.HTTP_200_OK)
     
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        room_serializer = self.get_serializer(data = request.data)
+        if room_serializer.is_valid():
+
+            new_room = room_serializer.save()
+            not_admin_users = list(new_room.users.filter(role__gte = 0).values_list("id", flat = True))
+            
+            send_room_to_users(new_room, not_admin_users, "create")
+            send_notice_to_room(new_room, new_room.last_message, False)            
+            return Response(RoomSerializer(new_room).data)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class RoomDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]

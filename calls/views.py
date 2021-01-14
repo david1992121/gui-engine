@@ -538,10 +538,9 @@ def get_order_counts(request):
     if is_normal == 1:
         status_title = [
             'Collecting customers', 'Selecting Cast Name',
-            'Cast Confirmed', 'Meeting Finished', 'Finished(Not Paid Yet)',
-            'Pay Finished', 'Cancel with not enough casts'
+            'Cast Confirmed', 'Meeting Finished', 'Pay Finished', 'Cancel with not enough casts'
         ]
-        status_numbers = [0, 1, 3, 5, 6, 7, 8]
+        status_numbers = [0, 1, 3, 5, 7, 8]
         for index, status_number in enumerate(status_numbers):
             if status_number != 3:
                 orders_count = Order.objects.filter(status = status_number).count()
