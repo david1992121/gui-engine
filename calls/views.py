@@ -76,7 +76,20 @@ class InvoiceView(mixins.ListModelMixin, generics.GenericAPIView):
                     created_at__lt = get_edge_time(date_to, "to"))
 
         total = query_set.count()
-        paginator = Paginator(query_set.order_by('-created_at'), 10)
+
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        print(sort_field, sort_order)
+        if sort_field != "null" and sort_field != "":
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+
+        paginator = Paginator(query_set, 10)
         invoices = paginator.page(page)
 
         return Response({"total": total, "results": InvoiceSerializer(invoices, many=True).data}, status=status.HTTP_200_OK)
