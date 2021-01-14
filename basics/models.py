@@ -86,10 +86,10 @@ class Choice(models.Model):
 
 class ReceiptSetting(models.Model):
     company_name = models.CharField('会社名', max_length = 100)
-    postal_code = models.CharField('郵便', max_length=8, validators=[RegexValidator(r'^\d\d\d-\d\d\d\d$')])
+    postal_code = models.CharField('郵便', max_length=8) # validators=[RegexValidator(r'^\d\d\d-\d\d\d\d$')]
     address = models.CharField('住所', max_length=100)
     building = models.CharField('番地・建物名', max_length=100)
-    phone_number = models.CharField('電話番号', max_length=15, validators=[RegexValidator(r'^\d\d-\d\d\d\d-\d\d\d\d$')])
+    phone_number = models.CharField('電話番号', max_length=15) # validators=[RegexValidator(r'^\d\d-\d\d\d\d-\d\d\d\d$')]
     charger = models.CharField('担当者名', max_length=20)
 
 class Banner(models.Model):
