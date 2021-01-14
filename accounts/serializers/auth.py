@@ -138,10 +138,14 @@ class IntroducerSerializer(serializers.ModelSerializer):
         model = Member
 
 class TransferInfoSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField(write_only = True)
+    user_id = serializers.IntegerField(write_only = True)    
     class Meta:
         fields = ('id', 'bank_name', 'bank_no', 'site_name', 'site_no', 'account_no', 'account_cat', 'transfer_name', 'user_id')
         model = TransferInfo
+        extra_kwargs = {
+            'bank_no': { 'allow_blank' : True },
+            'site_no': { 'allow_blank' : True }
+        }
     
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)

@@ -237,6 +237,7 @@ def change_password(request):
 
 
 class DetailView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = DetailSerializer(data=request.data, partial=True)
@@ -250,12 +251,15 @@ class DetailView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk):
-        detail_obj = Detail.objects.get(pk=pk)
+        detail_obj = Detail.objects.get(pk = pk)
         serializer = DetailSerializer(
             detail_obj, data=request.data, partial=True)
         if serializer.is_valid():
-            print(serializer.validated_data)
+            # print(serializer.validated_data)
             detail_obj = serializer.save()
+            if Member.objects.filter(detail_id = detail_obj.id).count() > 0:
+                user = Member.objects.filter(detail_id = detail_obj.id).first()
+                send_user(user)
             # user = request.user
             # user.detail = detail_obj
             # user.save()
@@ -452,7 +456,20 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                 query_set = query_set.filter(introducer_id=introducer_id)
 
         total = query_set.count()
-        paginator = Paginator(query_set.order_by('-created_at'), 10)
+
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        print(sort_field, sort_order)
+        if sort_field != "null" and sort_field != "":
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+
+        paginator = Paginator(query_set, 10)
         members = paginator.page(page)
 
         return Response({"total": total, "results": UserSerializer(members, many=True).data}, status=status.HTTP_200_OK)
@@ -469,7 +486,14 @@ class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins
         return self.retrieve(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        instance = self.get_object()
+        user_serializer = self.get_serializer(instance, data = request.data)
+        if user_serializer.is_valid():
+            new_user = user_serializer.save()
+            send_user(new_user)
+            return Response(UserSerializer(new_user).data)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
     
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
@@ -765,9 +789,9 @@ def proceed_transfer(request, id):
     cur_transfer.save()
 
     # cast point update
-    print(cur_transfer.user.point)
+    # print(cur_transfer.user.point)
     cur_transfer.user.point = cur_transfer.user.point - cur_transfer.point
-    print(cur_transfer.user.point)
+    # print(cur_transfer.user.point)
     cur_transfer.user.save()
     send_user(cur_transfer.user)
 

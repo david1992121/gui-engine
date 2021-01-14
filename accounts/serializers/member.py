@@ -144,7 +144,7 @@ class UserSerializer(serializers.ModelSerializer):
             'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
             'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
             'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id',
-            'cast_status', 'axes_exist', 'group_times', 'private_times', 'is_introducer'
+            'cast_status', 'axes_exist', 'group_times', 'private_times', 'is_introducer', 'left_at'
         )
         model = Member
         extra_kwargs = {
