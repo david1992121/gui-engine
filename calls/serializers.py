@@ -72,7 +72,8 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_applying(self, obj):
         return obj.joins.count()    
 
-    def create(self, validated_data):        
+    def create(self, validated_data):
+        # print(validated_data)
 
         location_id = validated_data.pop('location_id')
         situation_ids = validated_data.pop('situation_ids')
@@ -96,9 +97,9 @@ class OrderSerializer(serializers.ModelSerializer):
             new_order.collect_ended_at = max(new_order.collect_started_at + timedelta(minutes = 15), new_order.meet_time_iso - timedelta(minutes = 30))
                 
         # get cost plan
-        if new_order.cost_plan != None:
-            new_order.cost_value = new_order.cost_plan.cost
-            new_order.cost_extended = new_order.cost_plan.extend_cost
+        # if new_order.cost_plan != None:
+        #     new_order.cost_value = new_order.cost_plan.cost
+        #     new_order.cost_extended = new_order.cost_plan.extend_cost
 
         new_order.night_started_at = "00:00"
         new_order.night_ended_at = "06:00"

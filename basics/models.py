@@ -130,7 +130,10 @@ class CostPlan(models.Model):
 
     name = models.CharField('名称', max_length=100)
     location = models.ForeignKey(Location, verbose_name='支店', on_delete=models.SET_NULL, null = True)
-    cost = models.IntegerField('料金')
-    extend_cost = models.IntegerField('延長料金')
+    cost = models.IntegerField('料金', default = 0)
+    extend_cost = models.IntegerField('延長料金', default = 0)
+    is_custom = models.BooleanField('カスタム', default = False)
+    classes = models.ManyToManyField(CastClass, verbose_name = "キャスタレベル", related_name="plans")
+
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)

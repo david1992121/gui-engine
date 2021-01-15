@@ -30,8 +30,10 @@ def call_control():
                 order_item.save()
 
                 # remove the order from application list of cast page
-                user_ids = list(Member.objects.filter(location = order_item.parent_location, role = 0).values_list('id', flat = True))
-                send_call(order_item, user_ids, "delete")
+                class_ids = list(order_item.cost_plan.classes.values_list('id', flat = True))
+                cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+                # user_ids = list(Member.objects.filter(location = order_item.parent_location, role = 0).values_list('id', flat = True))
+                send_call(order_item, cast_ids, "delete")
 
                 # send super message to guest
                 send_super_message("system", order_item.user.id, message)

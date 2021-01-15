@@ -331,7 +331,8 @@ def create_order(request):
         if notify_cast > 0:
             cast_ids = []
             if notify_cast == 1:
-                cast_ids = list(Member.objects.filter(role = 0, location = order.parent_location).values_list('id', flat = True))
+                cast_class_ids = list(order.cost_plan.classes.values_list('id', flat = True))
+                cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = cast_class_ids).values_list('id', flat = True))
             else:
                 cast_ids = list(Member.objects.filter(role = 0, is_present = True).values_list('id', flat = True))
             for cast_id in cast_ids:
@@ -445,7 +446,9 @@ class OrderView(generics.GenericAPIView):
             meet_date = new_order.meet_time_iso.astimezone(pytz.timezone("Asia/Tokyo")).date()
             
             # call send
-            cast_ids = list(Member.objects.filter(location = new_order.parent_location).values_list('id', flat = True).distinct())
+            class_ids = list(new_order.cost_plan.classes.values_list('id', flat = True))
+            cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+            # cast_ids = list(Member.objects.filter(location = new_order.parent_location).values_list('id', flat = True).distinct())
             send_call(new_order, cast_ids, "create")
 
             # call type send 
@@ -492,10 +495,25 @@ class OrderDetailView(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generi
                         message = "{}の合流は終了されました。".format(ongoingJoin.user.nickname)
                         send_notice_to_room(new_order.room, message, True)
                     
-                    if new_order.room != None:                       
-
+                    if new_order.room != None:
                         # send room event
                         send_room_event("update", new_order.room)
+                
+                if new_order.status == 8:
+                    message = "管理画面よりオーダーがキャスト不足でキャンセルされました。"
+
+                    # remove the order from application list of cast page
+                    class_ids = list(new_order.cost_plan.classes.values_list('id', flat = True))
+                    cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+                    # user_ids = list(Member.objects.filter(location = new_order.parent_location, role = 0).values_list('id', flat = True))
+                    send_call(new_order, cast_ids, "delete")
+
+                    # send super message to guest
+                    send_super_message("system", new_order.user.id, message)
+
+                    if new_order.room != None:
+                        new_order.room.status = "end"
+                        new_order.room.save()
 
             return Response(OrderSerializer(new_order).data)
         else:
@@ -535,7 +553,10 @@ def cancel_order(request, id):
         else:
             send_super_message("system", cur_order.user.id, message)
 
-        cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True))
+        class_ids = list(cur_order.cost_plan.classes.values_list('id', flat = True))
+        cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+        # print("Cast ids")
+        # print(cast_ids)
         send_call(cur_order, cast_ids, "delete")
         
         join_ids = list(cur_order.joins.values_list('user_id', flat = True))
@@ -784,7 +805,8 @@ class OrderCastView(generics.GenericAPIView):
         mode = request.GET.get('mode', 'today')
         page = int(request.GET.get('page', "1"))
 
-        query_set = Order.objects.filter(parent_location = cur_user.location, is_private = False)
+        # query_set = Order.objects.filter(parent_location = cur_user.location, is_private = False)
+        query_set = Order.objects.filter(cost_plan__classes__id = cur_user.cast_class_id, is_private = False)
 
         today_date = datetime.now(pytz.timezone("Asia/Tokyo"))
         today_date = today_date.replace(hour = 0, minute = 0, second = 0, microsecond = 0)
@@ -840,7 +862,9 @@ def apply_order(request, id):
         # inform applier to casts
         cur_order = Order.objects.get(pk = id)
 
-        cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
+        class_ids = list(cur_order.cost_plan.classes.values_list('id', flat = True))
+        cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+        # cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
         send_call(cur_order, cast_ids, "update")
 
         return Response(JoinSerializer(new_join).data)
@@ -916,7 +940,9 @@ def cancel_order_apply(request):
                     cur_join.delete()
 
                     # notify to cast
-                    cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
+                    class_ids = list(cur_order.cost_plan.classes.values_list('id', flat = True))
+                    cast_ids = list(Member.objects.filter(role = 0, cast_class__id__in = class_ids).values_list('id', flat = True))
+                    # cast_ids = list(Member.objects.filter(location = cur_order.parent_location).values_list('id', flat = True).distinct())
                     send_call(cur_order, cast_ids, "update")
                 else:
                     return Response(status = status.HTTP_406_NOT_ACCEPTABLE)

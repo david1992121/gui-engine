@@ -168,12 +168,23 @@ class GiftPagination(PageNumberPagination):
 
 class CostplanSerializer(serializers.ModelSerializer):
     location = LocationSerializer(required = False)
+    classes = ClassesSerializer(many = True, read_only = True)
+    class_ids = serializers.ListField(
+        child = serializers.IntegerField(), write_only = True
+    )
 
     class Meta:
-        fields = ('id', 'name', 'location', 'cost', 'extend_cost', 'created_at', 'updated_at')
+        fields = ('id', 'name', 'location', 'cost', 'extend_cost', 'created_at', 'updated_at', 'classes', 'class_ids', 'is_custom')
         model = CostPlan
+        extra_kwargs = {
+            'cost': { 'required': False },
+            'extend_cost': { 'required': False }
+        }
 
     def create(self, validated_data):
+        # class_ids
+        class_ids = validated_data.pop("class_ids")
+
         # handle location
         location = None
         if 'location' in validated_data.keys():
@@ -182,10 +193,15 @@ class CostplanSerializer(serializers.ModelSerializer):
         new_plan = CostPlan.objects.create(**validated_data)
         if location:
             new_plan.location = location
+
+        new_plan.classes.set(class_ids)        
         new_plan.save()
         return new_plan
 
-    def update(self, instance, validated_data):       
+    def update(self, instance, validated_data):
+        # class ids
+        class_ids = validated_data.pop("class_ids")
+
         # handle location
         location = None
         if 'location' in validated_data.keys():
@@ -194,6 +210,8 @@ class CostplanSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.location = location
+        instance.classes.set(class_ids)
+
         instance.save()
         return instance
 
