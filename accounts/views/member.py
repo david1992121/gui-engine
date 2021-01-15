@@ -1,4 +1,5 @@
 import json
+from django.db.models.aggregates import Count
 import jwt
 from datetime import timedelta
 import requests
@@ -76,17 +77,38 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
 
     def get_queryset(self):
         tweet_type = self.request.GET.get('tweet_type', "")
+        tweet_queryset = Tweet.objects.annotate(heart = Count('tweet_likers'))
         
         if self.request.user.role == 1:
-            return Tweet.objects.filter(category=0).order_by("-created_at")
+            return tweet_queryset.filter(category=0)
         else:
             if tweet_type == "cast":
-                return Tweet.objects.filter(user__role = 0).order_by("-created_at")
+                return tweet_queryset.filter(user__role = 0)
             else:
-                return Tweet.objects.order_by("-created_at")
+                return tweet_queryset
 
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
+        query_set = self.get_queryset()
+
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        page = int(request.GET.get('page', "1"))
+        size = int(request.GET.get('size', "10"))
+        # print(sort_field, sort_order)
+        if sort_field != "null" and sort_field != "":            
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+        
+        total = query_set.count()
+        paginator = Paginator(query_set, size)
+        tweets = paginator.page(page)
+
+        return Response({"total": total, "results": TweetSerializer(tweets, many=True).data}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -733,7 +755,20 @@ class TransferView(generics.GenericAPIView):
                     created_at__lt=get_edge_time(date_to, "to"))
 
         total = query_set.count()
-        paginator = Paginator(query_set.order_by('-created_at'), 10)
+
+        # sort order
+        sort_field = request.GET.get("sortField", "")
+        sort_order = request.GET.get("sortOrder", "")
+        print(sort_field, sort_order)
+        if sort_field != "null" and sort_field != "":
+            if sort_order == "ascend":
+                query_set = query_set.order_by(sort_field)
+            else:
+                query_set = query_set.order_by("-{}".format(sort_field))
+        else:
+            query_set = query_set.order_by("-created_at")
+        
+        paginator = Paginator(query_set, 10)
         transfers = paginator.page(page)
 
         return Response({"total": total, "results": TransferSerializer(transfers, many=True).data}, status=status.HTTP_200_OK)

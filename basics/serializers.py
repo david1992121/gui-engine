@@ -18,12 +18,12 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class ClassesSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'color', 'point', 'updated_at')
+        fields = ('id', 'name', 'color', 'point', 'updated_at', 'order')
         model = CastClass
 
 class LevelsSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'color', 'point', 'updated_at')
+        fields = ('id', 'name', 'color', 'point', 'updated_at', 'order')
         model = GuestLevel
 
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -52,8 +52,11 @@ class BannerSerializer(serializers.ModelSerializer):
     delete_banner = serializers.BooleanField(default = False, write_only = True)
     delete_main = serializers.BooleanField(default = False, write_only = True)
     class Meta:
-        fields = ('id', 'name', 'banner_image', 'main_image', 'category', 'updated_at', 'delete_banner', 'delete_main')
+        fields = ('id', 'name', 'banner_image', 'main_image', 'category', 'created_at', 'updated_at', 'delete_banner', 'delete_main')
         model = Banner
+        extra_kwargs = {
+            'name': { 'allow_blank' : True }
+        }
 
     def create(self, validated_data):
         validated_data.pop('delete_banner')
@@ -167,7 +170,7 @@ class CostplanSerializer(serializers.ModelSerializer):
     location = LocationSerializer(required = False)
 
     class Meta:
-        fields = ('id', 'name', 'location', 'cost', 'extend_cost', 'updated_at')
+        fields = ('id', 'name', 'location', 'cost', 'extend_cost', 'created_at', 'updated_at')
         model = CostPlan
 
     def create(self, validated_data):

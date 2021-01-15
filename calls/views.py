@@ -146,7 +146,7 @@ def get_invoice_total(request):
     buy_point = Invoice.objects.exclude(invoice_type = "ADMIN").filter(
         Q(invoice_type = 'BUY') | Q(invoice_type = 'CHARGE') | Q(invoice_type = 'AURO CHARGE')
     ).aggregate(Sum('take_amount'))['take_amount__sum']
-    normal_invoices = Invoice.objects.exclude(invoice_type = 'ADMIN').exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO_CHARGE')
+    normal_invoices = Invoice.objects.exclude(invoice_type = 'ADMIN').exclude(invoice_type = 'CHARGE').exclude(invoice_type = 'BUY').exclude(invoice_type = 'AUTO')
     use_point = normal_invoices.aggregate(Sum('give_amount'))['give_amount__sum']
     pay_point = normal_invoices.aggregate(Sum('take_amount'))['take_amount__sum']
 

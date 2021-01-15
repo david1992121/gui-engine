@@ -37,6 +37,7 @@ class GuestLevel(models.Model):
     en_name = models.CharField('名前', unique=True, null = True, blank = True, max_length=190)
     point = models.IntegerField('しきい値', default=0)
     color = models.CharField('色', null = True, blank = True, max_length=190)
+    order = models.IntegerField('順序', default=0)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
     
@@ -48,6 +49,7 @@ class CastClass(models.Model):
     en_name = models.CharField('英語名前', unique=True, null = True, blank = True, max_length=190)
     color = models.CharField('色', null = True, blank = True, max_length=190)
     point = models.IntegerField('しきい値', default=0)
+    order = models.IntegerField('順序', default=0)
     created_at = models.DateTimeField('作成日時', auto_now_add = True)
     updated_at = models.DateTimeField('更新日時', auto_now = True)
 

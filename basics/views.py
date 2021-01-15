@@ -79,6 +79,9 @@ class ClassesView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             self.permission_classes = [IsAuthenticated]
         
         return super(ClassesView, self).get_permissions()
+    
+    def get_queryset(self):
+        return super().get_queryset().order_by('order')
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
