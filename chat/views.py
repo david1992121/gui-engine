@@ -197,8 +197,8 @@ def message_list(request, room_id):
 
                         for user in room.users.all():
                             if user.id != request.user.id:
-                                Invoice.objects.create(invoice_type = "GIFT", take_amount = gift.point, taker = user, gift = gift, room = room)
-                                user.point += gift.point
+                                Invoice.objects.create(invoice_type = "GIFT", take_amount = gift.back, taker = user, gift = gift, room = room)
+                                user.point += gift.back
                                 user.save()
                     except:
                         pass
