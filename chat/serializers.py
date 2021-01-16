@@ -126,17 +126,32 @@ class RoomSerializer(serializers.ModelSerializer):
         
         return room
 
-# class SuggestSerializer(serializers.ModelSerializer):
-#     address = LocationSerializer(read_only = True)
-#     address_id = serializers.IntegerField(write_only = True)
-#     room_id = serializers.IntegerField(write_only = True)
-#     target = MainInfoSerializer(read_only = True)
-#     user = MainInfoSerializer(read_only = True)
+    def update(self, instance, validated_data):
+        user_ids = validated_data.pop('user_ids')
+
+        # check if room already exists
+        queryset = Room.objects.annotate(count = Count('users')).exclude(id = instance.id)
+        room_type = validated_data['room_type']
+
+        if room_type == "private" or room_type == "random":
+            queryset = queryset.filter(count = len(user_ids))
+            for user_id in user_ids:
+                queryset = queryset.filter(users__pk = user_id)
+            queryset = queryset.filter(title = validated_data['title'], room_type = room_type)
         
-#     class Meta:
-#         model = Suggestion
-#         fields = ('id', 'address', 'address_id', 'meet_at', 'period', 'point_half', 
-#             'is_cancelled', 'room_id', 'user', 'target', 'is_replied')
+        elif room_type == "system" or room_type == "admin":
+            queryset = queryset.filter(count = 2).filter(users__pk = user_ids[0]).filter(
+                users__pk = Member.objects.get(is_superuser = True, username = room_type
+            ).id).filter(room_type = room_type)
+        if queryset.count() > 0:
+            raise serializers.ValidationError({'room': 'Room already exists'})        
+
+        instance.users.set(user_ids)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        return instance
 
 class MessageSerializer(serializers.ModelSerializer):
     """

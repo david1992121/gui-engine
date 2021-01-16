@@ -10,6 +10,7 @@ from rest_framework import generics, mixins, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 
 from .models import Notice, Room, Message, AdminNotice
@@ -629,14 +630,65 @@ class RoomView(mixins.CreateModelMixin, generics.GenericAPIView):
             send_notice_to_room(new_room, new_room.last_message, False)            
             return Response(RoomSerializer(new_room).data)
         else:
+            print("room not valid")
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
 class RoomDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
     serializer_class = RoomSerializer
+    queryset = Room.objects.all()
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        old_room = self.get_object()
+        old_user_ids = list(old_room.users.values_list('id', flat = True))
+
+        serializer = self.get_serializer(old_room, data = request.data)
+        if serializer.is_valid():
+            new_room = serializer.save()
+            new_user_ids = list(new_room.users.values_list('id', flat = True))
+
+            # kicked out users
+            kicked_user_ids = [x for x in old_user_ids if x not in new_user_ids]
+            remaining_user_ids = [x for x in old_user_ids if x in new_user_ids]
+            
+            # send room update to users
+            send_room_to_users(new_room, remaining_user_ids, "create")
+
+            # send room delete
+            send_room_to_users(old_room, kicked_user_ids, "delete")
+
+            message = "残念ですが管理画面より{0}から却下されました。"
+            real_message = ""
+
+            if old_room.room_type != "private":
+                real_message = message.format("チャットルーム「{0}」").format(old_room.title)
+            
+            for user_id in kicked_user_ids:
+                no_errors = True
+                if old_room.room_type == "private":
+                    try:
+                        roommate_ids = [x for x in old_user_ids if x != user_id]
+                        if len(roommate_ids) > 0:
+                            partner = Member.objects.get(pk = roommate_ids[0])
+                            real_message = message.format("{0}とのチャットルーム").format(partner.nickname)
+                    except:
+                        no_errors = False
+                if no_errors:
+                    send_super_message("system", user_id, real_message)
+                
+                cur_user = Member.objects.get(pk = user_id)
+                cur_user.joins.filter(order__room__id = new_room.id, is_ended = False).update(is_ended = True)
+                        
+            # newly added users
+            added_user_ids = [x for x in new_user_ids if x not in old_user_ids]
+            send_room_to_users(new_room, added_user_ids, "create")
+
+            return Response(RoomSerializer(new_room).data)
+        else:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsSuperuserPermission])
@@ -668,7 +720,7 @@ class RoomMessageView(APIView):
 @api_view(['DELETE'])
 @permission_classes([IsSuperuserPermission])
 def delete_member(request, pk, id):
-    print(pk, id)
+    # print(pk, id)
     try:
         room = Room.objects.get(pk = pk)        
         deleted_user = Member.objects.get(pk = id)
