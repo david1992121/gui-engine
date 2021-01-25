@@ -201,6 +201,14 @@ class AdminNoticeSerializer(serializers.ModelSerializer):
                   'location_id', 'created_at', 'updated_at')
         model = AdminNotice
 
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if not 'location_id' in validated_data.keys():
+            instance.location = None
+        instance.save()
+        return instance
 
 class FileListSerializer(serializers.Serializer):
     media = serializers.ListField(
