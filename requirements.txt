@@ -70,7 +70,6 @@ pycodestyle==2.8.0
 pycparser==2.20
 PyHamcrest==2.0.2
 PyJWT==1.7.1
-pylint==2.12.2
 pyOpenSSL==19.1.0
 pyparsing==2.4.7
 PyPDF2==1.26.0
@@ -86,7 +85,7 @@ ruamel.yaml==0.16.12
 ruamel.yaml.clib==0.2.2
 s3transfer==0.3.3
 service-identity==18.1.0
-setuptools==50.3.0
+setuptools==50.3.0.post20201006
 six==1.15.0
 sqlparse==0.4.1
 swagger-spec-validator==2.7.3
