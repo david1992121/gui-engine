@@ -1,6 +1,6 @@
 [![Build CI](https://github.com/david1992121/gui-engine/actions/workflows/config.yml/badge.svg)](https://github.com/david1992121/gui-engine/actions/workflows/config.yml)
 [![Python Version](https://img.shields.io/badge/Python-v3.7.5-blue)](https://www.python.org)
-[![Django Version](https://img.shields.io/badge/Django-v3.1.2-blue)](https://www.djangoproject.com)
+[![Django Version](https://img.shields.io/badge/Django-v3.2.13-blue)](https://www.djangoproject.com)
 
 # GUI Service
 A web service for public dating in Japan
