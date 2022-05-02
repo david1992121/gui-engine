@@ -27,6 +27,7 @@ from calls.axes import create_axes_payment
 from basics.serializers import ChoiceSerializer
 from chat.utils import send_room_to_users, send_message_to_user
 
+
 class IsSuperuserPermission(BasePermission):
     message = "Only superuser is allowed"
 
@@ -40,17 +41,20 @@ class IsCastPermission(BasePermission):
     def has_permission(self, request, view):
         return request.user.role == 0 and request.user.is_active
 
+
 class IsGuestPermission(BasePermission):
     message = "Only Active Guest is allowed"
 
     def has_permission(self, request, view):
         return request.user.role == 1 and request.user.is_active
 
+
 class IsAdminPermission(BasePermission):
     message = "Only Admin is allowed"
 
     def has_permission(self, request, view):
         return request.user.role < 0
+
 
 class InitialRegister(APIView):
     permission_classes = [IsAuthenticated]
@@ -65,25 +69,32 @@ class InitialRegister(APIView):
             # if Member.objects.exclude(id=cur_user.id).filter(nickname=request.data['nickname']).count() > 0:
             #     return Response(status=status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
-            return Response(MemberSerializer(updated_user).data, status.HTTP_200_OK)
+            return Response(
+                MemberSerializer(updated_user).data,
+                status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
+class TweetView(
+        mixins.DestroyModelMixin,
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        mixins.UpdateModelMixin,
+        generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TweetSerializer
     pagination_class = TweetPagination
 
     def get_queryset(self):
         tweet_type = self.request.GET.get('tweet_type', "")
-        tweet_queryset = Tweet.objects.annotate(heart = Count('tweet_likers'))
-        
+        tweet_queryset = Tweet.objects.annotate(heart=Count('tweet_likers'))
+
         if self.request.user.role == 1:
             return tweet_queryset.filter(category=0)
         else:
             if tweet_type == "cast":
-                return tweet_queryset.filter(user__role = 0)
+                return tweet_queryset.filter(user__role=0)
             else:
                 return tweet_queryset
 
@@ -96,19 +107,20 @@ class TweetView(mixins.DestroyModelMixin, mixins.CreateModelMixin, mixins.ListMo
         page = int(request.GET.get('page', "1"))
         size = int(request.GET.get('size', "10"))
         # print(sort_field, sort_order)
-        if sort_field != "null" and sort_field != "":            
+        if sort_field != "null" and sort_field != "":
             if sort_order == "ascend":
                 query_set = query_set.order_by(sort_field)
             else:
                 query_set = query_set.order_by("-{}".format(sort_field))
         else:
             query_set = query_set.order_by("-created_at")
-        
+
         total = query_set.count()
         paginator = Paginator(query_set, size)
         tweets = paginator.page(page)
 
-        return Response({"total": total, "results": TweetSerializer(tweets, many=True).data}, status=status.HTTP_200_OK)
+        return Response({"total": total, "results": TweetSerializer(
+            tweets, many=True).data}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -127,7 +139,9 @@ def toggle_tweet(request):
     try:
         target_id = request.data['id']
         cur_tweet = Tweet.objects.get(pk=target_id)
-        if FavoriteTweet.objects.filter(liker=cur_user, tweet=cur_tweet).count() > 0:
+        if FavoriteTweet.objects.filter(
+                liker=cur_user,
+                tweet=cur_tweet).count() > 0:
             FavoriteTweet.objects.filter(
                 liker=cur_user, tweet=cur_tweet).delete()
         else:
@@ -157,7 +171,11 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
             new_avatar = avatar_serializer.save()
             user = request.user
             user.avatars.add(new_avatar)
-            return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
+            return Response(
+                MediaImageSerializer(
+                    user.avatars,
+                    many=True).data,
+                status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -167,7 +185,11 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
         if avatar_serializer.is_valid():
             new_avatar = avatar_serializer.save()
             user = request.user
-            return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
+            return Response(
+                MediaImageSerializer(
+                    user.avatars,
+                    many=True).data,
+                status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -175,7 +197,11 @@ class AvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
         user = request.user
         user.avatars.remove(Media.objects.get(pk=pk))
         Media.objects.get(pk=pk).delete()
-        return Response(MediaImageSerializer(user.avatars, many=True).data, status=status.HTTP_200_OK)
+        return Response(
+            MediaImageSerializer(
+                user.avatars,
+                many=True).data,
+            status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -189,7 +215,11 @@ def change_avatar_order(request):
         for uri_item in uris_data['uris']:
             media_obj = Media.objects.create(uri=uri_item)
             cur_user.avatars.add(media_obj)
-        return Response(MediaImageSerializer(cur_user.avatars, many=True).data, status=status.HTTP_200_OK)
+        return Response(
+            MediaImageSerializer(
+                cur_user.avatars,
+                many=True).data,
+            status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -224,7 +254,9 @@ def change_line(request):
 
             cur_user = request.user
 
-            if Member.objects.exclude(pk=cur_user.id).filter(social_id=line_id).count() > 0:
+            if Member.objects.exclude(
+                    pk=cur_user.id).filter(
+                    social_id=line_id).count() > 0:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
             else:
                 cur_user.social_id = line_id
@@ -268,24 +300,28 @@ class DetailView(APIView):
             user = request.user
             user.detail = detail_obj
             user.save()
-            return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
+            return Response(
+                DetailSerializer(detail_obj).data,
+                status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, pk):
-        detail_obj = Detail.objects.get(pk = pk)
+        detail_obj = Detail.objects.get(pk=pk)
         serializer = DetailSerializer(
             detail_obj, data=request.data, partial=True)
         if serializer.is_valid():
             # print(serializer.validated_data)
             detail_obj = serializer.save()
-            if Member.objects.filter(detail_id = detail_obj.id).count() > 0:
-                user = Member.objects.filter(detail_id = detail_obj.id).first()
+            if Member.objects.filter(detail_id=detail_obj.id).count() > 0:
+                user = Member.objects.filter(detail_id=detail_obj.id).first()
                 send_user(user)
             # user = request.user
             # user.detail = detail_obj
             # user.save()
-            return Response(DetailSerializer(detail_obj).data, status.HTTP_200_OK)
+            return Response(
+                DetailSerializer(detail_obj).data,
+                status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -302,13 +338,20 @@ class ProfileView(APIView):
             # if Member.objects.exclude(id=user.id).filter(nickname=new_nickname).count() > 0:
             #     return Response(status=status.HTTP_409_CONFLICT)
             updated_user = serializer.save()
-            return Response(MemberSerializer(updated_user).data, status=status.HTTP_200_OK)
+            return Response(
+                MemberSerializer(updated_user).data,
+                status=status.HTTP_200_OK)
         else:
             print(serializer.errors)
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
+class AdminView(
+        mixins.DestroyModelMixin,
+        mixins.ListModelMixin,
+        mixins.CreateModelMixin,
+        mixins.UpdateModelMixin,
+        generics.GenericAPIView):
     permission_classes = [IsSuperuserPermission]
     serializer_class = AdminSerializer
     pagination_class = AdminPagination
@@ -331,6 +374,7 @@ class AdminView(mixins.DestroyModelMixin, mixins.ListModelMixin, mixins.CreateMo
         user.save()
         return self.destroy(request, *args, **kwargs)
 
+
 class MemberView(APIView):
     permission_classes = [IsAdminPermission]
 
@@ -345,17 +389,18 @@ class MemberView(APIView):
             members = Member.objects.filter(
                 Q(is_registered=True, is_active=True, role__gte=0) | Q(role__lt=0))
         elif is_super > 0:
-            members = Member.objects.filter(is_superuser = True)
+            members = Member.objects.filter(is_superuser=True)
         elif is_admin > 0:
-            members = Member.objects.filter(role__lt = 0)
+            members = Member.objects.filter(role__lt=0)
         elif is_cast > 0:
             members = Member.objects.filter(is_registered=True, role=0)
         elif is_guest > 0:
-            members = Member.objects.filter(role = 1, is_active = True)
+            members = Member.objects.filter(role=1, is_active=True)
         else:
             members = Member.objects.filter(
                 role__gte=0, is_registered=True, is_active=True)
         return Response(MemberSerializer(members, many=True).data)
+
 
 class CastView(APIView):
     permission_classes = [IsAdminPermission]
@@ -366,7 +411,8 @@ class CastView(APIView):
         is_present = int(request.GET.get("is_present", "0"))
 
         if is_present > 0:
-            query_set = Member.objects.filter(is_registered=True, role=0, is_present=True)
+            query_set = Member.objects.filter(
+                is_registered=True, role=0, is_present=True)
         else:
             query_set = Member.objects.filter(is_registered=True, role=0)
 
@@ -374,9 +420,14 @@ class CastView(APIView):
         paginator = Paginator(query_set.order_by('id'), size)
         members = paginator.page(page)
 
-        return Response({"total": total, "results": MemberSerializer(members, many=True).data}, status=status.HTTP_200_OK)
+        return Response({"total": total, "results": MemberSerializer(
+            members, many=True).data}, status=status.HTTP_200_OK)
 
-class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
+
+class UserView(
+        mixins.ListModelMixin,
+        mixins.CreateModelMixin,
+        generics.GenericAPIView):
     permission_classes = [IsAdminPermission]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
@@ -390,7 +441,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
         # user type
         if user_type == 'guest':
             if is_introducer == 'true':
-                query_set = Member.objects.filter(is_introducer = True)
+                query_set = Member.objects.filter(is_introducer=True)
             else:
                 query_set = Member.objects.filter(role=1)
         elif user_type == 'cast':
@@ -402,15 +453,16 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
         if cur_request != "":
             try:
                 query_obj = json.loads(cur_request)
-            except:
-                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+            except BaseException:
+                return Response({"total": 0, "results": []},
+                                status=status.HTTP_200_OK)
 
             if user_type == "cast":
                 # ids array
                 ids_array = query_obj.get('ids_array', [])
 
                 if len(ids_array) > 0:
-                    query_set = query_set.filter(id__in = ids_array)
+                    query_set = query_set.filter(id__in=ids_array)
 
                 # location
                 location_val = query_obj.get("location", 0)
@@ -432,9 +484,9 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                 is_applied = query_obj.get("is_applied", -1)
                 if is_applied > -1:
                     if is_applied == 0:
-                        query_set = query_set.filter(role = 0)
+                        query_set = query_set.filter(role=0)
                     else:
-                        query_set = query_set.filter(role = 10, is_applied = True)
+                        query_set = query_set.filter(role=10, is_applied=True)
 
                 # register status
                 reg_status = query_obj.get("reg_status", -1)
@@ -454,9 +506,9 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
                 # card register status
                 card_register_status = query_obj.get("card_register", -1)
                 if card_register_status == 1:
-                    query_set = query_set.filter(axes_exist = True)
+                    query_set = query_set.filter(axes_exist=True)
                 if card_register_status == 0:
-                    query_set = query_set.filter(axes_exist = False)
+                    query_set = query_set.filter(axes_exist=False)
 
             # user_id
             user_id = query_obj.get("user_id", 0)
@@ -467,7 +519,7 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
             nickname = query_obj.get("nickname", "")
             if nickname != "":
                 query_set = query_set.filter(nickname__icontains=nickname)
-           
+
             # username
             username = query_obj.get("username", "")
             query_set = query_set.filter(username__icontains=username)
@@ -494,12 +546,18 @@ class UserView(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericA
         paginator = Paginator(query_set, 10)
         members = paginator.page(page)
 
-        return Response({"total": total, "results": UserSerializer(members, many=True).data}, status=status.HTTP_200_OK)
+        return Response({"total": total, "results": UserSerializer(
+            members, many=True).data}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
-class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
+
+class UserDetailView(
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        mixins.UpdateModelMixin,
+        generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
     queryset = Member.objects.all()
@@ -509,19 +567,20 @@ class UserDetailView(mixins.RetrieveModelMixin, mixins.DestroyModelMixin, mixins
 
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
-        user_serializer = self.get_serializer(instance, data = request.data)
+        user_serializer = self.get_serializer(instance, data=request.data)
         if user_serializer.is_valid():
             new_user = user_serializer.save()
             send_user(new_user)
             return Response(UserSerializer(new_user).data)
         else:
-            return Response(status = status.HTTP_400_BAD_REQUEST)
-    
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
         user.username = "user_{}".format(user.id)
         user.save()
         return self.destroy(request, *args, **kwargs)
+
 
 class MemberDetailView(APIView):
     def get_object(self, pk):
@@ -545,14 +604,27 @@ def get_fresh_casts(request):
     today = timezone.now()
     three_months_ago = today - timedelta(days=90)
 
-    casts = Member.objects.filter(role=0, started_at__gt=three_months_ago, is_active = True)
-    return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
+    casts = Member.objects.filter(
+        role=0,
+        started_at__gt=three_months_ago,
+        is_active=True)
+    return Response(
+        GeneralInfoSerializer(
+            casts,
+            many=True).data,
+        status=status.HTTP_200_OK)
+
 
 @api_view(["GET"])
 @permission_classes([IsGuestPermission])
 def get_present_casts(request):
-    casts = Member.objects.filter(role = 0, is_present = True, is_active = True)    
-    return Response(GeneralInfoSerializer(casts, many=True).data, status=status.HTTP_200_OK)
+    casts = Member.objects.filter(role=0, is_present=True, is_active=True)
+    return Response(
+        GeneralInfoSerializer(
+            casts,
+            many=True).data,
+        status=status.HTTP_200_OK)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -669,7 +741,11 @@ def edit_choice(request):
         user.cast_status.clear()
         user.cast_status.set(choice_data.get('choice'))
         user.save()
-        return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
+        return Response(
+            ChoiceSerializer(
+                user.cast_status,
+                many=True).data,
+            status=status.HTTP_200_OK)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -709,8 +785,9 @@ class TransferView(generics.GenericAPIView):
         if cur_request != "":
             try:
                 query_obj = json.loads(cur_request)
-            except:
-                return Response({"total": 0, "results": []}, status=status.HTTP_200_OK)
+            except BaseException:
+                return Response({"total": 0, "results": []},
+                                status=status.HTTP_200_OK)
 
             # status
             status_val = query_obj.get("status", -1)
@@ -744,7 +821,7 @@ class TransferView(generics.GenericAPIView):
 
             # transfer from
             date_from = query_obj.get("from", "")
-            if date_from != "":                
+            if date_from != "":
                 query_set = query_set.filter(
                     created_at__gte=get_edge_time(date_from, "from"))
 
@@ -767,11 +844,13 @@ class TransferView(generics.GenericAPIView):
                 query_set = query_set.order_by("-{}".format(sort_field))
         else:
             query_set = query_set.order_by("-created_at")
-        
+
         paginator = Paginator(query_set, 10)
         transfers = paginator.page(page)
 
-        return Response({"total": total, "results": TransferSerializer(transfers, many=True).data}, status=status.HTTP_200_OK)
+        return Response({"total": total, "results": TransferSerializer(
+            transfers, many=True).data}, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
@@ -779,9 +858,9 @@ def count_transfer(request):
     status_array = []
 
     # present casts
-    query_set = TransferApplication.objects.filter(status = 0)
+    query_set = TransferApplication.objects.filter(status=0)
     orders_count = query_set.count()
-    ids_array = list(query_set.values_list('id', flat = True).distinct())
+    ids_array = list(query_set.values_list('id', flat=True).distinct())
 
     status_array.append({
         "title": "Transfer not processed",
@@ -791,9 +870,9 @@ def count_transfer(request):
     })
 
     # present casts
-    query_set = TransferApplication.objects.filter(apply_type = 1)
+    query_set = TransferApplication.objects.filter(apply_type=1)
     orders_count = query_set.count()
-    ids_array = list(query_set.values_list('id', flat = True).distinct())
+    ids_array = list(query_set.values_list('id', flat=True).distinct())
 
     status_array.append({
         "title": "Immediate transfer application",
@@ -804,7 +883,11 @@ def count_transfer(request):
 
     return Response(status_array)
 
-class TransferInfoView(mixins.UpdateModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
+
+class TransferInfoView(
+        mixins.UpdateModelMixin,
+        mixins.CreateModelMixin,
+        generics.GenericAPIView):
     permission_classes = (IsCastPermission | IsSuperuserPermission, )
     serializer_class = TransferInfoSerializer
     queryset = TransferInfo.objects.all()
@@ -832,38 +915,58 @@ def proceed_transfer(request, id):
 
     return Response({"success": True}, status=status.HTTP_200_OK)
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def like_person(request, id):
     cur_user = request.user
-    target_user = Member.objects.get(pk = id)
-    if Friendship.objects.filter(follower = cur_user, favorite = target_user).count() == 0:
-        Friendship.objects.create(follower = cur_user, favorite = target_user)
+    target_user = Member.objects.get(pk=id)
+    if Friendship.objects.filter(
+            follower=cur_user,
+            favorite=target_user).count() == 0:
+        Friendship.objects.create(follower=cur_user, favorite=target_user)
 
     # search room first
-    old_room_exist = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).count()
-    
+    old_room_exist = Room.objects.filter(
+        room_type="private").filter(
+        users__id=cur_user.id).filter(
+            users__id=target_user.id).count()
+
     if old_room_exist == 0:
 
         # create room
-        new_room = Room.objects.create(last_message = "♥ いいね", room_type = "private")        
+        new_room = Room.objects.create(
+            last_message="♥ いいね", room_type="private")
         new_room.users.set([cur_user.id, target_user.id])
 
         # send room
         send_room_to_users(new_room, [target_user.id, cur_user.id], "create")
 
         # send message
-        cur_message = Message.objects.create(room=new_room, sender=cur_user,
-            receiver=cur_user, is_like=True, is_read=True)
+        cur_message = Message.objects.create(
+            room=new_room,
+            sender=cur_user,
+            receiver=cur_user,
+            is_like=True,
+            is_read=True)
         send_message_to_user(cur_message, cur_user.id)
 
-        target_message = Message.objects.create(room=new_room, sender=cur_user,
-            receiver=target_user, is_like=True, is_read=False, follower = cur_message)
+        target_message = Message.objects.create(
+            room=new_room,
+            sender=cur_user,
+            receiver=target_user,
+            is_like=True,
+            is_read=False,
+            follower=cur_message)
         send_message_to_user(target_message, target_user.id)
     else:
-        new_room = Room.objects.filter(room_type = "private").filter(users__id = cur_user.id).filter(users__id = target_user.id).get()    
+        new_room = Room.objects.filter(
+            room_type="private").filter(
+            users__id=cur_user.id).filter(
+            users__id=target_user.id).get()
 
-    return Response(new_room.id, status = status.HTTP_200_OK)
+    return Response(new_room.id, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
@@ -871,22 +974,24 @@ def remove_thumbnail(request):
     user_id = request.GET.get("user_id", 0)
     thumbnail_id = request.GET.get("thumbnail_id", 0)
     if user_id == 0 or thumbnail_id == 0:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     else:
-        cur_user = Member.objects.get(pk = user_id)
+        cur_user = Member.objects.get(pk=user_id)
         cur_user.avatars.remove(Media.objects.get(pk=thumbnail_id))
         Media.objects.get(pk=thumbnail_id).delete()
-        return Response({ "success": True }, status=status.HTTP_200_OK)
+        return Response({"success": True}, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([IsSuperuserPermission])
 def add_thumbnails(request):
-    serializer = MediaListSerializer(data = request.data)
+    serializer = MediaListSerializer(data=request.data)
     if serializer.is_valid():
         return_array = serializer.save()
-        return Response(MediaImageSerializer(return_array, many = True).data)
+        return Response(MediaImageSerializer(return_array, many=True).data)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsSuperuserPermission])
@@ -896,42 +1001,49 @@ def set_choices(request):
         input_data = choice_serializer.validated_data
         user_id = input_data.get("user_id", 0)
         if user_id > 0:
-            user = Member.objects.get(pk = user_id)
+            user = Member.objects.get(pk=user_id)
             user.cast_status.clear()
             user.cast_status.set(input_data.get('choice'))
             user.save()
-            return Response(ChoiceSerializer(user.cast_status, many=True).data, status=status.HTTP_200_OK)
+            return Response(
+                ChoiceSerializer(
+                    user.cast_status,
+                    many=True).data,
+                status=status.HTTP_200_OK)
     return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
 def toggle_active(request, id):
-    cur_user = Member.objects.get(pk = id)
+    cur_user = Member.objects.get(pk=id)
     cur_user.is_active = not cur_user.is_active
     cur_user.save()
-    return Response(status = status.HTTP_200_OK)
+    return Response(status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
 def to_cast(request, id):
-    cur_user = Member.objects.get(pk = id)
+    cur_user = Member.objects.get(pk=id)
     cur_user.role = 0
     cur_user.save()
-    return Response(status = status.HTTP_200_OK)
+    return Response(status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
 def get_user_statistics(request):
     status_array = []
     status_title = [
-            'Present Casts', 'Interview Request',
-            'Temperary Registered Cast'
-        ]
+        'Present Casts', 'Interview Request',
+        'Temperary Registered Cast'
+    ]
 
     # present casts
-    query_set = Member.objects.filter(is_present = True)
+    query_set = Member.objects.filter(is_present=True)
     orders_count = query_set.count()
-    ids_array = list(query_set.values_list('id', flat = True).distinct())
+    ids_array = list(query_set.values_list('id', flat=True).distinct())
 
     status_array.append({
         "title": "Present Casts",
@@ -941,9 +1053,9 @@ def get_user_statistics(request):
     })
 
     # interview request
-    query_set = Member.objects.filter(is_applied = True, role = 10)
+    query_set = Member.objects.filter(is_applied=True, role=10)
     orders_count = query_set.count()
-    ids_array = list(query_set.values_list('id', flat = True).distinct())
+    ids_array = list(query_set.values_list('id', flat=True).distinct())
 
     status_array.append({
         "title": "Interview Request",
@@ -953,9 +1065,9 @@ def get_user_statistics(request):
     })
 
     # interview request
-    query_set = Member.objects.filter(is_registered = False, role = 0)
+    query_set = Member.objects.filter(is_registered=False, role=0)
     orders_count = query_set.count()
-    ids_array = list(query_set.values_list('id', flat = True).distinct())
+    ids_array = list(query_set.values_list('id', flat=True).distinct())
 
     status_array.append({
         "title": "Temperary Registered Cast",
@@ -965,6 +1077,7 @@ def get_user_statistics(request):
     })
 
     return Response(status_array)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -984,7 +1097,7 @@ def member_apply(request, member_id):
         return Response(
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     if request.method == 'PUT':
         member.is_applied = True
         member.save()
@@ -992,25 +1105,32 @@ def member_apply(request, member_id):
             status=status.HTTP_200_OK
         )
 
+
 @api_view(['GET'])
 @permission_classes([IsCastPermission])
 def toggle_present(request):
     cur_user = request.user
     cur_user.is_present = not cur_user.is_present
     if cur_user.is_present:
-        cur_user.presented_at = timezone.now() + timedelta(days = 1)
+        cur_user.presented_at = timezone.now() + timedelta(days=1)
     else:
         cur_user.presented_at = None
     cur_user.save()
 
     # notify to guests
-    guest_ids = list(Member.objects.filter(role = 1, is_active = True).values_list('id', flat = True))
+    guest_ids = list(
+        Member.objects.filter(
+            role=1,
+            is_active=True).values_list(
+            'id',
+            flat=True))
     if cur_user.is_present:
         send_present(cur_user, "add", guest_ids)
     else:
         send_present(cur_user, "remove", guest_ids)
 
     return Response(MemberSerializer(cur_user).data)
+
 
 @api_view(['POST'])
 @permission_classes([IsGuestPermission])
@@ -1021,17 +1141,21 @@ def buy_point(request):
 
         # create axes payment
         if not create_axes_payment(request.user, point):
-            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
             user.point += point
             user.save()
 
             # create invoice
-            Invoice.objects.create(taker = request.user, take_amount = point, invoice_type = "BUY")
+            Invoice.objects.create(
+                taker=request.user,
+                take_amount=point,
+                invoice_type="BUY")
 
             return Response(MemberSerializer(user).data)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsGuestPermission])
@@ -1041,21 +1165,29 @@ def export_pdf(request):
     pdf_info = request.GET.get("info")
     query_obj = json.loads(pdf_info)
     # print(query_obj)
-    
+
     seed = query_obj.get("seed", "")
     date = query_obj.get("date", "")
     name_array = query_obj.get("names", [])
-    number = query_obj.get("number", 1)    
+    number = query_obj.get("number", 1)
     no = query_obj.get("no", 100)
 
     try:
-        point = Invoice.objects.get(pk = no).take_amount
+        point = Invoice.objects.get(pk=no).take_amount
     except Invoice.DoesNotExist:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    filename = export_pdf(seed, date, name_array, number, no, point, request.user.id)
-    
+    filename = export_pdf(
+        seed,
+        date,
+        name_array,
+        number,
+        no,
+        point,
+        request.user.id)
+
     return Response(filename)
+
 
 @api_view(['GET'])
 @permission_classes([IsAdminPermission])
@@ -1068,28 +1200,33 @@ def update_admin_profile(request):
     admin = request.user
 
     if old_password == "":
-        return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+        return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
     else:
         if not admin.check_password(old_password):
-            return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
 
     if password != "":
-        admin.set_password(password)    
+        admin.set_password(password)
 
     if nickname.strip() != "" and username.strip() != "" and point >= 0:
         new_nickname = nickname.strip()
         new_username = username.strip()
 
-        if Member.all_objects.exclude(id = admin.id).filter(username = new_username).count() > 0:
-            return Response(status = status.HTTP_409_CONFLICT)            
+        if Member.all_objects.exclude(
+                id=admin.id).filter(
+                username=new_username).count() > 0:
+            return Response(status=status.HTTP_409_CONFLICT)
 
         admin.nickname = new_nickname
         admin.username = new_username
         admin.point = point
         admin.save()
-        return Response(MemberSerializer(admin).data, status = status.HTTP_200_OK)
+        return Response(
+            MemberSerializer(admin).data,
+            status=status.HTTP_200_OK)
     else:
-        return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsSuperuserPermission])
@@ -1097,10 +1234,12 @@ def check_user_exist(request):
     user_id = int(request.query_params.get('id'))
     user_email = request.query_params.get('email')
 
-    if Member.objects.exclude(id = user_id).filter(email = user_email).count() > 0:
+    if Member.objects.exclude(id=user_id).filter(email=user_email).count() > 0:
         return Response({"success": False, "deleted": False})
     else:
-        if Member.all_objects.exclude(id = user_id).filter(email = user_email).count() > 0:
+        if Member.all_objects.exclude(
+                id=user_id).filter(
+                email=user_email).count() > 0:
             return Response({"success": False, "deleted": False})
-    
+
     return Response({"success": True})

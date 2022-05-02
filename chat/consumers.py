@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from accounts.models import Member
 from django.utils import timezone
 
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
@@ -88,14 +89,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Send Applier
     async def applier_send(self, event):
         await self.send(text_data=json.dumps({
-            "type": "APPLIER",            
+            "type": "APPLIER",
             "data": event['content']
         }))
-    
+
     # Send Applier
     async def room_event_send(self, event):
         await self.send(text_data=json.dumps({
-            "type": "ROOMEVENTS",            
+            "type": "ROOMEVENTS",
             "data": event['content']
         }))
 
@@ -122,17 +123,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
 def on_status(user_id):
     # status save
     try:
-        member = Member.objects.get(pk = user_id)
+        member = Member.objects.get(pk=user_id)
         member.status = True
         member.save()
     except Member.DoesNotExist:
         pass
 
 # user status off
+
+
 @sync_to_async
 def off_status(user_id):
     try:
-        member = Member.objects.get(pk = user_id)
+        member = Member.objects.get(pk=user_id)
         member.status = False
         member.left_at = timezone.now()
         member.save()

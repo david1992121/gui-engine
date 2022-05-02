@@ -32,12 +32,15 @@ from accounts.models import Member
 from accounts.serializers.auth import *
 from chat.models import Room, Message
 
+
 class EmailLoginView(JSONWebTokenAPIView):
     """APIs for Email Login"""
     serializer_class = EmailJWTSerializer
 
+
 class AdminLoginView(JSONWebTokenAPIView):
     serializer_class = AdminEmailJWTSerializer
+
 
 class LineLoginView(APIView):
     """APIs for LINE Authorization"""
@@ -60,8 +63,9 @@ class LineLoginView(APIView):
             inviter_code = serializer.validated_data.get('inviter_code', "")
 
             if inviter_code != "":
-                if Member.objects.filter(inviter_code = inviter_code).count() == 0:
-                    return Response(status = status.HTTP_400_BAD_REQUEST)
+                if Member.objects.filter(
+                        inviter_code=inviter_code).count() == 0:
+                    return Response(status=status.HTTP_400_BAD_REQUEST)
 
             url = "https://api.line.me/oauth2/v2.1/token"
 
@@ -101,8 +105,9 @@ class LineLoginView(APIView):
                     user_obj.inviter_code = new_code
                     if inviter_code != "":
                         print("set introducer")
-                        user_obj.introducer = Member.objects.get(inviter_code=inviter_code)
-                        
+                        user_obj.introducer = Member.objects.get(
+                            inviter_code=inviter_code)
+
                     # if guest
                     if role == 1:
                         user_obj.started_at = timezone.now()
@@ -124,31 +129,55 @@ class LineLoginView(APIView):
 
                         admin_message = "GR運営局へのお問い合わせは、下の「メッセージを送る」からお願いいたします。"
 
-                        system_user = Member.objects.get(is_superuser = True, username = "system")
-                        admin_user = Member.objects.get(is_superuser = True, username = "admin")
+                        system_user = Member.objects.get(
+                            is_superuser=True, username="system")
+                        admin_user = Member.objects.get(
+                            is_superuser=True, username="admin")
 
                         # set system message
-                        system_room, is_created = Room.objects.get_or_create(room_type = "system", title = "システムメッセージ", users__id = user_obj.id)
+                        system_room, is_created = Room.objects.get_or_create(
+                            room_type="system", title="システムメッセージ", users__id=user_obj.id)
                         system_room.users.set([system_user.id, user_obj.id])
                         system_room.last_message = system_message
                         system_room.save()
 
-                        Message.objects.create(content = system_message, room = system_room, sender = system_user, receiver = system_user, is_read = True)
-                        Message.objects.create(content = system_message, room = system_room, sender = system_user, receiver = user_obj, is_read = False)
+                        Message.objects.create(
+                            content=system_message,
+                            room=system_room,
+                            sender=system_user,
+                            receiver=system_user,
+                            is_read=True)
+                        Message.objects.create(
+                            content=system_message,
+                            room=system_room,
+                            sender=system_user,
+                            receiver=user_obj,
+                            is_read=False)
 
-                        admin_room, is_created = Room.objects.get_or_create(room_type = "admin", title = "Gui運営局", users__id = user_obj.id)
+                        admin_room, is_created = Room.objects.get_or_create(
+                            room_type="admin", title="Gui運営局", users__id=user_obj.id)
                         admin_room.users.set([admin_user.id, user_obj.id])
                         admin_room.last_message = admin_message
                         admin_room.save()
 
-                        Message.objects.create(content = admin_message, room = admin_room, sender = admin_user, receiver = admin_user, is_read = True)
-                        Message.objects.create(content = admin_message, room = admin_room, sender = admin_user, receiver = user_obj, is_read = False)
-                
+                        Message.objects.create(
+                            content=admin_message,
+                            room=admin_room,
+                            sender=admin_user,
+                            receiver=admin_user,
+                            is_read=True)
+                        Message.objects.create(
+                            content=admin_message,
+                            room=admin_room,
+                            sender=admin_user,
+                            receiver=user_obj,
+                            is_read=False)
+
                 else:
-                    if user_obj.deleted_at != None:
-                        return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
+                    if user_obj.deleted_at is not None:
+                        return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
                     if role == 0 and user_obj.role == 1:
-                        return Response(status = status.HTTP_403_FORBIDDEN)
+                        return Response(status=status.HTTP_403_FORBIDDEN)
 
                 user_obj.social_id = line_id
                 user_obj.social_type = 1
@@ -168,15 +197,18 @@ class LineLoginView(APIView):
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
 def getInviterCode():
     import random
     random_id = ""
     while True:
-        random_id = ''.join([str(random.randint(0, 999)).zfill(3) for _ in range(2)])
-        if Member.objects.filter(inviter_code = random_id).count() > 0:
+        random_id = ''.join([str(random.randint(0, 999)).zfill(3)
+                            for _ in range(2)])
+        if Member.objects.filter(inviter_code=random_id).count() > 0:
             continue
         break
     return random_id
+
 
 class EmailRegisterView(APIView):
 
@@ -184,7 +216,6 @@ class EmailRegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-
         """Signup with Email"""
         serializer = EmailRegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -197,19 +228,20 @@ class EmailRegisterView(APIView):
             # additional info
             inviter_code = input_data.get('inviter_code', "")
             if inviter_code != "":
-                if Member.objects.filter(inviter_code = inviter_code).count() == 0:
-                    return Response(status = status.HTTP_400_BAD_REQUEST)
+                if Member.objects.filter(
+                        inviter_code=inviter_code).count() == 0:
+                    return Response(status=status.HTTP_400_BAD_REQUEST)
 
             user, is_created = Member.all_objects.get_or_create(email=email)
             if not is_created:
-                if user.deleted_at == None:
+                if user.deleted_at is None:
                     return Response({
                         "success": False,
                         "reason": "Email already exists"
                     }, status.HTTP_200_OK)
                 else:
-                    return Response(status = status.HTTP_406_NOT_ACCEPTABLE)
-            else:                
+                    return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
+            else:
                 # create user
                 user.username = "user_{}".format(user.id)
                 user.nickname = nickname
@@ -222,7 +254,7 @@ class EmailRegisterView(APIView):
 
                 # additional info
                 if inviter_code != "":
-                    introducer = Member.objects.get(inviter_code = inviter_code)
+                    introducer = Member.objects.get(inviter_code=inviter_code)
                     user.introducer = introducer
 
                 user.save()
@@ -267,7 +299,7 @@ def verify_token(email, email_token):
                 user.is_verified = True
                 user.save()
                 return valid
-    except :
+    except BaseException:
         pass
     return False
 
@@ -286,7 +318,7 @@ def verify_email(request, email, email_token):
                 "emails/email_error.html",
                 {'success': False, 'link': target_link}
             )
-    except:
+    except BaseException:
         pass
 
 
@@ -305,8 +337,8 @@ def resend_email(request):
     """Resend Verification Email"""
     email = request.data.get('email', "")
     try:
-        user = Member.objects.get(email = email)
-    except: 
+        user = Member.objects.get(email=email)
+    except BaseException:
         return Response("Email is not correct", status.HTTP_400_BAD_REQUEST)
 
     if not user.is_verified:
@@ -326,11 +358,18 @@ def resend_email(request):
 
         return Response(status.HTTP_200_OK)
     else:
-        return Response("User is already verified", status.HTTP_400_BAD_REQUEST)
+        return Response(
+            "User is already verified",
+            status.HTTP_400_BAD_REQUEST)
 
 
 @receiver(reset_password_token_created)
-def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+def password_reset_token_created(
+        sender,
+        instance,
+        reset_password_token,
+        *args,
+        **kwargs):
 
     target_link = "{}/account/result?type=reset_password&email={}&token={}".format(
         settings.CLIENT_URL, reset_password_token.user.email, reset_password_token.key)

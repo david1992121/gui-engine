@@ -17,6 +17,7 @@ from accounts.models import Media, Tweet, Member, TransferApplication, Detail
 from basics.serializers import LevelsSerializer, ClassesSerializer, LocationSerializer, ChoiceSerializer
 from .auth import DetailSerializer, MediaImageSerializer, MemberSerializer, TransferInfoSerializer
 
+
 def file_validator(file):
     max_file_size = 1024 * 1024 * 100  # 100MB
 
@@ -25,14 +26,14 @@ def file_validator(file):
                                             format(max_file_size, file.size)))
 
 
-class InitialInfoRegisterSerializer(serializers.Serializer):    
+class InitialInfoRegisterSerializer(serializers.Serializer):
     nickname = serializers.CharField()
     birthday = serializers.CharField()
     location_id = serializers.IntegerField()
     email = serializers.EmailField()
     phone_number = serializers.CharField()
     password = serializers.CharField()
-    inviter_code = serializers.CharField(allow_blank = True)
+    inviter_code = serializers.CharField(allow_blank=True)
 
     def update(self, instance, validated_data):
         # save user
@@ -42,14 +43,15 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
         inviter_code = validated_data['inviter_code']
         if inviter_code != "":
             try:
-                inviter = Member.objects.get(inviter_code = inviter_code)
+                inviter = Member.objects.get(inviter_code=inviter_code)
                 instance.introducer = inviter
-            except:
+            except BaseException:
                 pass
-                
+
         if validated_data['location_id'] <= 0:
-            raise ValidationError({ "location" : "Location id is greater or equal to 0"})
-        
+            raise ValidationError(
+                {"location": "Location id is greater or equal to 0"})
+
         instance.location_id = validated_data['location_id']
         instance.set_password(validated_data['password'])
         instance.phone_number = validated_data['phone_number']
@@ -62,8 +64,8 @@ class InitialInfoRegisterSerializer(serializers.Serializer):
 
 class MainInfoSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
-    location = LocationSerializer(read_only = True)
-    overall_points = serializers.IntegerField(read_only = True, default = 0)
+    location = LocationSerializer(read_only=True)
+    overall_points = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         fields = (
@@ -113,56 +115,97 @@ class GeneralInfoSerializer(serializers.ModelSerializer):
 
     def get_job(self, obj):
         return "" if not obj.detail.job else obj.detail.job
-    
+
     def get_annual(self, obj):
         return "" if not obj.detail.annual else obj.detail.annual
+
 
 class UserSerializer(serializers.ModelSerializer):
     average_review = serializers.SerializerMethodField()
     five_reviews = serializers.SerializerMethodField()
-    introducer = MainInfoSerializer(read_only = True)
-    cast_class = ClassesSerializer(read_only = True)
-    guest_level = LevelsSerializer(read_only = True)
-    location = LocationSerializer(read_only = True)
+    introducer = MainInfoSerializer(read_only=True)
+    cast_class = ClassesSerializer(read_only=True)
+    guest_level = LevelsSerializer(read_only=True)
+    location = LocationSerializer(read_only=True)
     detail = DetailSerializer()
-    transfer_infos = TransferInfoSerializer(many = True, read_only = True, required = False)
+    transfer_infos = TransferInfoSerializer(
+        many=True, read_only=True, required=False)
     avatars = MediaImageSerializer(read_only=True, many=True)
     cast_status = ChoiceSerializer(read_only=True, many=True)
-    
-    detail_id = serializers.IntegerField(write_only = True, required = False)
-    location_id = serializers.IntegerField(write_only = True, required = False)
-    cast_class_id = serializers.IntegerField(write_only = True, required = False)
-    introducer_id = serializers.IntegerField(write_only = True, required = False)
-    guest_level_id = serializers.IntegerField(write_only = True, required = False)
-    password = serializers.CharField(write_only = True, required = False, allow_blank = True)
+
+    detail_id = serializers.IntegerField(write_only=True, required=False)
+    location_id = serializers.IntegerField(write_only=True, required=False)
+    cast_class_id = serializers.IntegerField(write_only=True, required=False)
+    introducer_id = serializers.IntegerField(write_only=True, required=False)
+    guest_level_id = serializers.IntegerField(write_only=True, required=False)
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True)
 
     class Meta:
         fields = (
-            'id', 'nickname', 'cast_class', 'guest_level', 'back_ratio', 'expire_times',
-            'call_times', 'expire_amount', 'average_review', 'five_reviews', 'introducer',
-            'location', 'email', 'memo', 'started_at', 'last_login', 
-            'username', 'is_registered', 'is_active', 'phone_number', 'role', 'is_public', 'detail',
-            'birthday', 'transfer_infos', 'location_id', 'cast_class_id', 'introducer_id', 'guest_level_id', 'detail_id',
-            'password', 'point_half', 'point', 'presented_at', 'inviter_code', 'avatars', 'social_id',
-            'cast_status', 'axes_exist', 'group_times', 'private_times', 'is_introducer', 'left_at'
-        )
+            'id',
+            'nickname',
+            'cast_class',
+            'guest_level',
+            'back_ratio',
+            'expire_times',
+            'call_times',
+            'expire_amount',
+            'average_review',
+            'five_reviews',
+            'introducer',
+            'location',
+            'email',
+            'memo',
+            'started_at',
+            'last_login',
+            'username',
+            'is_registered',
+            'is_active',
+            'phone_number',
+            'role',
+            'is_public',
+            'detail',
+            'birthday',
+            'transfer_infos',
+            'location_id',
+            'cast_class_id',
+            'introducer_id',
+            'guest_level_id',
+            'detail_id',
+            'password',
+            'point_half',
+            'point',
+            'presented_at',
+            'inviter_code',
+            'avatars',
+            'social_id',
+            'cast_status',
+            'axes_exist',
+            'group_times',
+            'private_times',
+            'is_introducer',
+            'left_at')
         model = Member
         extra_kwargs = {
-            'username': { 'allow_blank': True },
-            'memo': { 'allow_blank': True },
-            'inviter_code': { 'read_only': True }
+            'username': {'allow_blank': True},
+            'memo': {'allow_blank': True},
+            'inviter_code': {'read_only': True}
         }
 
     def get_average_review(self, obj):
         from django.db.models import Avg
-        average_stars = obj.review_sources.aggregate(Avg('stars'))['stars__avg']
+        average_stars = obj.review_sources.aggregate(Avg('stars'))[
+            'stars__avg']
         if average_stars:
             return round(average_stars, 2)
         else:
             return 0
 
     def get_five_reviews(self, obj):
-        return obj.review_sources.filter(stars = 5).count()
+        return obj.review_sources.filter(stars=5).count()
 
     def create(self, validated_data):
         detail = validated_data.pop('detail')
@@ -175,13 +218,15 @@ class UserSerializer(serializers.ModelSerializer):
             username = validated_data.pop('username')
 
         if password == "":
-            raise serializers.ValidationError({ "password" : "password is needed" }) 
+            raise serializers.ValidationError(
+                {"password": "password is needed"})
         else:
             if len(password) < 8:
-                raise serializers.ValidationError({ "password" : "password length is at least 8" }) 
-        
+                raise serializers.ValidationError(
+                    {"password": "password length is at least 8"})
+
         new_detail = Detail.objects.create(**detail)
-        
+
         new_user = Member.objects.create(**validated_data)
         if password != "":
             new_user.set_password(password)
@@ -191,10 +236,10 @@ class UserSerializer(serializers.ModelSerializer):
         else:
             new_user.username = "user_{}".format(new_user.id)
 
-        if new_user.role == 1 and new_user.started_at == None:
+        if new_user.role == 1 and new_user.started_at is None:
             new_user.started_at = timezone.now()
 
-        if new_user.role == 0 and new_user.started_at == None:
+        if new_user.role == 0 and new_user.started_at is None:
             new_user.started_at = timezone.now()
 
         new_user.detail = new_detail
@@ -212,7 +257,8 @@ class UserSerializer(serializers.ModelSerializer):
 
         if password != "":
             if len(password) < 8:
-                raise serializers.ValidationError({ "password" : "password length is at least 8" }) 
+                raise serializers.ValidationError(
+                    {"password": "password length is at least 8"})
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -222,7 +268,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         # present check
         if instance.role == 0:
-            if instance.presented_at == None:
+            if instance.presented_at is None:
                 instance.is_present = False
             else:
                 if instance.presented_at < timezone.now():
@@ -232,12 +278,12 @@ class UserSerializer(serializers.ModelSerializer):
                     instance.is_present = True
 
         # sns check
-        if instance.social_id != None:
+        if instance.social_id is not None:
             instance.social_type = 1
         else:
             instance.social_type = 0
 
-        cur_detail = Detail.objects.get(pk = cur_detail_id)
+        cur_detail = Detail.objects.get(pk=cur_detail_id)
         cur_detail.about = detail['about']
         cur_detail.save()
 
@@ -245,15 +291,18 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 def getInviterCode():
     import random
     random_id = ""
     while True:
-        random_id = ''.join([str(random.randint(0, 999)).zfill(3) for _ in range(2)])
-        if Member.objects.filter(inviter_code = random_id).count() > 0:
+        random_id = ''.join([str(random.randint(0, 999)).zfill(3)
+                            for _ in range(2)])
+        if Member.objects.filter(inviter_code=random_id).count() > 0:
             continue
         break
     return random_id
+
 
 class TweetSerializer(serializers.ModelSerializer):
     medias = serializers.ListField(
@@ -270,11 +319,20 @@ class TweetSerializer(serializers.ModelSerializer):
     user = MainInfoSerializer(read_only=True)
     images = MediaImageSerializer(read_only=True, many=True)
     user_id = serializers.IntegerField(write_only=True)
-    category = serializers.IntegerField(default = 0)
+    category = serializers.IntegerField(default=0)
 
     class Meta:
-        fields = ("id", "content", "images", "user",
-                  "likers", "created_at", "medias", "user_id", "category", "updated_at")
+        fields = (
+            "id",
+            "content",
+            "images",
+            "user",
+            "likers",
+            "created_at",
+            "medias",
+            "user_id",
+            "category",
+            "updated_at")
         model = Tweet
 
     def get_likers(self, obj):
@@ -326,8 +384,12 @@ class TweetPagination(PageNumberPagination):
 
 class AvatarSerializer(serializers.ModelSerializer):
     media = serializers.FileField(
-        max_length=1000000, allow_empty_file=False, use_url=False, validators=[file_validator],
-        write_only=True, required=False)
+        max_length=1000000,
+        allow_empty_file=False,
+        use_url=False,
+        validators=[file_validator],
+        write_only=True,
+        required=False)
 
     class Meta:
         fields = ('id', 'media')
@@ -355,6 +417,7 @@ class AvatarChangerSerializer(serializers.Serializer):
 class PasswordChange(serializers.Serializer):
     old = serializers.CharField(required=False)
     new = serializers.CharField(required=False)
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -406,7 +469,7 @@ class AdminSerializer(serializers.ModelSerializer):
         if Member.objects.filter(username=username).count() > 0:
             return serializers.ValidationError("Username already exists")
         else:
-            new_user = Member.objects.create(username = username)
+            new_user = Member.objects.create(username=username)
             if location_id > 0:
                 new_user.location_id = location_id
 
@@ -425,8 +488,11 @@ class AdminSerializer(serializers.ModelSerializer):
 
         username = validated_data['username']
         location_id = int(validated_data['location_id'])
-        if Member.objects.exclude(pk=instance.pk).filter(username=username).count() > 0:
-            return serializers.ValidationError({"username": "Username already exists"})
+        if Member.objects.exclude(
+                pk=instance.pk).filter(
+                username=username).count() > 0:
+            return serializers.ValidationError(
+                {"username": "Username already exists"})
         else:
             instance.username = username
             if location_id > 0:
@@ -438,43 +504,57 @@ class AdminSerializer(serializers.ModelSerializer):
 
             return instance
 
+
 class ChoiceIdSerializer(serializers.Serializer):
     choice = serializers.ListField(
         child=serializers.IntegerField()
     )
-    user_id = serializers.IntegerField(write_only = True, required = False)
+    user_id = serializers.IntegerField(write_only=True, required=False)
+
 
 class AdminPagination(PageNumberPagination):
     page_size = 10
 
     def get_paginated_response(self, data):
-        return Response({
-            'total': Member.objects.filter(role__lt=0, is_superuser=False).count(),
-            'results': data
-        })
+        return Response({'total': Member.objects.filter(
+            role__lt=0, is_superuser=False).count(), 'results': data})
+
 
 class TransferSerializer(serializers.ModelSerializer):
-    user = MemberSerializer()    
+    user = MemberSerializer()
+
     class Meta:
-        fields = ('id', 'status', 'location', 'user', 'amount', 'apply_type', 'currency_type', 'point', 'created_at')
+        fields = (
+            'id',
+            'status',
+            'location',
+            'user',
+            'amount',
+            'apply_type',
+            'currency_type',
+            'point',
+            'created_at')
         model = TransferApplication
+
 
 class MediaListSerializer(serializers.Serializer):
     media = serializers.ListField(
-        child = serializers.FileField( max_length = 100000,
-            allow_empty_file=False, use_url=False, validators=[file_validator] )
-    )
-    user_id = serializers.IntegerField(required = True)
+        child=serializers.FileField(
+            max_length=100000,
+            allow_empty_file=False,
+            use_url=False,
+            validators=[file_validator]))
+    user_id = serializers.IntegerField(required=True)
 
     def create(self, validated_data):
         media_source = validated_data.pop('media')
         user_id = validated_data.pop('user_id')
 
-        return_array = []    
+        return_array = []
         for img in media_source:
-            media_image = Media.objects.create(uri = img)
-            cur_user = Member.objects.get(pk = user_id)
+            media_image = Media.objects.create(uri=img)
+            cur_user = Member.objects.get(pk=user_id)
             cur_user.avatars.add(media_image)
             return_array.append(media_image)
 
-        return return_array  
+        return return_array
