@@ -21,9 +21,11 @@ class EmailRegisterSerializer(serializers.Serializer):
     nickname = serializers.CharField()
     birthday = serializers.CharField(required=False, allow_blank=True)
 
+
 class SNSAuthorizeSerializer(serializers.Serializer):
     code = serializers.CharField()
     inviter_code = serializers.CharField(required=False, allow_blank=True)
+
 
 class AdminEmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'username'
@@ -41,7 +43,8 @@ class AdminEmailJWTSerializer(JSONWebTokenSerializer):
             'password': attrs.get("password")
         }
 
-        user_obj = Member.objects.filter(username=attrs.get("username"), role__lt = 0).first()
+        user_obj = Member.objects.filter(
+            username=attrs.get("username"), role__lt=0).first()
         if user_obj:
             credentials['username'] = user_obj.username
 
@@ -68,6 +71,7 @@ class AdminEmailJWTSerializer(JSONWebTokenSerializer):
             msg = 'Account with this email does not exist'
             raise serializers.ValidationError(msg)
 
+
 class EmailJWTSerializer(JSONWebTokenSerializer):
     username_field = 'email'
 
@@ -89,7 +93,7 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
             credentials['email'] = user_obj.email
 
             if all(credentials.values()):
-                if user_obj.check_password(attrs.get('password')):                    
+                if user_obj.check_password(attrs.get('password')):
                     if not user_obj.is_verified:
                         msg = "You did not verify your email address yet"
                         raise serializers.ValidationError(msg)
@@ -114,8 +118,10 @@ class EmailJWTSerializer(JSONWebTokenSerializer):
             msg = 'Account with this email does not exist'
             raise serializers.ValidationError(msg)
 
+
 class MediaImageSerializer(serializers.ModelSerializer):
     uri = Base64ImageField()
+
     class Meta:
         fields = ('uri', 'id')
         model = Media
@@ -127,37 +133,52 @@ class MediaImageSerializer(serializers.ModelSerializer):
         current_media_image.save()
         return True
 
+
 class DetailSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Detail
+
 
 class IntroducerSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'nickname', 'inviter_code')
         model = Member
 
+
 class TransferInfoSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField(write_only = True)    
+    user_id = serializers.IntegerField(write_only=True)
+
     class Meta:
-        fields = ('id', 'bank_name', 'bank_no', 'site_name', 'site_no', 'account_no', 'account_cat', 'transfer_name', 'user_id')
+        fields = (
+            'id',
+            'bank_name',
+            'bank_no',
+            'site_name',
+            'site_no',
+            'account_no',
+            'account_cat',
+            'transfer_name',
+            'user_id')
         model = TransferInfo
         extra_kwargs = {
-            'bank_no': { 'allow_blank' : True },
-            'site_no': { 'allow_blank' : True }
+            'bank_no': {'allow_blank': True},
+            'site_no': {'allow_blank': True}
         }
-    
+
+
 class MemberSerializer(serializers.ModelSerializer):
     avatars = MediaImageSerializer(read_only=True, many=True)
-    setting = SettingSerializer(read_only = True)
-    detail = DetailSerializer(read_only = True)
+    setting = SettingSerializer(read_only=True)
+    detail = DetailSerializer(read_only=True)
     cast_status = ChoiceSerializer(read_only=True, many=True)
-    introducer = IntroducerSerializer(read_only = True)
-    transfer_infos = TransferInfoSerializer(many = True)
+    introducer = IntroducerSerializer(read_only=True)
+    transfer_infos = TransferInfoSerializer(many=True)
     favorites = serializers.SerializerMethodField()
-    location = LocationSerializer(read_only = True)
-    cast_class = ClassesSerializer(read_only = True)
-    guest_level = LevelsSerializer(read_only = True)
+    location = LocationSerializer(read_only=True)
+    cast_class = ClassesSerializer(read_only=True)
+    guest_level = LevelsSerializer(read_only=True)
+
     class Meta:
         fields = (
             'id',
@@ -192,4 +213,4 @@ class MemberSerializer(serializers.ModelSerializer):
         model = Member
 
     def get_favorites(self, obj):
-        return list(obj.favorites.values_list('favorite_id', flat = True))
+        return list(obj.favorites.values_list('favorite_id', flat=True))

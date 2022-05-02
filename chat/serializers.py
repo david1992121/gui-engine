@@ -69,12 +69,12 @@ class RoomSerializer(serializers.ModelSerializer):
     Room Serializer
     """
     users = MainInfoSerializer(read_only=True, many=True)
-    unread = serializers.IntegerField(read_only=True, default = 0)
+    unread = serializers.IntegerField(read_only=True, default=0)
     last_sender = MainInfoSerializer(read_only=True)
     user_ids = ListField(
-        child = serializers.IntegerField(), write_only = True
+        child=serializers.IntegerField(), write_only=True
     )
-    last_sender_id = serializers.IntegerField(write_only = True)
+    last_sender_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Room
@@ -99,59 +99,80 @@ class RoomSerializer(serializers.ModelSerializer):
         last_sender_id = validated_data.pop('last_sender_id')
 
         # check if room already exists
-        queryset = Room.objects.annotate(count = Count('users'))
+        queryset = Room.objects.annotate(count=Count('users'))
         room_type = validated_data['room_type']
 
         if room_type == "private" or room_type == "random":
-            queryset = queryset.filter(count = len(user_ids))
+            queryset = queryset.filter(count=len(user_ids))
             for user_id in user_ids:
-                queryset = queryset.filter(users__pk = user_id)
-            queryset = queryset.filter(title = validated_data['title'], room_type = room_type)
-        
+                queryset = queryset.filter(users__pk=user_id)
+            queryset = queryset.filter(
+                title=validated_data['title'],
+                room_type=room_type)
+
         elif room_type == "system" or room_type == "admin":
-            queryset = queryset.filter(count = 2).filter(users__pk = user_ids[0]).filter(
-                users__pk = Member.objects.get(is_superuser = True, username = room_type
-            ).id).filter(room_type = room_type)
+            queryset = queryset.filter(
+                count=2).filter(
+                users__pk=user_ids[0]).filter(
+                users__pk=Member.objects.get(
+                    is_superuser=True,
+                    username=room_type).id).filter(
+                    room_type=room_type)
         if queryset.count() > 0:
-            raise serializers.ValidationError({'room': 'Room already exists'})        
+            raise serializers.ValidationError({'room': 'Room already exists'})
 
         room = Room.objects.create(**validated_data)
         room.users.set(user_ids)
-        room.last_sender = Member.objects.get(pk = last_sender_id)
+        room.last_sender = Member.objects.get(pk=last_sender_id)
 
         if room.room_type == "admin":
-            room.users.add(Member.objects.get(is_superuser = True, username = "admin"))
+            room.users.add(
+                Member.objects.get(
+                    is_superuser=True,
+                    username="admin"))
         elif room.room_type == "system":
-            room.users.add(Member.objects.get(is_superuser = True, username = "system"))
-        
+            room.users.add(
+                Member.objects.get(
+                    is_superuser=True,
+                    username="system"))
+
         return room
 
     def update(self, instance, validated_data):
         user_ids = validated_data.pop('user_ids')
 
         # check if room already exists
-        queryset = Room.objects.annotate(count = Count('users')).exclude(id = instance.id)
+        queryset = Room.objects.annotate(
+            count=Count('users')).exclude(
+            id=instance.id)
         room_type = validated_data['room_type']
 
         if room_type == "private" or room_type == "random":
-            queryset = queryset.filter(count = len(user_ids))
+            queryset = queryset.filter(count=len(user_ids))
             for user_id in user_ids:
-                queryset = queryset.filter(users__pk = user_id)
-            queryset = queryset.filter(title = validated_data['title'], room_type = room_type)
-        
+                queryset = queryset.filter(users__pk=user_id)
+            queryset = queryset.filter(
+                title=validated_data['title'],
+                room_type=room_type)
+
         elif room_type == "system" or room_type == "admin":
-            queryset = queryset.filter(count = 2).filter(users__pk = user_ids[0]).filter(
-                users__pk = Member.objects.get(is_superuser = True, username = room_type
-            ).id).filter(room_type = room_type)
+            queryset = queryset.filter(
+                count=2).filter(
+                users__pk=user_ids[0]).filter(
+                users__pk=Member.objects.get(
+                    is_superuser=True,
+                    username=room_type).id).filter(
+                    room_type=room_type)
         if queryset.count() > 0:
-            raise serializers.ValidationError({'room': 'Room already exists'})        
+            raise serializers.ValidationError({'room': 'Room already exists'})
 
         instance.users.set(user_ids)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        
+
         return instance
+
 
 class MessageSerializer(serializers.ModelSerializer):
     """
@@ -162,14 +183,14 @@ class MessageSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
-    medias = MediaImageSerializer(read_only = True, many=True)
+    medias = MediaImageSerializer(read_only=True, many=True)
     gift_id = serializers.IntegerField(required=False, write_only=True)
-    gift = GiftSerializer(read_only = True)
-    room = RoomSerializer(read_only = True)
-    room_id = serializers.IntegerField(write_only = True, required = False)
-    sender = MainInfoSerializer(read_only = True)
-    sender_id = serializers.IntegerField(write_only = True, required = False)
-    receiver = MainInfoSerializer(read_only = True)
+    gift = GiftSerializer(read_only=True)
+    room = RoomSerializer(read_only=True)
+    room_id = serializers.IntegerField(write_only=True, required=False)
+    sender = MainInfoSerializer(read_only=True)
+    sender_id = serializers.IntegerField(write_only=True, required=False)
+    receiver = MainInfoSerializer(read_only=True)
 
     class Meta:
         model = Message
@@ -191,7 +212,8 @@ class MessageSerializer(serializers.ModelSerializer):
             'sender_id',
             'created_at'
         )
-    
+
+
 class AdminNoticeSerializer(serializers.ModelSerializer):
     location = LocationSerializer(read_only=True)
     location_id = serializers.IntegerField(write_only=True, required=False)
@@ -205,16 +227,19 @@ class AdminNoticeSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        if not 'location_id' in validated_data.keys():
+        if 'location_id' not in validated_data.keys():
             instance.location = None
         instance.save()
         return instance
 
+
 class FileListSerializer(serializers.Serializer):
     media = serializers.ListField(
-        child=serializers.FileField(max_length=100000,
-                                    allow_empty_file=False, use_url=False, validators=[file_validator])
-    )
+        child=serializers.FileField(
+            max_length=100000,
+            allow_empty_file=False,
+            use_url=False,
+            validators=[file_validator]))
 
     def create(self, validated_data):
         media_source = validated_data.pop('media')
@@ -226,11 +251,12 @@ class FileListSerializer(serializers.Serializer):
 
         return return_array
 
+
 class AdminMessageSerializer(serializers.Serializer):
     content = serializers.CharField()
     media_ids = serializers.ListField(
-        child = serializers.IntegerField()
+        child=serializers.IntegerField()
     )
     receiver_ids = serializers.ListField(
-        child = serializers.IntegerField()
+        child=serializers.IntegerField()
     )
