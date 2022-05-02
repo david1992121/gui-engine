@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     'basics',
     'accounts',
     'calls',
-    'django_celery_beat'
+    'django_celery_beat',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
