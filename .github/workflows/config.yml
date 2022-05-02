@@ -45,7 +45,7 @@ jobs:
         env:
           DEBUG: off
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DATABASE_URL: ${{ secrets.DATEBASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python manage.py migrate
       - name: 'Run PEP8'
         uses: quentinguidee/pep8-action@v1
@@ -53,7 +53,7 @@ jobs:
           arguments: '--max-line-length=120 --ignore=E501'
       - name: Run Tests
         env:
-          DEBUG=off
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DEBUG: off
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           python manage.py test
