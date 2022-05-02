@@ -57,5 +57,23 @@ jobs:
         env:
           DEBUG: off
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CLIENT_URL: ${{ secrets.CLIENT_URL }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          EMAIL_FROM_USER: ${{ secrets.EMAIL_FROM_USER }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_BACKEND: ${{ secrets.EMAIL_BACKEND }}
+          EMAIL_USE_TLS: ${{ secrets.EMAIL_USE_TLS }}
+          LINE_CLIENT_ID: ${{ secrets.LINE_CLIENT_ID }}
+          LINE_CLIENT_SECRET: ${{ secrets.LINE_CLIENT_SECRET }}
+          LINE_CHANNEL_SECRE: ${{ secrets.LINE_CHANNEL_SECRE }}
+          LINE_CHANNEL_ACCESS_TOKE: ${{ secrets.LINE_CHANNEL_ACCESS_TOKE }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
         run: |
           python manage.py test
