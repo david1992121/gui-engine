@@ -120,3 +120,4 @@ media/
 /celerybeat-schedule.bak
 /celerybeat-schedule.dat
 /static/pdf/*.pdf
+/.idea
