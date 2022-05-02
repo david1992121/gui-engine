@@ -19,6 +19,7 @@ A web service for public dating in Japan
 - SimpleUI for django admin
 - Django channels and celery with redis
 - Django cronjob using celery
+- Swagger API Documentation
 - AWS deployment
 
 ## Getting Started

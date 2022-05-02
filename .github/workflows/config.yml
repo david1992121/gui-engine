@@ -30,6 +30,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
       - uses: actions/checkout@v2
@@ -41,6 +43,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          npm ci
+      - name: Connect to Redis
+        run: node client.js
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
       - name: Run migrations
         env:
           DEBUG: off
