@@ -20,7 +20,7 @@ A web service for public dating in Japan
 - Django channels and celery with redis
 - Django cronjob using celery
 - Swagger API Documentation
-- AWS deployment
+- AWS S3 Upload and Deployment
 
 ## Getting Started
 
