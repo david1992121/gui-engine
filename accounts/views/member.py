@@ -1,4 +1,5 @@
 import json
+import django
 from django.db.models.aggregates import Count
 import jwt
 from datetime import timedelta
@@ -26,6 +27,7 @@ from calls.models import Invoice
 from calls.axes import create_axes_payment
 from basics.serializers import ChoiceSerializer
 from chat.utils import send_room_to_users, send_message_to_user
+import django_filters
 
 
 class IsSuperuserPermission(BasePermission):
@@ -373,6 +375,26 @@ class AdminView(
         user.username = "user_{}".format(user.id)
         user.save()
         return self.destroy(request, *args, **kwargs)
+
+
+class MemberGuestLevelFilterSet(django_filters.FilterSet):
+    guest_level = django_filters.CharFilter(
+        method='filter_guest_level', field_name='guest_level')
+
+    def filter_guest_level(self, queryset, field_name, value):
+        if value != "":
+            id_array = json.loads(value)
+            if isinstance(id_array, list):
+                print(id_array)
+                return queryset.filter(guest_level__id__in=id_array)
+        return queryset
+
+
+class MemberListView(generics.ListAPIView):
+    serializer_class = MemberSerializer
+    queryset = Member.objects.all()
+    permission_classes = [AllowAny]
+    filterset_class = MemberGuestLevelFilterSet
 
 
 class MemberView(APIView):

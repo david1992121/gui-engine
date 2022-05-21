@@ -31,6 +31,7 @@ urlpatterns = [
     path('choices', set_choices, name="user_set_choice"),
 
     # member management
+    path('members-list', MemberListView.as_view(), name="member_list_view"),
     path('members', MemberView.as_view(), name="member_view"),
     path('members/<int:pk>', MemberDetailView.as_view(), name="member_view"),
     path('members/<int:member_id>/apply', member_apply, name="member_apply"),
